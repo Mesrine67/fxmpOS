@@ -25,10 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import {
-  ToggleGroup,
-  ToggleGroupItem,
-} from "@/components/ui/toggle-group"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 
 export const description = "An interactive area chart"
 
@@ -142,13 +139,19 @@ const chartConfig = {
 
 export function ChartAreaInteractive() {
   const isMobile = useIsMobile()
-  const [timeRange, setTimeRange] = React.useState("90d")
+  const [rangeState, setRangeState] = React.useState({
+    isMobile,
+    timeRange: "90d",
+  })
 
-  React.useEffect(() => {
-    if (isMobile) {
-      setTimeRange("7d")
-    }
-  }, [isMobile])
+  if (rangeState.isMobile !== isMobile) {
+    setRangeState((previous) => ({
+      isMobile,
+      timeRange: isMobile ? "7d" : previous.timeRange,
+    }))
+  }
+
+  const timeRange = rangeState.timeRange
 
   const filteredData = chartData.filter((item) => {
     const date = new Date(item.date)
@@ -179,7 +182,10 @@ export function ChartAreaInteractive() {
             multiple={false}
             value={timeRange ? [timeRange] : []}
             onValueChange={(value) => {
-              setTimeRange(value[0] ?? "90d")
+              setRangeState((previous) => ({
+                ...previous,
+                timeRange: value[0] ?? "90d",
+              }))
             }}
             variant="outline"
             className="hidden *:data-[slot=toggle-group-item]:px-4! @[767px]/card:flex"
@@ -192,7 +198,10 @@ export function ChartAreaInteractive() {
             value={timeRange}
             onValueChange={(value) => {
               if (value !== null) {
-                setTimeRange(value)
+                setRangeState((previous) => ({
+                  ...previous,
+                  timeRange: value,
+                }))
               }
             }}
           >

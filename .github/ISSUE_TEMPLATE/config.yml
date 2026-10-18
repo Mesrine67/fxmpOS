@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Signaler une vulnérabilité en privé
+    url: https://github.com/Mesrine67/fxmpOS/security/advisories/new
+    about: N’utilisez pas une Issue publique pour signaler une faille.
+  - name: Questions et discussions
+    url: https://github.com/Mesrine67/fxmpOS/discussions
+    about: Posez une question ou échangez sur FXMP OS.

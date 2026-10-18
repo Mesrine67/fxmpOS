@@ -1,13 +1,19 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Capability for the main window",
+  "description": "Minimal capability for the local FXMP OS main window",
+  "local": true,
   "windows": ["main"],
   "permissions": [
     "core:default",
-    "opener:default",
-    "log:default",
-    "updater:default",
-    "process:default"
+    "opener:allow-default-urls",
+    "log:allow-log",
+    "updater:allow-check",
+    "updater:allow-download-and-install",
+    "process:allow-restart",
+    "autostart:default",
+    "allow-get-system-snapshot",
+    "allow-get-display-monitors",
+    "allow-set-overlay-state"
   ]
 }

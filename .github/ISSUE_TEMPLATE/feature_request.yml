@@ -1,0 +1,33 @@
+name: Proposer une amélioration
+description: Expliquer un besoin et une amélioration souhaitée
+title: "[Amélioration]: "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problème ou besoin
+      description: Qu’essayez-vous de faire et qu’est-ce qui vous bloque ?
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Amélioration proposée
+      description: Décrivez le comportement ou résultat souhaité.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Autres solutions envisagées
+    validations:
+      required: false
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Vérifications
+      options:
+        - label: Cette proposition ne contient pas de données personnelles ni de secrets.
+          required: true
