@@ -30,15 +30,10 @@ pub(crate) fn monitor_identifier(monitor: &Monitor) -> String {
 pub(crate) fn overlay_positioning_supported() -> bool {
     #[cfg(target_os = "linux")]
     {
-        let gdk_backend = std::env::var("GDK_BACKEND").ok();
-        let session_type = std::env::var("XDG_SESSION_TYPE").ok();
-        let wayland_display_present = std::env::var_os("WAYLAND_DISPLAY").is_some();
+        use gdk::prelude::*;
 
-        return supports_global_window_positioning(
-            gdk_backend.as_deref(),
-            session_type.as_deref(),
-            wayland_display_present,
-        );
+        let selected_backend = gdk::Display::default().map(|display| display.backend());
+        return supports_global_window_positioning(selected_backend);
     }
 
     #[cfg(not(target_os = "linux"))]
@@ -46,52 +41,20 @@ pub(crate) fn overlay_positioning_supported() -> bool {
 }
 
 #[cfg(any(test, target_os = "linux"))]
-fn supports_global_window_positioning(
-    gdk_backend: Option<&str>,
-    session_type: Option<&str>,
-    wayland_display_present: bool,
-) -> bool {
-    if let Some(backend) =
-        gdk_backend.and_then(|value| value.split(',').find(|backend| !backend.trim().is_empty()))
-    {
-        return !backend.trim().eq_ignore_ascii_case("wayland");
-    }
-
-    if let Some(session_type) = session_type {
-        return !session_type.eq_ignore_ascii_case("wayland");
-    }
-
-    !wayland_display_present
+fn supports_global_window_positioning(selected_backend: Option<gdk::Backend>) -> bool {
+    selected_backend.is_some_and(|backend| backend.is_x11())
 }
 
-#[cfg(test)]
+#[cfg(all(test, target_os = "linux"))]
 mod tests {
     use super::supports_global_window_positioning;
+    use gdk::Backend;
 
     #[test]
     fn detects_wayland_from_the_selected_gdk_backend() {
-        assert!(!supports_global_window_positioning(
-            Some("wayland,x11"),
-            Some("x11"),
-            false,
-        ));
-        assert!(supports_global_window_positioning(
-            Some("x11,wayland"),
-            Some("wayland"),
-            true,
-        ));
-    }
-
-    #[test]
-    fn falls_back_to_session_and_display_environment() {
-        assert!(!supports_global_window_positioning(
-            None,
-            Some("wayland"),
-            false,
-        ));
-        assert!(supports_global_window_positioning(None, Some("x11"), true,));
-        assert!(!supports_global_window_positioning(None, None, true));
-        assert!(supports_global_window_positioning(None, None, false));
+        assert!(!supports_global_window_positioning(Some(Backend::Wayland)));
+        assert!(supports_global_window_positioning(Some(Backend::X11)));
+        assert!(!supports_global_window_positioning(None));
     }
 }
 
