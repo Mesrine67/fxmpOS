@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs"
+import { execFileSync, spawnSync } from "node:child_process"
 import process from "node:process"
 
 const packageVersion = JSON.parse(readFileSync("package.json", "utf8")).version
@@ -33,11 +34,37 @@ if (eventName === "push") {
       `Release tag ${process.env.GITHUB_REF_NAME ?? "<missing>"} must match the configured version v${tauriVersion}.`
     )
   }
+  const defaultBranch = process.env.DEFAULT_BRANCH
+  if (!defaultBranch) {
+    throw new Error("DEFAULT_BRANCH must be set to validate a release tag.")
+  }
+  const taggedCommit = execFileSync("git", ["rev-parse", "HEAD"], {
+    encoding: "utf8",
+  }).trim()
+  const defaultBranchRef = `refs/remotes/origin/${defaultBranch}`
+  execFileSync(
+    "git",
+    ["rev-parse", "--verify", `${defaultBranchRef}^{commit}`],
+    {
+      encoding: "utf8",
+    }
+  )
+  const ancestry = spawnSync(
+    "git",
+    ["merge-base", "--is-ancestor", taggedCommit, defaultBranchRef],
+    { encoding: "utf8" }
+  )
+  if (ancestry.error) throw ancestry.error
+  if (ancestry.status !== 0) {
+    throw new Error(
+      `Release tag commit ${taggedCommit} must be reachable from the current ${defaultBranch} history.`
+    )
+  }
 } else if (eventName === "workflow_dispatch") {
   const defaultBranch = process.env.DEFAULT_BRANCH
   if (!defaultBranch || ref !== `refs/heads/${defaultBranch}`) {
     throw new Error(
-      `Manual releases must run from the repository default branch (${defaultBranch ?? "<missing>"}).`
+      `Manual release verification must run from the repository default branch (${defaultBranch ?? "<missing>"}).`
     )
   }
 } else if (eventName) {

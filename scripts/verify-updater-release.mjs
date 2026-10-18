@@ -57,17 +57,21 @@ if (platforms.length === 0) {
 
 const requiredPlatformTargets = [
   "windows-x86_64",
-  "darwin-aarch64",
-  "darwin-x86_64",
-  "linux-x86_64",
+  "windows-x86_64-nsis",
+  "windows-x86_64-msi",
 ]
 const platformNames = platforms.map(([platform]) => platform)
-for (const target of requiredPlatformTargets) {
-  if (
-    !platformNames.some(
-      (platform) => platform === target || platform.startsWith(`${target}-`)
+const allowedPlatformTarget = /^windows-x86_64(?:-(?:nsis|msi))?$/
+for (const platform of platformNames) {
+  if (!allowedPlatformTarget.test(platform)) {
+    throw new Error(
+      `latest.json contains unsupported platform target ${platform}; only Windows x86_64 NSIS/MSI updates are allowed`
     )
-  ) {
+  }
+}
+
+for (const target of requiredPlatformTargets) {
+  if (!platformNames.includes(target)) {
     throw new Error(`latest.json is missing an updater entry for ${target}`)
   }
 }
@@ -120,6 +124,47 @@ for (const asset of release.assets) {
   }
   releaseAssets.set(asset.name, asset)
 }
+
+const escapedVersion = expectedVersion.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+const windowsInstallerAssets = [
+  new RegExp(`^FXMP\\.OS-${escapedVersion}-windows-x64-setup\\.exe$`, "i"),
+  new RegExp(`^FXMP\\.OS-${escapedVersion}-windows-x64\\.msi$`, "i"),
+  new RegExp(
+    `^FXMP-OS-${escapedVersion}-windows-x64-standalone-experimental\\.exe$`,
+    "i"
+  ),
+]
+let hasNsisInstaller = false
+let hasMsiInstaller = false
+for (const assetName of releaseAssets.keys()) {
+  if (assetName === "latest.json" || assetName === "SHA256SUMS.txt") continue
+  const isSignature = assetName.endsWith(".sig")
+  const bundleName = assetName.endsWith(".sig")
+    ? assetName.slice(0, -".sig".length)
+    : assetName
+  if (!windowsInstallerAssets.some((pattern) => pattern.test(bundleName))) {
+    throw new Error(
+      `The release contains unsupported non-Windows or unexpected asset ${assetName}`
+    )
+  }
+  if (isSignature && windowsInstallerAssets[2].test(bundleName)) {
+    throw new Error(
+      `The standalone experimental asset must not have a signature sidecar: ${assetName}`
+    )
+  }
+  if (!isSignature && /-windows-x64-setup\.exe$/i.test(bundleName)) {
+    hasNsisInstaller = true
+  }
+  if (!isSignature && /-windows-x64\.msi$/i.test(bundleName)) {
+    hasMsiInstaller = true
+  }
+}
+if (!hasNsisInstaller || !hasMsiInstaller) {
+  throw new Error(
+    "The draft release must contain both the Windows NSIS setup (.exe) and MSI installer."
+  )
+}
+
 if (!releaseAssets.has("latest.json")) {
   throw new Error("The draft release does not contain latest.json")
 }
