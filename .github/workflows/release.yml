@@ -153,6 +153,49 @@ jobs:
             Remove-Item -LiteralPath $pfxPath -Force -ErrorAction SilentlyContinue
           }
 
+      - name: Configure macOS signing
+        if: startsWith(matrix.platform, 'macos-')
+        shell: bash
+        env:
+          APPLE_CERTIFICATE_INPUT: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD_INPUT: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY_INPUT: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID_INPUT: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD_INPUT: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID_INPUT: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          certificate="${APPLE_CERTIFICATE_INPUT//$'\r'/}"
+          certificate="${certificate//$'\n'/}"
+
+          if [[ -n "$certificate" || -n "$APPLE_CERTIFICATE_PASSWORD_INPUT" || -n "$APPLE_SIGNING_IDENTITY_INPUT" ]]; then
+            if [[ -z "$certificate" || -z "$APPLE_CERTIFICATE_PASSWORD_INPUT" || -z "$APPLE_SIGNING_IDENTITY_INPUT" ]]; then
+              echo "::error::Set APPLE_CERTIFICATE, APPLE_CERTIFICATE_PASSWORD, and APPLE_SIGNING_IDENTITY together, or leave all three unset for ad-hoc signing."
+              exit 1
+            fi
+
+            {
+              printf 'APPLE_CERTIFICATE=%s\n' "$certificate"
+              printf 'APPLE_CERTIFICATE_PASSWORD=%s\n' "$APPLE_CERTIFICATE_PASSWORD_INPUT"
+              printf 'APPLE_SIGNING_IDENTITY=%s\n' "$APPLE_SIGNING_IDENTITY_INPUT"
+            } >> "$GITHUB_ENV"
+          else
+            # Do not export an empty APPLE_CERTIFICATE: Tauri interprets a present
+            # but empty value as a certificate to import. A dash identity enables
+            # the documented ad-hoc signing path without a Developer ID certificate.
+            printf 'APPLE_SIGNING_IDENTITY=-\n' >> "$GITHUB_ENV"
+            echo "::notice::Apple Developer ID credentials are not configured; building with ad-hoc signing and without notarization."
+          fi
+
+          if [[ -n "$certificate" && -n "$APPLE_ID_INPUT" && -n "$APPLE_PASSWORD_INPUT" && -n "$APPLE_TEAM_ID_INPUT" ]]; then
+            {
+              printf 'APPLE_ID=%s\n' "$APPLE_ID_INPUT"
+              printf 'APPLE_PASSWORD=%s\n' "$APPLE_PASSWORD_INPUT"
+              printf 'APPLE_TEAM_ID=%s\n' "$APPLE_TEAM_ID_INPUT"
+            } >> "$GITHUB_ENV"
+          elif [[ -n "$certificate" && ( -n "$APPLE_ID_INPUT" || -n "$APPLE_PASSWORD_INPUT" || -n "$APPLE_TEAM_ID_INPUT" ) ]]; then
+            echo "::warning::Apple notarization credentials are incomplete; notarization will be skipped."
+          fi
+
       - name: Build and publish signed update artifacts
         id: tauri
         uses: tauri-apps/tauri-action@1deb371b0cd8bd54025b384f1cd735e725c4060f # action-v1.0.0
@@ -160,12 +203,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-          APPLE_CERTIFICATE: ${{ startsWith(matrix.platform, 'macos-') && secrets.APPLE_SIGNING_IDENTITY != '' && secrets.APPLE_CERTIFICATE || '' }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ startsWith(matrix.platform, 'macos-') && secrets.APPLE_SIGNING_IDENTITY != '' && secrets.APPLE_CERTIFICATE != '' && secrets.APPLE_CERTIFICATE_PASSWORD || '' }}
-          APPLE_SIGNING_IDENTITY: ${{ startsWith(matrix.platform, 'macos-') && (secrets.APPLE_CERTIFICATE != '' && secrets.APPLE_SIGNING_IDENTITY != '' && secrets.APPLE_SIGNING_IDENTITY || '-') || '' }}
-          APPLE_ID: ${{ startsWith(matrix.platform, 'macos-') && secrets.APPLE_CERTIFICATE != '' && secrets.APPLE_SIGNING_IDENTITY != '' && secrets.APPLE_ID != '' && secrets.APPLE_PASSWORD != '' && secrets.APPLE_TEAM_ID != '' && secrets.APPLE_ID || '' }}
-          APPLE_PASSWORD: ${{ startsWith(matrix.platform, 'macos-') && secrets.APPLE_CERTIFICATE != '' && secrets.APPLE_SIGNING_IDENTITY != '' && secrets.APPLE_ID != '' && secrets.APPLE_PASSWORD != '' && secrets.APPLE_TEAM_ID != '' && secrets.APPLE_PASSWORD || '' }}
-          APPLE_TEAM_ID: ${{ startsWith(matrix.platform, 'macos-') && secrets.APPLE_CERTIFICATE != '' && secrets.APPLE_SIGNING_IDENTITY != '' && secrets.APPLE_ID != '' && secrets.APPLE_PASSWORD != '' && secrets.APPLE_TEAM_ID != '' && secrets.APPLE_TEAM_ID || '' }}
         with:
           tagName: v__VERSION__
           releaseName: v__VERSION__
