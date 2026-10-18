@@ -8,6 +8,20 @@ fn safe_url_label(url: &tauri::Url) -> String {
     }
 }
 
+fn is_bundled_app_origin(url: &tauri::Url) -> bool {
+    #[cfg(any(target_os = "windows", target_os = "android"))]
+    {
+        matches!(url.scheme(), "http" | "https")
+            && url.host_str() == Some("tauri.localhost")
+            && url.port().is_none()
+    }
+
+    #[cfg(not(any(target_os = "windows", target_os = "android")))]
+    {
+        url.scheme() == "tauri" && url.host_str() == Some("localhost") && url.port().is_none()
+    }
+}
+
 pub fn init<R: Runtime>() -> TauriPlugin<R> {
     tauri::plugin::Builder::<R>::new("external-navigation")
         .on_navigation(|webview, url| {
@@ -29,7 +43,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
                             && dev_url.port_or_known_default() == url.port_or_known_default()
                     });
 
-            if same_origin || is_configured_dev_origin {
+            if same_origin || is_bundled_app_origin(url) || is_configured_dev_origin {
                 return true;
             }
 

@@ -16,7 +16,6 @@ pub enum OverlayAnchor {
     BottomLeft,
     BottomRight,
 }
-
 impl Default for OverlayAnchor {
     fn default() -> Self {
         Self::TopRight

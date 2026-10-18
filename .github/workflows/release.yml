@@ -11,17 +11,27 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    outputs:
+      prerelease: ${{ steps.validate.outputs.prerelease }}
 
     steps:
       - name: Checkout release source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Validate release ref and application version
+        id: validate
         shell: bash
         env:
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
           version="$(node scripts/validate-release-source.mjs)"
+          semver_without_build="${version%%+*}"
+          if [[ "$semver_without_build" == *-* ]]; then
+            prerelease=true
+          else
+            prerelease=false
+          fi
+          echo "prerelease=$prerelease" >> "$GITHUB_OUTPUT"
           echo "Validated release source for FXMP OS $version ($GITHUB_REF)."
 
   publish-tauri:
@@ -163,7 +173,7 @@ jobs:
             See the assets below to download this version.
             The experimental Windows standalone executable is not an officially supported portable build and requires the Microsoft Edge WebView2 Runtime.
           releaseDraft: true
-          prerelease: false
+          prerelease: ${{ needs.validate-release-source.outputs.prerelease }}
           generateReleaseNotes: true
           retryAttempts: 2
           tauriScript: pnpm tauri
@@ -268,7 +278,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y minisign
 
-      - name: Download draft release assets
+      - name: Download draft updater manifest
         id: assets
         shell: bash
         env:
@@ -276,30 +286,28 @@ jobs:
         run: |
           version="$(node -e 'console.log(JSON.parse(require("node:fs").readFileSync("src-tauri/tauri.conf.json", "utf8")).version)')"
           tag="v${version}"
-          release_dir="${RUNNER_TEMP}/fxmp-release-assets"
-          mkdir -p "$release_dir"
+          mkdir -p release-assets
           gh release download "$tag" \
+            --pattern latest.json \
             --repo "$GITHUB_REPOSITORY" \
-            --dir "$release_dir" \
+            --dir release-assets \
             --clobber
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
-          echo "directory=$release_dir" >> "$GITHUB_OUTPUT"
 
       - name: Verify updater manifest and signed bundles
         shell: bash
         env:
-          RELEASE_DIR: ${{ steps.assets.outputs.directory }}
           RELEASE_VERSION: ${{ steps.assets.outputs.version }}
-        run: node scripts/verify-updater-release.mjs "$RELEASE_DIR" "$RELEASE_VERSION"
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/verify-updater-release.mjs "$RELEASE_VERSION"
 
       - name: Upload release checksums
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RELEASE_DIR: ${{ steps.assets.outputs.directory }}
           RELEASE_TAG: ${{ steps.assets.outputs.tag }}
         run: |
-          gh release upload "$RELEASE_TAG" "$RELEASE_DIR/SHA256SUMS.txt" \
+          gh release upload "$RELEASE_TAG" "release-assets/SHA256SUMS.txt" \
             --repo "$GITHUB_REPOSITORY" \
             --clobber

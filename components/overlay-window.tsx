@@ -11,9 +11,9 @@ import {
   normalizeOverlayPreferences,
   useOverlayPreferences,
   type OverlayPreferences,
+  writeOverlayPreferences,
 } from "@/lib/overlay-settings"
 import { trackedEmit, trackedInvoke } from "@/lib/tauri"
-import { writeOverlayPreferences } from "@/lib/overlay-settings"
 import { useTauriRuntime } from "@/hooks/use-tauri-runtime"
 
 type OverlaySnapshot = {
@@ -65,20 +65,24 @@ export function OverlayWindow() {
       else stopListening = unlisten
     })
 
-    const initialRefresh = window.setTimeout(
-      () => void refreshSnapshot(),
-      0
-    )
-    const timer = window.setInterval(() => void refreshSnapshot(), 5000)
-
     return () => {
       disposed = true
       stopListening?.()
-      window.clearTimeout(initialRefresh)
-      window.clearInterval(timer)
       delete document.documentElement.dataset.fxmpOverlay
     }
-  }, [refreshSnapshot])
+  }, [])
+
+  useEffect(() => {
+    if (!isTauri() || !preferences.enabled) return
+
+    const initialRefresh = window.setTimeout(() => void refreshSnapshot(), 0)
+    const timer = window.setInterval(() => void refreshSnapshot(), 5000)
+
+    return () => {
+      window.clearTimeout(initialRefresh)
+      window.clearInterval(timer)
+    }
+  }, [preferences.enabled, refreshSnapshot])
 
   const usage = snapshot?.memoryTotalBytes
     ? Math.min(
@@ -96,11 +100,7 @@ export function OverlayWindow() {
     const next = { ...preferences, enabled: false }
     try {
       writeOverlayPreferences(next)
-      await trackedInvoke("set_overlay_state", {
-        visible: false,
-        settings: next,
-      })
-      await trackedEmit("overlay-settings-changed", next)
+      await trackedEmit("overlay-hide-requested")
     } catch {
       setError("Impossible de masquer l’overlay")
     }
@@ -128,7 +128,9 @@ export function OverlayWindow() {
             ) {
               return
             }
-            void getCurrentWindow().startDragging().catch(() => {})
+            void getCurrentWindow()
+              .startDragging()
+              .catch(() => {})
           }}
           title="Faire glisser pour déplacer"
         >

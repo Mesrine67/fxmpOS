@@ -7,7 +7,6 @@
   "permissions": [
     "core:default",
     "core:window:allow-start-dragging",
-    "allow-get-overlay-snapshot",
-    "allow-set-overlay-state"
+    "allow-get-overlay-snapshot"
   ]
 }
