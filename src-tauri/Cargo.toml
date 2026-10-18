@@ -5,7 +5,7 @@ description = "A FXMP Tauri App OS for monitoring and controlling your PC"
 authors = ["FXMP"]
 license = "MIT"
 edition = "2024"
-rust-version = "1.90"
+rust-version = "1.95"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

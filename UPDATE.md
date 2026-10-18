@@ -52,7 +52,7 @@ Sans `WINDOWS_CERTIFICATE`, les installateurs Windows n'ont pas de signature Aut
 
 Toutes les GitHub Actions sont épinglées sur un SHA complet. Dependabot vérifie chaque semaine les mises à jour de ces références.
 
-Le workflow CI vérifie le typage et le build Next.js, puis le formatage et la compilation Rust sur Linux, Windows et macOS. Un job distinct vérifie la compilation avec le MSRV déclaré, Rust 1.90. Ces contrôles s'exécutent pour les PR et les pushes sur `main`.
+Le workflow CI vérifie le typage et le build Next.js, puis le formatage et la compilation Rust sur Linux, Windows et macOS. Un job distinct vérifie la compilation avec le MSRV déclaré, Rust 1.95. Ces contrôles s'exécutent pour les PR et les pushes sur `main`.
 
 Pour amorcer le canal, dans PowerShell depuis la racine du dépôt :
 

@@ -59,7 +59,7 @@ Commandes utiles :
 - `src-tauri/tauri.conf.json` : URL de développement, fenêtre et configuration Tauri.
 - `src-tauri/capabilities/` : permissions frontend séparées pour les fenêtres `main` et `overlay`.
 - `.github/workflows/release.yml` : génération des installateurs et du manifeste Tauri signés pour les tags `v*`.
-- `.github/workflows/ci.yml` : vérification frontend, compilation Rust sur Linux, Windows et macOS, et contrôle du MSRV Rust 1.90 lors des PR et des pushes sur `main`.
+- `.github/workflows/ci.yml` : vérification frontend, compilation Rust sur Linux, Windows et macOS, et contrôle du MSRV Rust 1.95 lors des PR et des pushes sur `main`.
 - `.github/dependabot.yml` : propositions hebdomadaires de mise à jour des dépendances npm/pnpm, Cargo et des actions GitHub.
 - `scripts/validate-release-source.mjs` et `scripts/verify-updater-release.mjs` : garde-fous de version, de manifeste et de signature avant publication.
 

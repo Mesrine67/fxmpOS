@@ -6,7 +6,7 @@ FXMP OS est en développement. Avant de proposer un changement important, ouvre 
 
 - Node.js 24
 - pnpm 12.3.4, déclaré dans package.json
-- Rust 1.90 ou plus récent
+- Rust 1.95 ou plus récent
 - Les prérequis natifs de Tauri 2 pour votre système, dont WebView2 sur Windows
 
 Installation et lancement :

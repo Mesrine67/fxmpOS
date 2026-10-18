@@ -2,6 +2,7 @@ import { createHash } from "node:crypto"
 import { spawnSync } from "node:child_process"
 import {
   mkdtempSync,
+  realpathSync,
   readFileSync,
   readdirSync,
   rmSync,
@@ -19,7 +20,55 @@ if (!assetDirectory || !expectedVersion) {
   )
 }
 
-const manifestPath = path.join(assetDirectory, "latest.json")
+const runnerTempInput = process.env.RUNNER_TEMP
+if (!runnerTempInput) {
+  throw new Error("RUNNER_TEMP must be set to verify downloaded release assets")
+}
+
+const runnerTemp = realpathSync(runnerTempInput)
+const requestedAssetDirectory = path.resolve(assetDirectory)
+const runnerTempPrefix = `${runnerTemp}${path.sep}`
+if (!requestedAssetDirectory.startsWith(runnerTempPrefix)) {
+  throw new Error("The release asset directory must be inside RUNNER_TEMP")
+}
+
+const resolvedAssetDirectory = realpathSync(requestedAssetDirectory)
+if (!resolvedAssetDirectory.startsWith(runnerTempPrefix)) {
+  throw new Error("The release asset directory resolves outside RUNNER_TEMP")
+}
+
+const assetRoot = resolvedAssetDirectory
+
+function resolveContainedPath(root, fileName) {
+  if (
+    typeof fileName !== "string" ||
+    !/^[A-Za-z0-9 _().-]{1,255}$/.test(fileName) ||
+    fileName === "." ||
+    fileName === ".."
+  ) {
+    throw new Error("A release asset has an invalid filename")
+  }
+
+  const resolvedPath = path.resolve(root, fileName)
+  const rootPrefix = `${root}${path.sep}`
+  if (!resolvedPath.startsWith(rootPrefix)) {
+    throw new Error("A release asset path escapes its download directory")
+  }
+
+  return resolvedPath
+}
+
+function resolveExistingAsset(fileName) {
+  const resolvedPath = resolveContainedPath(assetRoot, fileName)
+  const realPath = realpathSync(resolvedPath)
+  const rootPrefix = `${assetRoot}${path.sep}`
+  if (!realPath.startsWith(rootPrefix)) {
+    throw new Error("A release asset resolves outside its download directory")
+  }
+  return realPath
+}
+
+const manifestPath = resolveExistingAsset("latest.json")
 const manifest = JSON.parse(readFileSync(manifestPath, "utf8"))
 
 if (manifest.version !== expectedVersion) {
@@ -111,14 +160,8 @@ try {
       )
     }
 
-    const assetRoot = path.resolve(assetDirectory)
-    const assetPath = path.resolve(assetRoot, assetName)
-    if (path.dirname(assetPath) !== assetRoot) {
-      throw new Error(
-        `Updater entry ${platform} escapes the downloaded release directory`
-      )
-    }
-    const signaturePath = `${assetPath}.sig`
+    const assetPath = resolveExistingAsset(assetName)
+    const signaturePath = resolveExistingAsset(`${assetName}.sig`)
     const signature = update.signature.trim()
 
     if (!signature) {
@@ -167,7 +210,7 @@ try {
 }
 
 const excludedAssets = new Set(["latest.json", "SHA256SUMS.txt"])
-const releaseAssets = readdirSync(assetDirectory, { withFileTypes: true })
+const releaseAssets = readdirSync(assetRoot, { withFileTypes: true })
   .filter((entry) => entry.isFile())
   .map((entry) => entry.name)
   .filter((name) => !excludedAssets.has(name) && !name.endsWith(".sig"))
@@ -179,13 +222,13 @@ if (releaseAssets.length === 0) {
 
 const checksums = releaseAssets.map((assetName) => {
   const digest = createHash("sha256")
-    .update(readFileSync(path.join(assetDirectory, assetName)))
+    .update(readFileSync(resolveExistingAsset(assetName)))
     .digest("hex")
   return `${digest}  ${assetName}`
 })
 
 writeFileSync(
-  path.join(assetDirectory, "SHA256SUMS.txt"),
+  resolveContainedPath(assetRoot, "SHA256SUMS.txt"),
   `${checksums.join("\n")}\n`
 )
 console.log(`Wrote SHA256SUMS.txt for ${releaseAssets.length} release assets`)
