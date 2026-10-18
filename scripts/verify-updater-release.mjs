@@ -55,7 +55,11 @@ if (platforms.length === 0) {
   throw new Error("latest.json contains no updater platforms")
 }
 
-const requiredPlatformTargets = ["windows-x86_64"]
+const requiredPlatformTargets = [
+  "windows-x86_64",
+  "windows-x86_64-nsis",
+  "windows-x86_64-msi",
+]
 const platformNames = platforms.map(([platform]) => platform)
 const allowedPlatformTarget = /^windows-x86_64(?:-(?:nsis|msi))?$/
 for (const platform of platformNames) {
@@ -67,11 +71,7 @@ for (const platform of platformNames) {
 }
 
 for (const target of requiredPlatformTargets) {
-  if (
-    !platformNames.some(
-      (platform) => platform === target || platform.startsWith(`${target}-`)
-    )
-  ) {
+  if (!platformNames.includes(target)) {
     throw new Error(`latest.json is missing an updater entry for ${target}`)
   }
 }
@@ -126,24 +126,39 @@ for (const asset of release.assets) {
 }
 
 const escapedVersion = expectedVersion.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-const windowsInstallerAsset = new RegExp(
-  `^FXMP OS-${escapedVersion}-windows-x64(?:-setup|-standalone-experimental)?\\.(?:exe|msi)$`,
-  "i"
-)
+const windowsInstallerAssets = [
+  new RegExp(
+    `^FXMP(?: OS|\\.OS)-${escapedVersion}-windows-x64-setup\\.exe$`,
+    "i"
+  ),
+  new RegExp(
+    `^FXMP(?: OS|\\.OS)-${escapedVersion}-windows-x64\\.msi$`,
+    "i"
+  ),
+  new RegExp(
+    `^FXMP-OS-${escapedVersion}-windows-x64-standalone-experimental\\.exe$`,
+    "i"
+  ),
+]
 let hasNsisInstaller = false
 let hasMsiInstaller = false
 for (const assetName of releaseAssets.keys()) {
   if (assetName === "latest.json" || assetName === "SHA256SUMS.txt") continue
+  const isSignature = assetName.endsWith(".sig")
   const bundleName = assetName.endsWith(".sig")
     ? assetName.slice(0, -".sig".length)
     : assetName
-  if (!windowsInstallerAsset.test(bundleName)) {
+  if (!windowsInstallerAssets.some((pattern) => pattern.test(bundleName))) {
     throw new Error(
       `The release contains unsupported non-Windows or unexpected asset ${assetName}`
     )
   }
-  if (bundleName.endsWith("-windows-x64-setup.exe")) hasNsisInstaller = true
-  if (bundleName.endsWith("-windows-x64.msi")) hasMsiInstaller = true
+  if (!isSignature && /-windows-x64-setup\.exe$/i.test(bundleName)) {
+    hasNsisInstaller = true
+  }
+  if (!isSignature && /-windows-x64\.msi$/i.test(bundleName)) {
+    hasMsiInstaller = true
+  }
 }
 if (!hasNsisInstaller || !hasMsiInstaller) {
   throw new Error(
