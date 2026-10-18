@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs"
-import { execFileSync, spawnSync } from "node:child_process"
+import { spawnSync } from "node:child_process"
 import process from "node:process"
 
 const packageVersion = JSON.parse(readFileSync("package.json", "utf8")).version
@@ -8,6 +8,35 @@ const tauriVersion = JSON.parse(
 ).version
 const cargoToml = readFileSync("src-tauri/Cargo.toml", "utf8")
 const cargoVersion = cargoToml.match(/^\s*version\s*=\s*"([^"]+)"/m)?.[1]
+
+function resolveCommit(ref, description) {
+  const result = spawnSync(
+    "git",
+    ["rev-parse", "--verify", `${ref}^{commit}`],
+    { encoding: "utf8" }
+  )
+  if (result.error) throw result.error
+  if (result.status !== 0) {
+    throw new Error(`${description} does not resolve to a Git commit.`)
+  }
+  return result.stdout.trim()
+}
+
+function assertCommitOnDefaultBranch(commit, defaultBranch) {
+  const defaultBranchRef = `refs/remotes/origin/${defaultBranch}`
+  resolveCommit(defaultBranchRef, `Default branch ${defaultBranch}`)
+  const ancestry = spawnSync(
+    "git",
+    ["merge-base", "--is-ancestor", commit, defaultBranchRef],
+    { encoding: "utf8" }
+  )
+  if (ancestry.error) throw ancestry.error
+  if (ancestry.status !== 0) {
+    throw new Error(
+      `Release tag commit ${commit} must be reachable from the current ${defaultBranch} history.`
+    )
+  }
+}
 
 if (
   !/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/.test(tauriVersion)
@@ -38,28 +67,8 @@ if (eventName === "push") {
   if (!defaultBranch) {
     throw new Error("DEFAULT_BRANCH must be set to validate a release tag.")
   }
-  const taggedCommit = execFileSync("git", ["rev-parse", "HEAD"], {
-    encoding: "utf8",
-  }).trim()
-  const defaultBranchRef = `refs/remotes/origin/${defaultBranch}`
-  execFileSync(
-    "git",
-    ["rev-parse", "--verify", `${defaultBranchRef}^{commit}`],
-    {
-      encoding: "utf8",
-    }
-  )
-  const ancestry = spawnSync(
-    "git",
-    ["merge-base", "--is-ancestor", taggedCommit, defaultBranchRef],
-    { encoding: "utf8" }
-  )
-  if (ancestry.error) throw ancestry.error
-  if (ancestry.status !== 0) {
-    throw new Error(
-      `Release tag commit ${taggedCommit} must be reachable from the current ${defaultBranch} history.`
-    )
-  }
+  const taggedCommit = resolveCommit("HEAD", "Checked-out release source")
+  assertCommitOnDefaultBranch(taggedCommit, defaultBranch)
 } else if (eventName === "workflow_dispatch") {
   const defaultBranch = process.env.DEFAULT_BRANCH
   if (!defaultBranch || ref !== `refs/heads/${defaultBranch}`) {
@@ -67,6 +76,12 @@ if (eventName === "push") {
       `Manual release verification must run from the repository default branch (${defaultBranch ?? "<missing>"}).`
     )
   }
+  const draftTag = `v${tauriVersion}`
+  const draftTagCommit = resolveCommit(
+    `refs/tags/${draftTag}`,
+    `Draft release tag ${draftTag}`
+  )
+  assertCommitOnDefaultBranch(draftTagCommit, defaultBranch)
 } else if (eventName) {
   throw new Error(`Unsupported release event: ${eventName}`)
 }
