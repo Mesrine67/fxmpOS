@@ -8,6 +8,16 @@ on:
         type: boolean
         required: false
         default: false
+      platform:
+        description: Rebuild all platforms or only the selected platform family.
+        type: choice
+        required: true
+        default: all
+        options:
+          - all
+          - macOS
+          - Windows
+          - Linux
   push:
     tags:
       - "v*"
@@ -42,7 +52,11 @@ jobs:
 
   publish-tauri:
     needs: validate-release-source
-    if: ${{ !inputs.verifyOnly }}
+    if: >-
+      ${{
+        !inputs.verifyOnly &&
+        (github.event_name == 'push' || inputs.platform == 'all' || startsWith(matrix.name, inputs.platform))
+      }}
     permissions:
       contents: write
     strategy:
@@ -60,14 +74,14 @@ jobs:
             standaloneUpload: true
           - name: macOS Apple Silicon
             platform: macos-latest
-            args: --target aarch64-apple-darwin --bundles dmg,updater
+            args: --target aarch64-apple-darwin --bundles dmg,app
             rustTargets: aarch64-apple-darwin
             assetPattern: "[name]-[version]-[platform]-[arch][setup][ext]"
             uploadPlainBinary: false
             standaloneUpload: false
           - name: macOS Intel
             platform: macos-latest
-            args: --target x86_64-apple-darwin --bundles dmg,updater
+            args: --target x86_64-apple-darwin --bundles dmg,app
             rustTargets: x86_64-apple-darwin
             assetPattern: "[name]-[version]-[platform]-[arch][setup][ext]"
             uploadPlainBinary: false
