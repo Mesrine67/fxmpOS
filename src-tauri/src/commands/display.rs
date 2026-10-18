@@ -1,5 +1,8 @@
+#[cfg(target_os = "linux")]
+use std::{sync::mpsc, time::Duration};
+
 use serde::Serialize;
-use tauri::{WebviewWindow, window::Monitor};
+use tauri::{AppHandle, WebviewWindow, window::Monitor};
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -27,17 +30,30 @@ pub(crate) fn monitor_identifier(monitor: &Monitor) -> String {
     )
 }
 
-pub(crate) fn overlay_positioning_supported() -> bool {
+pub(crate) fn overlay_positioning_supported(app: &AppHandle) -> Result<bool, String> {
     #[cfg(target_os = "linux")]
     {
-        use gdk::prelude::*;
+        let (sender, receiver) = mpsc::sync_channel(1);
+        app.run_on_main_thread(move || {
+            use gdk::prelude::*;
 
-        let selected_backend = gdk::Display::default().map(|display| display.backend());
-        return supports_global_window_positioning(selected_backend);
+            let supported = gdk::Display::default()
+                .map(|display| display.backend())
+                .is_some_and(|backend| supports_global_window_positioning(Some(backend)));
+            let _ = sender.send(supported);
+        })
+        .map_err(|error| format!("Impossible de détecter le backend graphique : {error}"))?;
+
+        return receiver
+            .recv_timeout(Duration::from_secs(5))
+            .map_err(|error| format!("La détection du backend graphique a expiré : {error}"));
     }
 
     #[cfg(not(target_os = "linux"))]
-    true
+    {
+        let _ = app;
+        Ok(true)
+    }
 }
 
 #[cfg(any(test, target_os = "linux"))]

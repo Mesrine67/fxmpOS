@@ -50,16 +50,6 @@ fn apply_overlay_settings(
     window: &WebviewWindow,
     settings: &OverlaySettings,
 ) -> Result<(), String> {
-    if !overlay_positioning_supported() {
-        return Err(
-            "Le placement personnalisé de l’overlay n’est pas disponible sous Wayland. Utilisez une session X11 pour choisir l’écran et le coin.".into(),
-        );
-    }
-
-    if !(35..=100).contains(&settings.opacity_percent) {
-        return Err("L’opacité de l’overlay doit être comprise entre 35 et 100 %.".into());
-    }
-
     #[cfg(desktop)]
     {
         window
@@ -119,6 +109,20 @@ fn apply_overlay_settings(
         .map_err(|error| format!("Impossible de placer l’overlay : {error}"))
 }
 
+fn validate_overlay_settings(app: &AppHandle, settings: &OverlaySettings) -> Result<(), String> {
+    if !overlay_positioning_supported(app)? {
+        return Err(
+            "Le placement personnalisé de l’overlay n’est pas disponible sous Wayland. Utilisez une session X11 pour choisir l’écran et le coin.".into(),
+        );
+    }
+
+    if !(35..=100).contains(&settings.opacity_percent) {
+        return Err("L’opacité de l’overlay doit être comprise entre 35 et 100 %.".into());
+    }
+
+    Ok(())
+}
+
 /// Shows or hides the configured overlay. The command is async because creating
 /// a WebView2 window from a synchronous Windows command can deadlock.
 #[tauri::command]
@@ -135,6 +139,10 @@ pub async fn set_overlay_state(
         }
         return Ok(());
     }
+
+    // Validate before touching an existing window or creating the WebView.
+    // In particular, Wayland does not support the global positioning used here.
+    validate_overlay_settings(&app, &settings)?;
 
     if let Some(window) = app.get_webview_window(OVERLAY_LABEL) {
         apply_overlay_settings(&window, &settings)?;

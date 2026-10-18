@@ -91,28 +91,37 @@ export function OverlaySettings() {
     async (next: OverlayPreferences, applyWindowState = true) => {
       setError(null)
 
-      try {
-        writeOverlayPreferences(next)
-      } catch (cause) {
-        setError(`Impossible d’enregistrer les préférences : ${errorMessage(cause)}`)
-        return
-      }
+      if (desktopRuntime === true) setSaving(true)
 
-      if (desktopRuntime !== true) return
-
-      setSaving(true)
       try {
-        if (applyWindowState) {
+        if (desktopRuntime === true && applyWindowState) {
           await trackedInvoke("set_overlay_state", {
             visible: next.enabled,
             settings: next,
           })
         }
-        await trackedEmit("overlay-settings-changed", next)
       } catch (cause) {
         setError(errorMessage(cause))
-      } finally {
-        setSaving(false)
+        if (desktopRuntime === true) setSaving(false)
+        return
+      }
+
+      try {
+        writeOverlayPreferences(next)
+      } catch (cause) {
+        setError(`Impossible d’enregistrer les préférences : ${errorMessage(cause)}`)
+        if (desktopRuntime === true) setSaving(false)
+        return
+      }
+
+      if (desktopRuntime === true) {
+        try {
+          await trackedEmit("overlay-settings-changed", next)
+        } catch (cause) {
+          setError(errorMessage(cause))
+        } finally {
+          setSaving(false)
+        }
       }
     },
     [desktopRuntime]
