@@ -10,6 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { Switch } from "@/components/ui/switch"
 
 function messageFrom(error: unknown) {
   return error instanceof Error ? error.message : String(error)
@@ -74,25 +75,13 @@ export function AutostartSettings() {
             Optionnel. FXMP OS démarrera réduit dans la zone de notification.
           </CardDescription>
         </div>
-        <button
-          aria-checked={enabled}
+        <Switch
           aria-label="Lancer FXMP OS au démarrage de Windows"
-          className={
-            "relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 " +
-            (enabled ? "border-primary bg-primary" : "border-input bg-muted")
-          }
+          checked={enabled}
+          className="mt-1"
           disabled={!settingsReady || pending || desktopRuntime !== true}
-          onClick={() => void updateAutostart(!enabled)}
-          role="switch"
-          type="button"
-        >
-          <span
-            className={
-              "pointer-events-none block size-4 rounded-full bg-background shadow-sm transition-transform " +
-              (enabled ? "translate-x-5" : "translate-x-1")
-            }
-          />
-        </button>
+          onCheckedChange={(value) => void updateAutostart(value)}
+        />
       </CardHeader>
       <CardContent>
         {desktopRuntime === false ? (

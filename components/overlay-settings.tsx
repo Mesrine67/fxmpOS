@@ -14,6 +14,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { useTauriRuntime } from "@/hooks/use-tauri-runtime"
+import { Switch } from "@/components/ui/switch"
 import {
   normalizeOverlayPreferences,
   useOverlayPreferences,
@@ -54,9 +55,7 @@ export function OverlaySettings() {
 
   const loadMonitors = useCallback(async () => {
     try {
-      setMonitors(
-        await trackedInvoke<DisplayMonitor[]>("get_display_monitors")
-      )
+      setMonitors(await trackedInvoke<DisplayMonitor[]>("get_display_monitors"))
     } catch (cause) {
       setError(errorMessage(cause))
     }
@@ -145,7 +144,9 @@ export function OverlaySettings() {
   )
 
   const selectedMonitorId =
-    preferences.monitorId ?? monitors.find((monitor) => monitor.primary)?.id ?? ""
+    preferences.monitorId ??
+    monitors.find((monitor) => monitor.primary)?.id ??
+    ""
 
   return (
     <Card>
@@ -176,18 +177,17 @@ export function OverlaySettings() {
               choix sur cet appareil.
             </span>
           </span>
-          <input
+          <Switch
             aria-label="Afficher l’overlay au lancement de FXMP OS"
             checked={preferences.enabled}
-            className="mt-0.5 size-4 accent-primary"
+            className="mt-1"
             disabled={saving}
-            onChange={(event) =>
+            onCheckedChange={(enabled) =>
               void applyPreferences({
                 ...preferences,
-                enabled: event.currentTarget.checked,
+                enabled,
               })
             }
-            type="checkbox"
           />
         </label>
 
@@ -201,18 +201,17 @@ export function OverlaySettings() {
                 Garde le widget devant les autres fenêtres.
               </span>
             </span>
-            <input
+            <Switch
               aria-label="Toujours au premier plan"
               checked={preferences.alwaysOnTop}
-              className="mt-0.5 size-4 accent-primary"
+              className="mt-1"
               disabled={saving || desktopRuntime !== true}
-              onChange={(event) =>
+              onCheckedChange={(alwaysOnTop) =>
                 void applyPreferences({
                   ...preferences,
-                  alwaysOnTop: event.currentTarget.checked,
+                  alwaysOnTop,
                 })
               }
-              type="checkbox"
             />
           </label>
 
@@ -225,18 +224,17 @@ export function OverlaySettings() {
                 Le widget ne captera plus les clics ni le déplacement.
               </span>
             </span>
-            <input
+            <Switch
               aria-label="Laisser passer les clics"
               checked={preferences.clickThrough}
-              className="mt-0.5 size-4 accent-primary"
+              className="mt-1"
               disabled={saving || desktopRuntime !== true}
-              onChange={(event) =>
+              onCheckedChange={(clickThrough) =>
                 void applyPreferences({
                   ...preferences,
-                  clickThrough: event.currentTarget.checked,
+                  clickThrough,
                 })
               }
-              type="checkbox"
             />
           </label>
         </div>
@@ -255,7 +253,9 @@ export function OverlaySettings() {
               <select
                 aria-label="Écran de l’overlay"
                 className="h-9 w-full rounded-md border border-input bg-background py-1 pr-3 pl-9 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/40 disabled:opacity-50"
-                disabled={saving || desktopRuntime !== true || monitors.length === 0}
+                disabled={
+                  saving || desktopRuntime !== true || monitors.length === 0
+                }
                 onChange={(event) =>
                   void applyPreferences({
                     ...preferences,
@@ -270,8 +270,8 @@ export function OverlaySettings() {
                   monitors.map((monitor, index) => (
                     <option key={monitor.id + index} value={monitor.id}>
                       {monitor.name || `Écran ${index + 1}`}
-                      {monitor.primary ? " · principal" : ""} — {monitor.width} ×{" "}
-                      {monitor.height}
+                      {monitor.primary ? " · principal" : ""} — {monitor.width}{" "}
+                      × {monitor.height}
                     </option>
                   ))
                 )}
@@ -313,7 +313,7 @@ export function OverlaySettings() {
         <label className="block space-y-2 text-sm">
           <span className="flex items-center justify-between gap-4">
             <span className="font-medium">Opacité</span>
-            <span className="text-xs tabular-nums text-muted-foreground">
+            <span className="text-xs text-muted-foreground tabular-nums">
               {preferences.opacityPercent}%
             </span>
           </span>
@@ -344,13 +344,20 @@ export function OverlaySettings() {
           </p>
         )}
         {error && (
-          <p aria-live="polite" className="text-xs text-destructive" role="status">
+          <p
+            aria-live="polite"
+            className="text-xs text-destructive"
+            role="status"
+          >
             {error}
           </p>
         )}
         {saving && (
           <p className="flex items-center gap-2 text-xs text-muted-foreground">
-            <LoaderCircleIcon aria-hidden="true" className="size-3.5 animate-spin" />
+            <LoaderCircleIcon
+              aria-hidden="true"
+              className="size-3.5 animate-spin"
+            />
             Application des réglages…
           </p>
         )}
@@ -362,7 +369,9 @@ export function OverlaySettings() {
           </p>
           <div className="flex gap-2">
             <Button
-              disabled={saving || desktopRuntime !== true || !preferences.enabled}
+              disabled={
+                saving || desktopRuntime !== true || !preferences.enabled
+              }
               onClick={() => void loadMonitors()}
               type="button"
               variant="outline"
