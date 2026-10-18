@@ -25,7 +25,8 @@ if (process.env.GITHUB_REPOSITORY !== repository) {
 }
 
 const githubToken = process.env.GH_TOKEN
-if (!githubToken) throw new Error("GH_TOKEN must be set to normalize release URLs")
+if (!githubToken)
+  throw new Error("GH_TOKEN must be set to normalize release URLs")
 
 const manifest = JSON.parse(readFileSync(manifestPath, "utf8"))
 if (manifest.version !== expectedVersion) {
@@ -71,7 +72,9 @@ for (const asset of release.assets) {
     releaseAssets.has(asset.name) ||
     releaseAssetsById.has(String(asset.id))
   ) {
-    throw new Error("The GitHub release contains invalid or duplicate asset metadata")
+    throw new Error(
+      "The GitHub release contains invalid or duplicate asset metadata"
+    )
   }
   releaseAssets.set(asset.name, asset)
   releaseAssetsById.set(String(asset.id), asset)
