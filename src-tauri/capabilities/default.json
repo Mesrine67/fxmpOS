@@ -12,6 +12,7 @@
     "updater:allow-download-and-install",
     "process:allow-restart",
     "autostart:default",
+    "allow-greet",
     "allow-get-system-snapshot",
     "allow-get-display-monitors",
     "allow-set-overlay-state"

@@ -295,6 +295,36 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
 
+      - name: Normalize updater URLs for the desktop updater
+        shell: bash
+        env:
+          RELEASE_VERSION: ${{ steps.assets.outputs.version }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: node scripts/normalize-updater-release.mjs "$RELEASE_VERSION"
+
+      - name: Upload normalized updater manifest
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ steps.assets.outputs.tag }}
+        run: |
+          gh release upload "$RELEASE_TAG" "release-assets/latest.json" \
+            --repo "$GITHUB_REPOSITORY" \
+            --clobber
+
+      - name: Download normalized updater manifest
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ steps.assets.outputs.tag }}
+        run: |
+          gh release download "$RELEASE_TAG" \
+            --pattern latest.json \
+            --repo "$GITHUB_REPOSITORY" \
+            --dir release-assets \
+            --clobber
+
       - name: Verify updater manifest and signed bundles
         shell: bash
         env:

@@ -1241,6 +1241,7 @@ dependencies = [
 name = "fxmp-os"
 version = "0.0.1"
 dependencies = [
+ "gdk",
  "log",
  "serde",
  "serde_json",

@@ -30,8 +30,12 @@ pub fn install(app: &mut App) -> tauri::Result<()> {
 
 pub fn show_main_window<R: Runtime>(app: &AppHandle<R>) {
     if let Some(window) = app.get_webview_window("main") {
+        if let Err(error) = window.unminimize() {
+            log::error!("failed to restore main window: {error}");
+        }
         if let Err(error) = window.show() {
             log::error!("failed to show main window: {error}");
+            return;
         }
         if let Err(error) = window.set_focus() {
             log::error!("failed to focus main window: {error}");

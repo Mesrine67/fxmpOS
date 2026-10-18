@@ -1,5 +1,8 @@
+#[cfg(target_os = "linux")]
+use std::{sync::mpsc, time::Duration};
+
 use serde::Serialize;
-use tauri::{WebviewWindow, window::Monitor};
+use tauri::{AppHandle, WebviewWindow, window::Monitor};
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -25,6 +28,50 @@ pub(crate) fn monitor_identifier(monitor: &Monitor) -> String {
         "{}:{}:{}:{}",
         position.x, position.y, size.width, size.height
     )
+}
+
+pub(crate) fn overlay_positioning_supported(app: &AppHandle) -> Result<bool, String> {
+    #[cfg(target_os = "linux")]
+    {
+        let (sender, receiver) = mpsc::sync_channel(1);
+        app.run_on_main_thread(move || {
+            use gdk::prelude::*;
+
+            let supported = gdk::Display::default()
+                .map(|display| display.backend())
+                .is_some_and(|backend| supports_global_window_positioning(Some(backend)));
+            let _ = sender.send(supported);
+        })
+        .map_err(|error| format!("Impossible de détecter le backend graphique : {error}"))?;
+
+        return receiver
+            .recv_timeout(Duration::from_secs(5))
+            .map_err(|error| format!("La détection du backend graphique a expiré : {error}"));
+    }
+
+    #[cfg(not(target_os = "linux"))]
+    {
+        let _ = app;
+        Ok(true)
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn supports_global_window_positioning(selected_backend: Option<gdk::Backend>) -> bool {
+    selected_backend.is_some_and(|backend| backend.is_x11())
+}
+
+#[cfg(all(test, target_os = "linux"))]
+mod tests {
+    use super::supports_global_window_positioning;
+    use gdk::Backend;
+
+    #[test]
+    fn detects_wayland_from_the_selected_gdk_backend() {
+        assert!(!supports_global_window_positioning(Some(Backend::Wayland)));
+        assert!(supports_global_window_positioning(Some(Backend::X11)));
+        assert!(!supports_global_window_positioning(None));
+    }
 }
 
 /// Returns local monitor geometry only; no hardware serials or display EDIDs.
