@@ -13,7 +13,6 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react"
 
 import { Button } from "@/components/ui/button"
-import { AutostartSettings } from "@/components/autostart-settings"
 import { useTauriRuntime } from "@/hooks/use-tauri-runtime"
 import {
   Card,
@@ -132,118 +131,103 @@ export function UpdaterSettings() {
 
   return (
     <section className="w-full">
-      <div className="flex w-full flex-col gap-6">
-        <div className="space-y-1">
-          <p className="text-xs text-muted-foreground">Application</p>
-          <h1 className="text-xl font-semibold tracking-tight">Settings</h1>
-          <p className="text-sm text-muted-foreground">
-            Version de l’application et mises à jour signées.
-          </p>
-        </div>
+      <Card>
+        <CardHeader className="gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-1">
+            <CardTitle className="flex items-center gap-2">
+              <ArrowDownToLineIcon className="size-4 text-primary" />
+              Mises à jour
+            </CardTitle>
+            <CardDescription>
+              FXMP OS vérifie les versions publiées et valide leur signature
+              avant installation.
+            </CardDescription>
+          </div>
+          <span className="rounded-md border px-2 py-1 text-xs text-muted-foreground">
+            {currentVersion ? `Version ${currentVersion}` : "Version inconnue"}
+          </span>
+        </CardHeader>
 
-        <AutostartSettings />
-
-        <Card>
-          <CardHeader className="gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div className="space-y-1">
-              <CardTitle className="flex items-center gap-2">
-                <ArrowDownToLineIcon className="size-4 text-primary" />
-                Mises à jour
-              </CardTitle>
-              <CardDescription>
-                FXMP OS vérifie les versions publiées et valide leur signature
-                avant installation.
-              </CardDescription>
-            </div>
-            <span className="rounded-md border px-2 py-1 text-xs text-muted-foreground">
-              {currentVersion
-                ? `Version ${currentVersion}`
-                : "Version inconnue"}
-            </span>
-          </CardHeader>
-
-          <CardContent className="space-y-4">
-            <div className="rounded-lg border bg-muted/30 p-4">
-              <div className="flex items-start gap-3">
-                {status === "checking" || status === "installing" ? (
-                  <LoaderCircleIcon className="mt-0.5 size-4 animate-spin text-primary" />
-                ) : status === "error" ? (
-                  <TriangleAlertIcon className="mt-0.5 size-4 text-destructive" />
-                ) : (
-                  <CheckCircle2Icon className="mt-0.5 size-4 text-primary" />
-                )}
-                <div className="min-w-0 flex-1 space-y-1">
-                  <p className="font-medium">
-                    {displayedStatus === "browser" &&
-                      "Disponible dans l’application de bureau"}
-                    {displayedStatus === "idle" && "Prêt à vérifier"}
-                    {displayedStatus === "checking" &&
-                      "Recherche des mises à jour…"}
-                    {displayedStatus === "current" && "FXMP OS est à jour"}
-                    {displayedStatus === "available" &&
-                      `Version ${availableVersion} disponible`}
-                    {displayedStatus === "installing" &&
-                      "Téléchargement et installation…"}
-                    {displayedStatus === "error" && "La vérification a échoué"}
+        <CardContent className="space-y-4">
+          <div className="rounded-lg border bg-muted/30 p-4">
+            <div className="flex items-start gap-3">
+              {status === "checking" || status === "installing" ? (
+                <LoaderCircleIcon className="mt-0.5 size-4 animate-spin text-primary" />
+              ) : status === "error" ? (
+                <TriangleAlertIcon className="mt-0.5 size-4 text-destructive" />
+              ) : (
+                <CheckCircle2Icon className="mt-0.5 size-4 text-primary" />
+              )}
+              <div className="min-w-0 flex-1 space-y-1">
+                <p className="font-medium">
+                  {displayedStatus === "browser" &&
+                    "Disponible dans l’application de bureau"}
+                  {displayedStatus === "idle" && "Prêt à vérifier"}
+                  {displayedStatus === "checking" &&
+                    "Recherche des mises à jour…"}
+                  {displayedStatus === "current" && "FXMP OS est à jour"}
+                  {displayedStatus === "available" &&
+                    `Version ${availableVersion} disponible`}
+                  {displayedStatus === "installing" &&
+                    "Téléchargement et installation…"}
+                  {displayedStatus === "error" && "La vérification a échoué"}
+                </p>
+                {displayedStatus === "browser" && (
+                  <p className="text-sm text-muted-foreground">
+                    Le vérificateur fonctionne uniquement dans la fenêtre Tauri.
                   </p>
-                  {displayedStatus === "browser" && (
-                    <p className="text-sm text-muted-foreground">
-                      Le vérificateur fonctionne uniquement dans la fenêtre
-                      Tauri.
-                    </p>
-                  )}
-                  {displayedStatus === "installing" && progress && (
-                    <p className="text-sm text-muted-foreground">
-                      {formatBytes(progress.downloaded)}
-                      {progress.total
-                        ? ` sur ${formatBytes(progress.total)}`
-                        : " téléchargés"}
-                    </p>
-                  )}
-                  {displayedStatus === "available" && releaseNotes && (
-                    <p className="mt-2 text-sm whitespace-pre-wrap text-muted-foreground">
-                      {releaseNotes}
-                    </p>
-                  )}
-                  {displayedStatus === "error" && error && (
-                    <p className="text-sm break-words text-destructive">
-                      {error}
-                    </p>
-                  )}
-                </div>
+                )}
+                {displayedStatus === "installing" && progress && (
+                  <p className="text-sm text-muted-foreground">
+                    {formatBytes(progress.downloaded)}
+                    {progress.total
+                      ? ` sur ${formatBytes(progress.total)}`
+                      : " téléchargés"}
+                  </p>
+                )}
+                {displayedStatus === "available" && releaseNotes && (
+                  <p className="mt-2 text-sm whitespace-pre-wrap text-muted-foreground">
+                    {releaseNotes}
+                  </p>
+                )}
+                {displayedStatus === "error" && error && (
+                  <p className="text-sm break-words text-destructive">
+                    {error}
+                  </p>
+                )}
               </div>
             </div>
-          </CardContent>
+          </div>
+        </CardContent>
 
-          <CardFooter className="flex-wrap justify-between gap-2 border-t">
+        <CardFooter className="flex-wrap justify-between gap-2 border-t">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              if (requestInFlight.current) return
+              setStatus("checking")
+              setError(null)
+              setProgress(null)
+              void checkForUpdates()
+            }}
+            disabled={busy || displayedStatus === "browser"}
+          >
+            <RefreshCwIcon />
+            Vérifier maintenant
+          </Button>
+          {displayedStatus === "available" && (
             <Button
               type="button"
-              variant="outline"
-              onClick={() => {
-                if (requestInFlight.current) return
-                setStatus("checking")
-                setError(null)
-                setProgress(null)
-                void checkForUpdates()
-              }}
-              disabled={busy || displayedStatus === "browser"}
+              onClick={() => void installUpdate()}
+              disabled={busy}
             >
-              <RefreshCwIcon />
-              Vérifier maintenant
+              <ArrowDownToLineIcon />
+              Télécharger et installer
             </Button>
-            {displayedStatus === "available" && (
-              <Button
-                type="button"
-                onClick={() => void installUpdate()}
-                disabled={busy}
-              >
-                <ArrowDownToLineIcon />
-                Télécharger et installer
-              </Button>
-            )}
-          </CardFooter>
-        </Card>
-      </div>
+          )}
+        </CardFooter>
+      </Card>
     </section>
   )
 }

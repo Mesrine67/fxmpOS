@@ -3,7 +3,7 @@ import { AppShell } from "@/components/app-shell"
 
 export default function Page() {
   return (
-    <AppShell title="Account">
+    <AppShell title="Compte">
       <AccountPage />
     </AppShell>
   )

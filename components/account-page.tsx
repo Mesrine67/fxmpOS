@@ -1,7 +1,8 @@
 "use client"
 
-import { useCallback, useEffect, useState, type ReactNode } from "react"
+import { useCallback, useEffect, useState } from "react"
 import {
+  CheckCircle2Icon,
   CircleAlertIcon,
   Clock3Icon,
   CpuIcon,
@@ -10,7 +11,12 @@ import {
   MemoryStickIcon,
   MonitorIcon,
   RefreshCwIcon,
+  ServerIcon,
 } from "lucide-react"
+import type { LucideIcon } from "lucide-react"
+
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import {
   Card,
   CardAction,
@@ -19,7 +25,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useTauriRuntime } from "@/hooks/use-tauri-runtime"
 import { trackedInvoke } from "@/lib/tauri"
 
@@ -87,7 +94,7 @@ const numberFormat = new Intl.NumberFormat("fr-FR", {
 })
 
 function formatCapacity(bytes: number) {
-  return numberFormat.format(bytes / 1024 ** 3) + " Go"
+  return `${numberFormat.format(bytes / 1024 ** 3)} Go`
 }
 
 function formatPercent(value: number) {
@@ -100,10 +107,9 @@ function formatUptime(totalSeconds: number) {
   const minutes = Math.floor((totalSeconds % 3600) / 60)
   const parts = []
 
-  if (days > 0) parts.push(days + " j")
-  if (hours > 0 || days > 0) parts.push(hours + " h")
-  parts.push(minutes + " min")
-
+  if (days > 0) parts.push(`${days} j`)
+  if (hours > 0 || days > 0) parts.push(`${hours} h`)
+  parts.push(`${minutes} min`)
   return parts.join(" ")
 }
 
@@ -116,7 +122,7 @@ function architectureLabel(architecture: string) {
 
 function DetailRow({ label, value }: { label: string; value?: string | null }) {
   return (
-    <div className="flex items-start justify-between gap-6 py-3">
+    <div className="flex items-start justify-between gap-4 py-2.5">
       <dt className="shrink-0 text-muted-foreground">{label}</dt>
       <dd className="max-w-[65%] text-right font-medium break-words">
         {value || "—"}
@@ -125,36 +131,22 @@ function DetailRow({ label, value }: { label: string; value?: string | null }) {
   )
 }
 
-function UsageBar({
-  label,
-  used,
-  total,
-}: {
-  label: string
-  used: number
-  total: number
-}) {
-  const percentage = total > 0 ? formatPercent((used / total) * 100) : 0
+function ProgressTrack({ label, value }: { label: string; value: number }) {
+  const percentage = formatPercent(value)
 
   return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between gap-3 text-xs">
-        <span className="text-muted-foreground">{label}</span>
-        <span className="font-medium tabular-nums">{percentage}%</span>
-      </div>
+    <div
+      aria-label={label}
+      aria-valuemax={100}
+      aria-valuemin={0}
+      aria-valuenow={percentage}
+      className="h-2 overflow-hidden rounded-full bg-muted"
+      role="progressbar"
+    >
       <div
-        aria-label={label}
-        aria-valuemax={100}
-        aria-valuemin={0}
-        aria-valuenow={percentage}
-        className="h-1.5 overflow-hidden rounded-full bg-muted"
-        role="progressbar"
-      >
-        <div
-          className="h-full rounded-full bg-primary transition-[width]"
-          style={{ width: String(percentage) + "%" }}
-        />
-      </div>
+        className="h-full rounded-full bg-primary transition-[width]"
+        style={{ width: `${percentage}%` }}
+      />
     </div>
   )
 }
@@ -164,13 +156,13 @@ function MetricCard({
   label,
   value,
   detail,
-  children,
+  progress,
 }: {
-  icon: typeof CpuIcon
+  icon: LucideIcon
   label: string
   value: string
   detail: string
-  children?: ReactNode
+  progress?: number
 }) {
   return (
     <Card className="min-w-0">
@@ -180,14 +172,16 @@ function MetricCard({
           {value}
         </CardTitle>
         <CardAction>
-          <div className="rounded-md border border-border/60 bg-muted/50 p-2 text-muted-foreground">
-            <Icon aria-hidden="true" className="size-4" />
+          <div className="rounded-md border bg-muted/50 p-2 text-muted-foreground">
+            <Icon aria-hidden="true" />
           </div>
         </CardAction>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="flex flex-col gap-3">
         <p className="min-h-5 text-xs text-muted-foreground">{detail}</p>
-        {children}
+        {progress !== undefined && (
+          <ProgressTrack label={label} value={progress} />
+        )}
       </CardContent>
     </Card>
   )
@@ -197,18 +191,32 @@ function NativeUnavailable() {
   return (
     <Card>
       <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
-        <div className="rounded-xl border border-border/60 bg-muted/50 p-3 text-muted-foreground">
-          <MonitorIcon aria-hidden="true" className="size-6" />
-        </div>
-        <div className="space-y-1">
+        <MonitorIcon aria-hidden="true" className="text-muted-foreground" />
+        <div className="flex flex-col gap-1">
           <p className="font-medium">Informations natives indisponibles</p>
-          <p className="max-w-md text-xs text-muted-foreground">
-            Ouvre cette page dans l’application FXMP OS pour afficher les
-            caractéristiques réelles de Windows et de cet appareil.
+          <p className="max-w-md text-muted-foreground">
+            Ouvre cette page dans l’application FXMP OS pour lire les détails
+            réels de Windows et de cet appareil.
           </p>
         </div>
       </CardContent>
     </Card>
+  )
+}
+
+function LoadingState() {
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      {Array.from({ length: 4 }, (_, index) => (
+        <Card key={index}>
+          <CardContent className="flex flex-col gap-4 pt-4">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-7 w-3/4" />
+            <Skeleton className="h-3 w-full" />
+          </CardContent>
+        </Card>
+      ))}
+    </div>
   )
 }
 
@@ -227,6 +235,7 @@ export function AccountPage() {
       const result = await trackedInvoke<SystemSnapshot>("get_system_snapshot")
       setSnapshot(result)
       setLastUpdated(new Date())
+      setError(null)
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : String(reason))
     } finally {
@@ -250,22 +259,21 @@ export function AccountPage() {
 
   const refreshSnapshot = useCallback(() => {
     setIsLoading(true)
-    setError(null)
     setAreMonitorsLoading(true)
+    setError(null)
     setMonitorError(null)
-    void loadSnapshot()
-    void loadMonitors()
+    void Promise.all([loadSnapshot(), loadMonitors()])
   }, [loadMonitors, loadSnapshot])
 
   useEffect(() => {
     if (isDesktopRuntime !== true) return
 
-    const snapshotTimer = window.setTimeout(() => {
+    const timer = window.setTimeout(() => {
       void loadSnapshot()
       void loadMonitors()
     }, 0)
 
-    return () => window.clearTimeout(snapshotTimer)
+    return () => window.clearTimeout(timer)
   }, [isDesktopRuntime, loadMonitors, loadSnapshot])
 
   const memoryPercent = snapshot?.memoryTotalBytes
@@ -273,244 +281,328 @@ export function AccountPage() {
         (snapshot.memoryUsedBytes / snapshot.memoryTotalBytes) * 100
       )
     : 0
+  const storageTotal =
+    snapshot?.disks.reduce((total, disk) => total + disk.totalBytes, 0) ?? 0
+  const storageAvailable =
+    snapshot?.disks.reduce((total, disk) => total + disk.availableBytes, 0) ?? 0
+  const storageUsed = Math.max(0, storageTotal - storageAvailable)
+  const storagePercent = storageTotal
+    ? formatPercent((storageUsed / storageTotal) * 100)
+    : 0
+
   return (
-    <div className="flex flex-1 flex-col">
-      <div className="@container/main flex flex-1 flex-col gap-2">
-        <div className="flex flex-col gap-4 px-4 py-4 md:gap-6 md:px-6 md:py-6">
-          <div className="flex flex-wrap items-end justify-between gap-4">
-            <div className="space-y-1">
-              <p className="text-xs font-medium tracking-[0.14em] text-primary uppercase">
-                Appareil
+    <div className="min-h-0 flex-1 px-5 py-6 md:px-8">
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
+        <header className="flex flex-wrap items-end justify-between gap-4">
+          <div className="flex flex-col gap-2">
+            <Badge className="w-fit" variant="outline">
+              <ServerIcon aria-hidden="true" data-icon="inline-start" />
+              Appareil local
+            </Badge>
+            <div className="flex flex-col gap-1">
+              <h1 className="text-2xl font-semibold tracking-tight">
+                Compte et appareil
+              </h1>
+              <p className="max-w-2xl text-sm text-muted-foreground">
+                Vue détaillée de Windows, du matériel, du stockage et des écrans
+                connectés.
               </p>
-              <h2 className="text-xl font-semibold">Détails du PC</h2>
-              <p className="text-xs text-muted-foreground">
-                Informations locales sur Windows, le matériel et le stockage.
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              {lastUpdated && (
-                <span className="text-xs text-muted-foreground">
-                  Mis à jour à{" "}
-                  {lastUpdated.toLocaleTimeString("fr-FR", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </span>
-              )}
-              <button
-                className="inline-flex h-8 items-center gap-2 rounded-md border border-border bg-background px-3 text-xs font-medium shadow-xs transition-colors hover:bg-muted disabled:pointer-events-none disabled:opacity-50"
-                disabled={isLoading || isDesktopRuntime !== true}
-                onClick={() => void refreshSnapshot()}
-                type="button"
-              >
-                <RefreshCwIcon
-                  aria-hidden="true"
-                  className={"size-3.5 " + (isLoading ? "animate-spin" : "")}
-                />
-                Actualiser
-              </button>
             </div>
           </div>
-
-          {error && snapshot && (
-            <div
-              aria-live="polite"
-              className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-xs"
-              role="status"
+          <div className="flex flex-wrap items-center gap-3">
+            {lastUpdated && (
+              <span className="text-muted-foreground">
+                Lecture à {lastUpdated.toLocaleTimeString("fr-FR")}
+              </span>
+            )}
+            <Button
+              disabled={isLoading || isDesktopRuntime !== true}
+              onClick={() => refreshSnapshot()}
+              type="button"
+              variant="outline"
             >
-              <p className="text-destructive">
-                L’actualisation a échoué. Les détails affichés proviennent de la
-                lecture réussie du {lastUpdated?.toLocaleTimeString("fr-FR")}.
-              </p>
-              <button
-                className="inline-flex h-8 items-center gap-2 rounded-md border border-border bg-background px-3 text-xs font-medium transition-colors hover:bg-muted disabled:pointer-events-none disabled:opacity-50"
+              <RefreshCwIcon
+                className={isLoading ? "animate-spin" : undefined}
+                data-icon="inline-start"
+              />
+              Actualiser
+            </Button>
+          </div>
+        </header>
+
+        {error && snapshot && (
+          <Card role="status">
+            <CardContent className="flex flex-wrap items-center justify-between gap-3 pt-4">
+              <div className="flex items-center gap-2 text-destructive">
+                <CircleAlertIcon aria-hidden="true" />
+                <p>
+                  Actualisation impossible. Les données affichées datent de la
+                  dernière lecture réussie.
+                </p>
+              </div>
+              <Button
                 disabled={isLoading}
-                onClick={() => void refreshSnapshot()}
+                onClick={() => refreshSnapshot()}
                 type="button"
+                variant="outline"
               >
                 Réessayer
-              </button>
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {isDesktopRuntime === false ? (
+          <NativeUnavailable />
+        ) : isDesktopRuntime === null || (isLoading && !snapshot) ? (
+          <div className="flex flex-col gap-4" role="status">
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <LoaderCircleIcon className="animate-spin" />
+              Lecture des informations de cet appareil…
             </div>
-          )}
-
-          {isDesktopRuntime === false ? (
-            <NativeUnavailable />
-          ) : isLoading && !snapshot ? (
+            <LoadingState />
+          </div>
+        ) : error && !snapshot ? (
+          <Card role="alert">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CircleAlertIcon className="text-destructive" />
+                Impossible de lire les informations système
+              </CardTitle>
+              <CardDescription className="break-words">{error}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button
+                onClick={() => refreshSnapshot()}
+                type="button"
+                variant="outline"
+              >
+                Réessayer
+              </Button>
+            </CardContent>
+          </Card>
+        ) : snapshot ? (
+          <>
             <Card>
-              <CardContent className="flex items-center justify-center gap-3 py-12 text-xs text-muted-foreground">
-                <LoaderCircleIcon
-                  aria-hidden="true"
-                  className="size-4 animate-spin"
-                />
-                Lecture des informations de cet appareil…
-              </CardContent>
-            </Card>
-          ) : error && !snapshot ? (
-            <Card className="border-destructive/30">
-              <CardContent className="flex flex-col items-center gap-3 py-10 text-center">
-                <CircleAlertIcon
-                  aria-hidden="true"
-                  className="size-5 text-destructive"
-                />
-                <div className="space-y-1">
-                  <p className="font-medium">
-                    Impossible de lire les informations système
-                  </p>
-                  <p className="max-w-xl text-xs break-words text-muted-foreground">
-                    {error}
-                  </p>
+              <CardContent className="flex flex-wrap items-center justify-between gap-5 pt-4">
+                <div className="flex min-w-0 items-center gap-4">
+                  <div className="rounded-xl border bg-primary/10 p-3 text-primary">
+                    <MonitorIcon aria-hidden="true" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-muted-foreground">Nom de l’appareil</p>
+                    <h2 className="truncate text-xl font-semibold">
+                      {snapshot.hostname || "PC Windows"}
+                    </h2>
+                    <p className="truncate text-muted-foreground">
+                      {snapshot.osName || "Windows"} · {snapshot.osVersion} ·{" "}
+                      {architectureLabel(snapshot.architecture)}
+                    </p>
+                  </div>
                 </div>
-                <button
-                  className="inline-flex h-8 items-center gap-2 rounded-md border border-border bg-background px-3 text-xs font-medium transition-colors hover:bg-muted"
-                  onClick={() => void refreshSnapshot()}
-                  type="button"
-                >
-                  Réessayer
-                </button>
+                <Badge variant="secondary">
+                  <CheckCircle2Icon
+                    aria-hidden="true"
+                    data-icon="inline-start"
+                  />
+                  Lecture locale
+                </Badge>
               </CardContent>
             </Card>
-          ) : snapshot ? (
-            <>
-              <Card className="overflow-hidden">
-                <CardContent className="relative p-5 md:p-6">
-                  <div className="pointer-events-none absolute inset-y-0 right-0 w-1/2 bg-[radial-gradient(ellipse_at_right,rgba(180,30,30,0.16),transparent_70%)]" />
-                  <div className="relative flex flex-wrap items-center justify-between gap-5">
-                    <div className="flex min-w-0 items-center gap-4">
-                      <div className="rounded-xl border border-primary/20 bg-primary/10 p-3 text-primary">
-                        <MonitorIcon aria-hidden="true" className="size-6" />
-                      </div>
-                      <div className="min-w-0 space-y-1">
-                        <p className="text-xs text-muted-foreground">
-                          Nom de l’appareil
-                        </p>
-                        <h3 className="truncate text-lg font-semibold">
-                          {snapshot.hostname || "PC Windows"}
-                        </h3>
-                        <p className="truncate text-xs text-muted-foreground">
-                          {snapshot.osName || "Windows"} ·{" "}
-                          {snapshot.architecture}
-                        </p>
-                      </div>
-                    </div>
-                    <Badge
-                      className="border-emerald-500/20 bg-emerald-500/10 text-emerald-400"
-                      variant="outline"
-                    >
-                      <span className="size-1.5 rounded-full bg-emerald-400" />
-                      Lecture locale
-                    </Badge>
-                  </div>
-                </CardContent>
-              </Card>
 
-              <div className="grid grid-cols-1 gap-4 @xl/main:grid-cols-3">
-                <MetricCard
-                  detail={
-                    (snapshot.physicalCores == null
-                      ? snapshot.logicalProcessors + " processeurs logiques"
-                      : snapshot.physicalCores +
-                        " cœurs · " +
-                        snapshot.logicalProcessors +
-                        " threads") +
-                    (snapshot.cpuFrequencyMhz
-                      ? " · " +
-                        numberFormat.format(snapshot.cpuFrequencyMhz) +
-                        " MHz"
-                      : "")
-                  }
-                  icon={CpuIcon}
-                  label="Processeur"
-                  value={snapshot.cpuName || "Modèle indisponible"}
-                />
-                <MetricCard
-                  detail={
-                    formatCapacity(snapshot.memoryUsedBytes) +
-                    " utilisés sur " +
-                    formatCapacity(snapshot.memoryTotalBytes)
-                  }
-                  icon={MemoryStickIcon}
-                  label="Mémoire vive"
-                  value={memoryPercent + "% utilisée"}
-                >
-                  <UsageBar
-                    label="Utilisation de la mémoire vive"
-                    total={snapshot.memoryTotalBytes}
-                    used={snapshot.memoryUsedBytes}
-                  />
-                  <div className="space-y-2 border-t border-border/60 pt-3">
-                    <div className="flex items-center justify-between gap-3 text-xs">
-                      <span className="text-muted-foreground">
-                        Mémoire virtuelle
-                      </span>
-                      <span className="font-medium tabular-nums">
-                        {formatCapacity(snapshot.virtualMemoryUsedBytes)} /{" "}
-                        {formatCapacity(snapshot.virtualMemoryTotalBytes)}
-                      </span>
-                    </div>
-                    <UsageBar
-                      label="Utilisation de la mémoire virtuelle"
-                      total={snapshot.virtualMemoryTotalBytes}
-                      used={snapshot.virtualMemoryUsedBytes}
-                    />
-                  </div>
-                </MetricCard>
-                <MetricCard
-                  detail={
-                    snapshot.kernelVersion || "Depuis le dernier démarrage"
-                  }
-                  icon={Clock3Icon}
-                  label="Temps de fonctionnement"
-                  value={formatUptime(snapshot.uptimeSeconds)}
-                />
-              </div>
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              <MetricCard
+                detail={`${snapshot.physicalCores === null ? "" : `${snapshot.physicalCores} cœurs physiques · `}${snapshot.logicalProcessors} processeurs logiques${snapshot.cpuFrequencyMhz ? ` · ${numberFormat.format(snapshot.cpuFrequencyMhz / 1000)} GHz` : ""}`}
+                icon={CpuIcon}
+                label="Processeur"
+                value={snapshot.cpuName || "Modèle indisponible"}
+              />
+              <MetricCard
+                detail={`${formatCapacity(snapshot.memoryUsedBytes)} utilisés sur ${formatCapacity(snapshot.memoryTotalBytes)}`}
+                icon={MemoryStickIcon}
+                label="Mémoire vive"
+                progress={memoryPercent}
+                value={`${memoryPercent}% utilisée`}
+              />
+              <MetricCard
+                detail={`${formatCapacity(storageAvailable)} disponibles sur ${formatCapacity(storageTotal)}`}
+                icon={HardDriveIcon}
+                label="Stockage"
+                progress={storagePercent}
+                value={`${formatCapacity(storageTotal)} au total`}
+              />
+              <MetricCard
+                detail={
+                  areMonitorsLoading
+                    ? "Détection en cours…"
+                    : monitorError
+                      ? "Détection échouée"
+                      : "Détectés par Windows"
+                }
+                icon={MonitorIcon}
+                label="Écrans"
+                value={
+                  monitorError
+                    ? "Indisponibles"
+                    : `${monitors.length} ${monitors.length === 1 ? "écran" : "écrans"}`
+                }
+              />
+            </div>
 
-              <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+            <Tabs className="gap-4" defaultValue="overview">
+              <TabsList className="grid h-auto w-full grid-cols-3 sm:w-fit">
+                <TabsTrigger value="overview">Vue d’ensemble</TabsTrigger>
+                <TabsTrigger value="hardware">Matériel</TabsTrigger>
+                <TabsTrigger value="displays">Affichage</TabsTrigger>
+              </TabsList>
+
+              <TabsContent className="flex flex-col gap-4" value="overview">
+                <div className="grid gap-4 xl:grid-cols-2">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Windows et session</CardTitle>
+                      <CardDescription>
+                        Version du système et session locale.
+                      </CardDescription>
+                      <CardAction>
+                        <Badge variant="outline">Windows</Badge>
+                      </CardAction>
+                    </CardHeader>
+                    <CardContent>
+                      <dl className="divide-y divide-border/60">
+                        <DetailRow
+                          label="Nom du PC"
+                          value={snapshot.hostname}
+                        />
+                        <DetailRow label="Édition" value={snapshot.osName} />
+                        <DetailRow label="Version" value={snapshot.osVersion} />
+                        <DetailRow
+                          label="Build du système"
+                          value={snapshot.kernelVersion}
+                        />
+                        <DetailRow
+                          label="Architecture"
+                          value={architectureLabel(snapshot.architecture)}
+                        />
+                        <DetailRow
+                          label="Langue système"
+                          value={snapshot.locale}
+                        />
+                        <DetailRow
+                          label="Utilisateur Windows"
+                          value={snapshot.windowsUser}
+                        />
+                      </dl>
+                    </CardContent>
+                  </Card>
+
+                  <div className="grid gap-4">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <MemoryStickIcon aria-hidden="true" />
+                          Mémoire et fichier d’échange
+                        </CardTitle>
+                        <CardDescription>
+                          Capacité et utilisation au moment de la lecture.
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="flex flex-col gap-4">
+                        <div className="flex flex-col gap-2">
+                          <div className="flex items-center justify-between gap-3">
+                            <span>Mémoire vive</span>
+                            <span className="font-medium tabular-nums">
+                              {formatCapacity(snapshot.memoryUsedBytes)} /{" "}
+                              {formatCapacity(snapshot.memoryTotalBytes)}
+                            </span>
+                          </div>
+                          <ProgressTrack
+                            label="Utilisation de la mémoire vive"
+                            value={memoryPercent}
+                          />
+                          <p className="text-right text-muted-foreground">
+                            {formatCapacity(
+                              Math.max(
+                                0,
+                                snapshot.memoryTotalBytes -
+                                  snapshot.memoryUsedBytes
+                              )
+                            )}{" "}
+                            disponibles
+                          </p>
+                        </div>
+                        <div className="flex flex-col gap-2 border-t pt-4">
+                          <div className="flex items-center justify-between gap-3">
+                            <span>Mémoire virtuelle</span>
+                            <span className="font-medium tabular-nums">
+                              {formatCapacity(snapshot.virtualMemoryUsedBytes)}{" "}
+                              /{" "}
+                              {formatCapacity(snapshot.virtualMemoryTotalBytes)}
+                            </span>
+                          </div>
+                          <ProgressTrack
+                            label="Utilisation de la mémoire virtuelle"
+                            value={
+                              snapshot.virtualMemoryTotalBytes
+                                ? (snapshot.virtualMemoryUsedBytes /
+                                    snapshot.virtualMemoryTotalBytes) *
+                                  100
+                                : 0
+                            }
+                          />
+                          <p className="text-right text-muted-foreground">
+                            {formatCapacity(
+                              Math.max(
+                                0,
+                                snapshot.virtualMemoryTotalBytes -
+                                  snapshot.virtualMemoryUsedBytes
+                              )
+                            )}{" "}
+                            disponibles
+                          </p>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <Clock3Icon aria-hidden="true" />
+                          Session actuelle
+                        </CardTitle>
+                        <CardDescription>
+                          Durée depuis le dernier démarrage de Windows.
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-2xl font-semibold tabular-nums">
+                          {formatUptime(snapshot.uptimeSeconds)}
+                        </p>
+                        <p className="mt-1 text-muted-foreground">
+                          Build noyau : {snapshot.kernelVersion || "—"}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </div>
+
                 <Card>
                   <CardHeader>
-                    <CardTitle>Windows et session</CardTitle>
+                    <CardTitle className="flex items-center gap-2">
+                      <HardDriveIcon aria-hidden="true" />
+                      Volumes de stockage
+                    </CardTitle>
                     <CardDescription>
-                      Version du système et compte Windows local.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <dl className="divide-y divide-border/60">
-                      <DetailRow label="Nom du PC" value={snapshot.hostname} />
-                      <DetailRow label="Édition" value={snapshot.osName} />
-                      <DetailRow label="Version" value={snapshot.osVersion} />
-                      <DetailRow
-                        label="Build du système"
-                        value={snapshot.kernelVersion}
-                      />
-                      <DetailRow
-                        label="Architecture"
-                        value={architectureLabel(snapshot.architecture)}
-                      />
-                      <DetailRow
-                        label="Langue système"
-                        value={snapshot.locale}
-                      />
-                      <DetailRow
-                        label="Utilisateur Windows"
-                        value={snapshot.windowsUser}
-                      />
-                    </dl>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Stockage</CardTitle>
-                    <CardDescription>
-                      Espace utilisé et disponible par volume détecté.
+                      Espace utilisé et disponible pour chaque volume détecté.
                     </CardDescription>
                     <CardAction>
-                      <HardDriveIcon
-                        aria-hidden="true"
-                        className="size-4 text-muted-foreground"
-                      />
+                      <Badge variant="outline">
+                        {snapshot.disks.length}{" "}
+                        {snapshot.disks.length === 1 ? "volume" : "volumes"}
+                      </Badge>
                     </CardAction>
                   </CardHeader>
-                  <CardContent className="space-y-5">
+                  <CardContent className="flex flex-col gap-5">
                     {snapshot.disks.length ? (
                       snapshot.disks.map((disk) => {
                         const usedBytes = Math.max(
@@ -522,248 +614,295 @@ export function AccountPage() {
                           : 0
 
                         return (
-                          <div className="space-y-2" key={disk.mountPoint}>
+                          <div
+                            className="flex flex-col gap-2"
+                            key={disk.mountPoint}
+                          >
                             <div className="flex items-start justify-between gap-4">
                               <div className="min-w-0">
-                                <p className="truncate text-sm font-medium">
+                                <p className="truncate font-medium">
                                   {disk.mountPoint || disk.name}
                                 </p>
-                                <p className="text-xs text-muted-foreground">
-                                  {disk.fileSystem || "Volume"}
+                                <p className="text-muted-foreground">
+                                  {disk.fileSystem ||
+                                    "Système de fichiers inconnu"}
                                 </p>
                               </div>
-                              <p className="shrink-0 text-right text-xs tabular-nums">
+                              <p className="shrink-0 text-right tabular-nums">
                                 {formatCapacity(usedBytes)} /{" "}
                                 {formatCapacity(disk.totalBytes)}
                               </p>
                             </div>
-                            <div
-                              aria-label={
-                                "Utilisation du volume " + disk.mountPoint
-                              }
-                              aria-valuemax={100}
-                              aria-valuemin={0}
-                              aria-valuenow={percentage}
-                              className="h-1.5 overflow-hidden rounded-full bg-muted"
-                              role="progressbar"
-                            >
-                              <div
-                                className="h-full rounded-full bg-primary"
-                                style={{ width: String(percentage) + "%" }}
-                              />
-                            </div>
-                            <p className="text-right text-xs text-muted-foreground">
+                            <ProgressTrack
+                              label={`Utilisation du volume ${disk.mountPoint}`}
+                              value={percentage}
+                            />
+                            <p className="text-right text-muted-foreground">
                               {formatCapacity(disk.availableBytes)} disponibles
                             </p>
                           </div>
                         )
                       })
                     ) : (
-                      <p className="py-6 text-center text-xs text-muted-foreground">
+                      <p className="py-5 text-center text-muted-foreground">
                         Aucun volume de stockage détecté.
                       </p>
                     )}
                   </CardContent>
                 </Card>
-              </div>
+              </TabsContent>
 
-              <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Identité matérielle</CardTitle>
-                    <CardDescription>
-                      Fabricant et références fournis par le matériel local.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <dl className="divide-y divide-border/60">
-                      <DetailRow
-                        label="Fabricant du PC"
-                        value={snapshot.computerManufacturer}
-                      />
-                      <DetailRow
-                        label="Modèle"
-                        value={snapshot.computerModel}
-                      />
-                      <DetailRow
-                        label="Famille"
-                        value={snapshot.computerFamily}
-                      />
-                      <DetailRow
-                        label="Révision du modèle"
-                        value={snapshot.computerVersion}
-                      />
-                      <DetailRow
-                        label="Fabricant de la carte mère"
-                        value={snapshot.motherboardManufacturer}
-                      />
-                      <DetailRow
-                        label="Carte mère"
-                        value={snapshot.motherboardModel}
-                      />
-                      <DetailRow
-                        label="Version de la carte mère"
-                        value={snapshot.motherboardVersion}
-                      />
-                    </dl>
-                  </CardContent>
-                </Card>
+              <TabsContent className="flex flex-col gap-4" value="hardware">
+                <div className="grid gap-4 xl:grid-cols-2">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Processeur</CardTitle>
+                      <CardDescription>
+                        Références et capacités signalées par Windows.
+                      </CardDescription>
+                      <CardAction>
+                        <CpuIcon aria-hidden="true" />
+                      </CardAction>
+                    </CardHeader>
+                    <CardContent>
+                      <dl className="divide-y divide-border/60">
+                        <DetailRow label="Modèle" value={snapshot.cpuName} />
+                        <DetailRow
+                          label="Cœurs physiques"
+                          value={snapshot.physicalCores?.toString()}
+                        />
+                        <DetailRow
+                          label="Processeurs logiques"
+                          value={snapshot.logicalProcessors.toString()}
+                        />
+                        <DetailRow
+                          label="Fréquence signalée"
+                          value={
+                            snapshot.cpuFrequencyMhz
+                              ? `${numberFormat.format(snapshot.cpuFrequencyMhz)} MHz`
+                              : null
+                          }
+                        />
+                      </dl>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Ordinateur et carte mère</CardTitle>
+                      <CardDescription>
+                        Informations matérielles génériques. Aucun numéro de
+                        série n’est lu.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <dl className="divide-y divide-border/60">
+                        <DetailRow
+                          label="Fabricant du PC"
+                          value={snapshot.computerManufacturer}
+                        />
+                        <DetailRow
+                          label="Modèle"
+                          value={snapshot.computerModel}
+                        />
+                        <DetailRow
+                          label="Famille"
+                          value={snapshot.computerFamily}
+                        />
+                        <DetailRow
+                          label="Révision du modèle"
+                          value={snapshot.computerVersion}
+                        />
+                        <DetailRow
+                          label="Fabricant de la carte mère"
+                          value={snapshot.motherboardManufacturer}
+                        />
+                        <DetailRow
+                          label="Carte mère"
+                          value={snapshot.motherboardModel}
+                        />
+                        <DetailRow
+                          label="Version de la carte mère"
+                          value={snapshot.motherboardVersion}
+                        />
+                      </dl>
+                    </CardContent>
+                  </Card>
+                </div>
 
                 <Card>
                   <CardHeader>
                     <CardTitle>Adaptateurs graphiques</CardTitle>
                     <CardDescription>
-                      Contrôleurs détectés et version de leurs pilotes.
+                      Contrôleurs détectés et version des pilotes. Les charges
+                      GPU et températures ne sont pas mesurées ici.
                     </CardDescription>
                     <CardAction>
-                      <MonitorIcon
-                        aria-hidden="true"
-                        className="size-4 text-muted-foreground"
-                      />
+                      <Badge variant="outline">
+                        {snapshot.graphicsAdapters?.length ?? 0}{" "}
+                        {snapshot.graphicsAdapters?.length === 1
+                          ? "adaptateur"
+                          : "adaptateurs"}
+                      </Badge>
                     </CardAction>
                   </CardHeader>
                   <CardContent>
                     {snapshot.graphicsAdapters === null ? (
-                      <p className="py-4 text-xs text-muted-foreground">
-                        Les informations graphiques ne sont pas disponibles sur
-                        cette plateforme.
+                      <p className="py-4 text-muted-foreground">
+                        Ces informations ne sont pas disponibles sur cette
+                        plateforme.
                       </p>
                     ) : snapshot.graphicsAdapters.length === 0 ? (
-                      <p className="py-4 text-xs text-muted-foreground">
+                      <p className="py-4 text-muted-foreground">
                         Aucun adaptateur graphique détecté.
                       </p>
                     ) : (
-                      <div className="divide-y divide-border/60">
+                      <div className="grid gap-4 md:grid-cols-2">
                         {snapshot.graphicsAdapters.map((adapter, index) => (
-                          <div
-                            className="py-3 first:pt-0 last:pb-0"
-                            key={adapter.name + "-" + index}
-                          >
-                            <p className="text-sm font-medium break-words">
-                              {adapter.name}
-                            </p>
-                            <dl className="mt-1 divide-y divide-border/40 text-xs">
-                              {adapter.manufacturer && (
+                          <Card key={`${adapter.name}-${index}`} size="sm">
+                            <CardHeader>
+                              <CardTitle className="break-words">
+                                {adapter.name}
+                              </CardTitle>
+                              <CardDescription>
+                                Adaptateur graphique
+                              </CardDescription>
+                              <CardAction>
+                                <MonitorIcon aria-hidden="true" />
+                              </CardAction>
+                            </CardHeader>
+                            <CardContent>
+                              <dl className="divide-y divide-border/60">
                                 <DetailRow
                                   label="Fabricant"
                                   value={adapter.manufacturer}
                                 />
-                              )}
-                              {adapter.videoProcessor && (
                                 <DetailRow
                                   label="Processeur graphique"
                                   value={adapter.videoProcessor}
                                 />
-                              )}
-                              {adapter.driverVersion && (
                                 <DetailRow
-                                  label="Pilote"
+                                  label="Version du pilote"
                                   value={adapter.driverVersion}
                                 />
-                              )}
-                            </dl>
-                          </div>
+                              </dl>
+                            </CardContent>
+                          </Card>
                         ))}
                       </div>
                     )}
                   </CardContent>
                 </Card>
-              </div>
+              </TabsContent>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Écrans détectés</CardTitle>
-                  <CardDescription>
-                    Résolution, zone de travail, position et mise à l’échelle
-                    renvoyées par l’API native Tauri.
-                  </CardDescription>
-                  <CardAction>
-                    <Badge variant="outline">
-                      {monitors.length} {monitors.length === 1 ? "écran" : "écrans"}
-                    </Badge>
-                  </CardAction>
-                </CardHeader>
-                <CardContent>
-                  {areMonitorsLoading ? (
-                    <p className="py-4 text-xs text-muted-foreground">
-                      Détection des écrans…
-                    </p>
-                  ) : monitorError ? (
-                    <p
-                      aria-live="polite"
-                      className="py-4 text-xs text-destructive"
-                      role="status"
-                    >
-                      La détection des écrans a échoué : {monitorError}
-                    </p>
-                  ) : monitors.length === 0 ? (
-                    <p className="py-4 text-xs text-muted-foreground">
-                      Aucun écran détecté.
-                    </p>
-                  ) : (
-                    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                      {monitors.map((monitor, index) => (
-                        <div
-                          className="space-y-3 rounded-lg border bg-muted/20 p-4"
-                          key={monitor.id + index}
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex min-w-0 items-center gap-3">
-                              <div className="rounded-md border bg-background p-2 text-muted-foreground">
-                                <MonitorIcon
-                                  aria-hidden="true"
-                                  className="size-4"
-                                />
-                              </div>
-                              <p className="truncate text-sm font-medium">
+              <TabsContent className="flex flex-col gap-4" value="displays">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Écrans connectés</CardTitle>
+                    <CardDescription>
+                      Résolution, zone de travail, position et mise à l’échelle
+                      lues auprès de Tauri.
+                    </CardDescription>
+                    <CardAction>
+                      <Badge variant="outline">
+                        {areMonitorsLoading
+                          ? "Détection…"
+                          : `${monitors.length} ${monitors.length === 1 ? "écran" : "écrans"}`}
+                      </Badge>
+                    </CardAction>
+                  </CardHeader>
+                  <CardContent>
+                    {monitorError ? (
+                      <Card role="alert">
+                        <CardContent className="flex items-center gap-2 pt-4 text-destructive">
+                          <CircleAlertIcon aria-hidden="true" />
+                          <p>
+                            La détection des écrans a échoué : {monitorError}
+                          </p>
+                        </CardContent>
+                      </Card>
+                    ) : areMonitorsLoading ? (
+                      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                        {Array.from({ length: 2 }, (_, index) => (
+                          <Card key={index} size="sm">
+                            <CardContent className="flex flex-col gap-3 pt-4">
+                              <Skeleton className="h-4 w-2/3" />
+                              <Skeleton className="h-3 w-full" />
+                              <Skeleton className="h-3 w-5/6" />
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    ) : monitors.length === 0 ? (
+                      <p className="py-6 text-center text-muted-foreground">
+                        Aucun écran détecté.
+                      </p>
+                    ) : (
+                      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                        {monitors.map((monitor, index) => (
+                          <Card key={`${monitor.id}-${index}`} size="sm">
+                            <CardHeader>
+                              <CardTitle className="truncate">
                                 {monitor.name || `Écran ${index + 1}`}
-                              </p>
-                            </div>
-                            {monitor.primary && (
-                              <Badge className="shrink-0" variant="outline">
-                                Principal
-                              </Badge>
-                            )}
-                          </div>
-                          <dl className="divide-y divide-border/60 text-xs">
-                            <DetailRow
-                              label="Résolution"
-                              value={`${monitor.width} × ${monitor.height} px`}
-                            />
-                            <DetailRow
-                              label="Mise à l’échelle"
-                              value={`${numberFormat.format(monitor.scaleFactor * 100)} %`}
-                            />
-                            <DetailRow
-                              label="Position"
-                              value={`${monitor.positionX}, ${monitor.positionY} px`}
-                            />
-                            <DetailRow
-                              label="Zone de travail"
-                              value={`${monitor.workAreaWidth} × ${monitor.workAreaHeight} px`}
-                            />
-                          </dl>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                              </CardTitle>
+                              <CardDescription>
+                                {monitor.primary
+                                  ? "Écran principal"
+                                  : `Écran ${index + 1}`}
+                              </CardDescription>
+                              <CardAction>
+                                {monitor.primary ? (
+                                  <Badge variant="secondary">Principal</Badge>
+                                ) : (
+                                  <MonitorIcon aria-hidden="true" />
+                                )}
+                              </CardAction>
+                            </CardHeader>
+                            <CardContent>
+                              <dl className="divide-y divide-border/60">
+                                <DetailRow
+                                  label="Résolution"
+                                  value={`${monitor.width} × ${monitor.height} px`}
+                                />
+                                <DetailRow
+                                  label="Mise à l’échelle"
+                                  value={`${numberFormat.format(monitor.scaleFactor * 100)} %`}
+                                />
+                                <DetailRow
+                                  label="Position de l’écran"
+                                  value={`${monitor.positionX}, ${monitor.positionY} px`}
+                                />
+                                <DetailRow
+                                  label="Zone de travail"
+                                  value={`${monitor.workAreaWidth} × ${monitor.workAreaHeight} px`}
+                                />
+                                <DetailRow
+                                  label="Origine de la zone de travail"
+                                  value={`${monitor.workAreaX}, ${monitor.workAreaY} px`}
+                                />
+                              </dl>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
 
-              <p className="text-center text-[0.65rem] text-muted-foreground">
-                Ces informations sont lues localement sur cet appareil. Les
-                numéros de série et identifiants uniques ne sont pas collectés.
-                {lastUpdated && (
-                  <span>
-                    {" "}
-                    Dernière lecture : {lastUpdated.toLocaleTimeString("fr-FR")}
-                    .
-                  </span>
-                )}
-              </p>
-            </>
-          ) : null}
-        </div>
+            <p className="text-center text-muted-foreground">
+              Ces informations sont lues localement. Aucun numéro de série, UUID
+              ou identifiant unique d’écran n’est collecté.
+              {lastUpdated && (
+                <>
+                  {" "}
+                  Dernière lecture : {lastUpdated.toLocaleTimeString("fr-FR")}.
+                </>
+              )}
+            </p>
+          </>
+        ) : null}
       </div>
     </div>
   )
