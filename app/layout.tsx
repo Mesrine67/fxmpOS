@@ -4,7 +4,8 @@ import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { ExternalLinkGuard } from "@/components/external-link-guard"
-import { DebugPanel } from "@/components/debug-panel"
+import { DebugPanelGate } from "@/components/debug-panel-gate"
+import { OverlayBootstrap } from "@/components/overlay-bootstrap"
 import { cn } from "@/lib/utils";
 
 const fontSans = Geist({
@@ -30,7 +31,8 @@ export default function RootLayout({
           <TooltipProvider>
             <div data-ui-app-shell>
               <ExternalLinkGuard />
-              {process.env.NODE_ENV === "development" ? <DebugPanel /> : null}
+              {process.env.NODE_ENV === "development" ? <DebugPanelGate /> : null}
+              <OverlayBootstrap />
               {children}
             </div>
           </TooltipProvider>

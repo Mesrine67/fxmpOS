@@ -5,6 +5,7 @@ description = "A FXMP Tauri App OS for monitoring and controlling your PC"
 authors = ["FXMP"]
 license = "MIT"
 edition = "2024"
+rust-version = "1.95"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -21,16 +22,21 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 log = "0.4"
 tauri-plugin-log = "2"
-tauri = { version = "2", features = [] }
+tauri = { version = "2", features = ["tray-icon"] }
 tauri-plugin-opener = "2"
-tauri-plugin-cli = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tauri-plugin-os = "2.4.0"
 tauri-plugin-updater = "2"
 tauri-plugin-process = "2"
 sysinfo = "0.39.6"
-sha2 = "0.11.0"
+
+[target.'cfg(any(target_os = "macos", windows, target_os = "linux"))'.dependencies]
+tauri-plugin-autostart = "2"
+tauri-plugin-single-instance = "2"
+
+[target.'cfg(target_os = "windows")'.dependencies]
+wmi = "0.18.4"
 
 # Read the optimization guideline for more details: https://tauri.app/concept/size/#cargo-configuration
 [profile.release]

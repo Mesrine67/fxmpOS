@@ -1,0 +1,61 @@
+name: Signaler un bug
+description: Décrire un problème reproductible dans FXMP OS
+title: "[Bug]: "
+labels:
+  - bug
+  - needs-triage
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Pour une faille de sécurité, utilisez le signalement privé du dépôt. Ne joignez aucune clé, aucun jeton ni donnée personnelle.
+  - type: input
+    id: version
+    attributes:
+      label: Version ou commit
+      description: Indiquez la version affichée par l’application ou le SHA du commit.
+      placeholder: 0.0.1-dev
+    validations:
+      required: true
+  - type: dropdown
+    id: operating-system
+    attributes:
+      label: Système
+      options:
+        - Windows 11
+        - Windows 10
+        - Linux
+        - macOS
+        - Autre
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Étapes pour reproduire
+      description: Décrivez les actions dans l’ordre.
+      placeholder: |
+        1. Ouvrir…
+        2. Sélectionner…
+        3. Constater…
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Résultat attendu
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Résultat observé
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs ou captures utiles
+      description: Retirez les secrets et informations personnelles avant tout partage.
+    validations:
+      required: false

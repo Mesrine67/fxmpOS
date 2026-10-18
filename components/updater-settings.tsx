@@ -1,7 +1,6 @@
 "use client"
 
 import { getVersion } from "@tauri-apps/api/app"
-import { isTauri } from "@tauri-apps/api/core"
 import { relaunch } from "@tauri-apps/plugin-process"
 import { check } from "@tauri-apps/plugin-updater"
 import {
@@ -14,6 +13,8 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react"
 
 import { Button } from "@/components/ui/button"
+import { AutostartSettings } from "@/components/autostart-settings"
+import { useTauriRuntime } from "@/hooks/use-tauri-runtime"
 import {
   Card,
   CardContent,
@@ -23,7 +24,14 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 
-type UpdateStatus = "idle" | "browser" | "checking" | "current" | "available" | "installing" | "error"
+type UpdateStatus =
+  | "idle"
+  | "browser"
+  | "checking"
+  | "current"
+  | "available"
+  | "installing"
+  | "error"
 type DownloadProgress = { downloaded: number; total: number | null }
 
 function errorMessage(error: unknown) {
@@ -36,7 +44,8 @@ function formatBytes(bytes: number) {
 }
 
 export function UpdaterSettings() {
-  const [status, setStatus] = useState<UpdateStatus>("idle")
+  const desktopRuntime = useTauriRuntime()
+  const [status, setStatus] = useState<UpdateStatus>("checking")
   const [currentVersion, setCurrentVersion] = useState<string | null>(null)
   const [availableVersion, setAvailableVersion] = useState<string | null>(null)
   const [releaseNotes, setReleaseNotes] = useState<string | null>(null)
@@ -46,16 +55,9 @@ export function UpdaterSettings() {
   const requestInFlight = useRef(false)
 
   const checkForUpdates = useCallback(async () => {
-    if (!isTauri()) {
-      setStatus("browser")
-      return
-    }
     if (requestInFlight.current) return
 
     requestInFlight.current = true
-    setStatus("checking")
-    setError(null)
-    setProgress(null)
 
     try {
       setCurrentVersion(await getVersion())
@@ -77,12 +79,25 @@ export function UpdaterSettings() {
   }, [])
 
   useEffect(() => {
-    void checkForUpdates()
+    if (desktopRuntime !== true) return
+    const checkTimer = window.setTimeout(() => {
+      void checkForUpdates()
+    }, 0)
+
     return () => {
+      window.clearTimeout(checkTimer)
       const update = updateRef.current
+      updateRef.current = null
       if (update) void update.close()
     }
-  }, [checkForUpdates])
+  }, [desktopRuntime, checkForUpdates])
+
+  const displayedStatus: UpdateStatus =
+    desktopRuntime === false
+      ? "browser"
+      : desktopRuntime === null
+        ? "idle"
+        : status
 
   async function installUpdate() {
     const update = updateRef.current
@@ -112,11 +127,12 @@ export function UpdaterSettings() {
     }
   }
 
-  const busy = status === "checking" || status === "installing"
+  const busy =
+    displayedStatus === "checking" || displayedStatus === "installing"
 
   return (
-    <main className="min-h-0 flex-1 overflow-y-auto px-5 py-6 md:px-8">
-      <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
+    <section className="w-full">
+      <div className="flex w-full flex-col gap-6">
         <div className="space-y-1">
           <p className="text-xs text-muted-foreground">Application</p>
           <h1 className="text-xl font-semibold tracking-tight">Settings</h1>
@@ -124,6 +140,8 @@ export function UpdaterSettings() {
             Version de l’application et mises à jour signées.
           </p>
         </div>
+
+        <AutostartSettings />
 
         <Card>
           <CardHeader className="gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -133,11 +151,14 @@ export function UpdaterSettings() {
                 Mises à jour
               </CardTitle>
               <CardDescription>
-                FXMP OS vérifie les versions publiées et valide leur signature avant installation.
+                FXMP OS vérifie les versions publiées et valide leur signature
+                avant installation.
               </CardDescription>
             </div>
             <span className="rounded-md border px-2 py-1 text-xs text-muted-foreground">
-              {currentVersion ? `Version ${currentVersion}` : "Version inconnue"}
+              {currentVersion
+                ? `Version ${currentVersion}`
+                : "Version inconnue"}
             </span>
           </CardHeader>
 
@@ -153,32 +174,41 @@ export function UpdaterSettings() {
                 )}
                 <div className="min-w-0 flex-1 space-y-1">
                   <p className="font-medium">
-                    {status === "browser" && "Disponible dans l’application de bureau"}
-                    {status === "idle" && "Prêt à vérifier"}
-                    {status === "checking" && "Recherche des mises à jour…"}
-                    {status === "current" && "FXMP OS est à jour"}
-                    {status === "available" && `Version ${availableVersion} disponible`}
-                    {status === "installing" && "Téléchargement et installation…"}
-                    {status === "error" && "La vérification a échoué"}
+                    {displayedStatus === "browser" &&
+                      "Disponible dans l’application de bureau"}
+                    {displayedStatus === "idle" && "Prêt à vérifier"}
+                    {displayedStatus === "checking" &&
+                      "Recherche des mises à jour…"}
+                    {displayedStatus === "current" && "FXMP OS est à jour"}
+                    {displayedStatus === "available" &&
+                      `Version ${availableVersion} disponible`}
+                    {displayedStatus === "installing" &&
+                      "Téléchargement et installation…"}
+                    {displayedStatus === "error" && "La vérification a échoué"}
                   </p>
-                  {status === "browser" && (
+                  {displayedStatus === "browser" && (
                     <p className="text-sm text-muted-foreground">
-                      Le vérificateur fonctionne uniquement dans la fenêtre Tauri.
+                      Le vérificateur fonctionne uniquement dans la fenêtre
+                      Tauri.
                     </p>
                   )}
-                  {status === "installing" && progress && (
+                  {displayedStatus === "installing" && progress && (
                     <p className="text-sm text-muted-foreground">
                       {formatBytes(progress.downloaded)}
-                      {progress.total ? ` sur ${formatBytes(progress.total)}` : " téléchargés"}
+                      {progress.total
+                        ? ` sur ${formatBytes(progress.total)}`
+                        : " téléchargés"}
                     </p>
                   )}
-                  {status === "available" && releaseNotes && (
-                    <p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">
+                  {displayedStatus === "available" && releaseNotes && (
+                    <p className="mt-2 text-sm whitespace-pre-wrap text-muted-foreground">
                       {releaseNotes}
                     </p>
                   )}
-                  {status === "error" && error && (
-                    <p className="break-words text-sm text-destructive">{error}</p>
+                  {displayedStatus === "error" && error && (
+                    <p className="text-sm break-words text-destructive">
+                      {error}
+                    </p>
                   )}
                 </div>
               </div>
@@ -189,14 +219,24 @@ export function UpdaterSettings() {
             <Button
               type="button"
               variant="outline"
-              onClick={() => void checkForUpdates()}
-              disabled={busy || status === "browser"}
+              onClick={() => {
+                if (requestInFlight.current) return
+                setStatus("checking")
+                setError(null)
+                setProgress(null)
+                void checkForUpdates()
+              }}
+              disabled={busy || displayedStatus === "browser"}
             >
               <RefreshCwIcon />
               Vérifier maintenant
             </Button>
-            {status === "available" && (
-              <Button type="button" onClick={() => void installUpdate()} disabled={busy}>
+            {displayedStatus === "available" && (
+              <Button
+                type="button"
+                onClick={() => void installUpdate()}
+                disabled={busy}
+              >
                 <ArrowDownToLineIcon />
                 Télécharger et installer
               </Button>
@@ -204,6 +244,6 @@ export function UpdaterSettings() {
           </CardFooter>
         </Card>
       </div>
-    </main>
+    </section>
   )
 }

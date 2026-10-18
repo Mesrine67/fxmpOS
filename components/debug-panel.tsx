@@ -50,7 +50,8 @@ import {
   emitDebugEvent,
   serializeError,
 } from "@/lib/debug-events"
-import { trackedEmit, isTauri } from "@/lib/tauri"
+import { trackedEmit } from "@/lib/tauri"
+import { useTauriRuntime } from "@/hooks/use-tauri-runtime"
 import { cn } from "@/lib/utils"
 
 type AppDiagnostics = {
@@ -198,6 +199,7 @@ const COLOR_SCHEME_QUERY = "(prefers-color-scheme: dark)"
 const DEBUG_PANEL_SIDE_KEY = "ctui-debug-panel-side"
 const DEBUG_PANEL_TAB_KEY = "ctui-debug-panel-tab"
 const DEBUG_PANEL_ATTACH_KEY = "ctui-debug-panel-attach"
+const SESSION_STORAGE_CHANGE_EVENT = "fxmp-session-storage-change"
 const SIDE_PANEL_WIDTH = 480
 const BOTTOM_PANEL_HEIGHT = 360
 const DEBUG_PANEL_THEME_STYLE_LIGHT = {
@@ -259,6 +261,92 @@ function isDebugPanelTab(value: string): value is DebugPanelTab {
     value === "system" ||
     value === "errors"
   )
+}
+
+function parseDebugPanelSide(value: string): DebugPanelSide | null {
+  return isDebugPanelSide(value) ? value : null
+}
+
+function parseDebugPanelTab(value: string): DebugPanelTab | null {
+  return isDebugPanelTab(value) ? value : null
+}
+
+function parseBoolean(value: string): boolean | null {
+  if (value === "true") return true
+  if (value === "false") return false
+  return null
+}
+
+function subscribeToSessionStorage(key: string, onStoreChange: () => void) {
+  const onStorage = (event: StorageEvent) => {
+    if (event.key === null || event.key === key) onStoreChange()
+  }
+  const onSameWindowChange = (event: Event) => {
+    if (event instanceof CustomEvent && event.detail === key) onStoreChange()
+  }
+
+  window.addEventListener("storage", onStorage)
+  window.addEventListener(SESSION_STORAGE_CHANGE_EVENT, onSameWindowChange)
+
+  return () => {
+    window.removeEventListener("storage", onStorage)
+    window.removeEventListener(SESSION_STORAGE_CHANGE_EVENT, onSameWindowChange)
+  }
+}
+
+function useSessionStorageValue<T>(
+  key: string,
+  defaultValue: T,
+  parse: (value: string) => T | null,
+  serialize: (value: T) => string
+) {
+  const subscribe = React.useCallback(
+    (onStoreChange: () => void) =>
+      subscribeToSessionStorage(key, onStoreChange),
+    [key]
+  )
+  const getSnapshot = React.useCallback(
+    () => window.sessionStorage.getItem(key),
+    [key]
+  )
+  const getServerSnapshot = React.useCallback(() => null, [])
+  const storedValue = React.useSyncExternalStore(
+    subscribe,
+    getSnapshot,
+    getServerSnapshot
+  )
+  const value =
+    storedValue === null ? defaultValue : (parse(storedValue) ?? defaultValue)
+
+  const setValue = React.useCallback(
+    (next: React.SetStateAction<T>) => {
+      const currentStoredValue = window.sessionStorage.getItem(key)
+      const currentValue =
+        currentStoredValue === null
+          ? defaultValue
+          : (parse(currentStoredValue) ?? defaultValue)
+      const nextValue =
+        typeof next === "function"
+          ? (next as (previous: T) => T)(currentValue)
+          : next
+
+      window.sessionStorage.setItem(key, serialize(nextValue))
+      window.dispatchEvent(
+        new CustomEvent(SESSION_STORAGE_CHANGE_EVENT, { detail: key })
+      )
+    },
+    [defaultValue, key, parse, serialize]
+  )
+
+  return [value, setValue] as const
+}
+
+function serializeIdentity(value: string) {
+  return value
+}
+
+function serializeBoolean(value: boolean) {
+  return String(value)
 }
 
 function isTypingTarget(target: EventTarget | null) {
@@ -453,15 +541,15 @@ function DebugSection({
   )
 }
 
-const DebugPanelThemeContext = React.createContext<React.CSSProperties | undefined>(
-  undefined
-)
+const DebugPanelThemeContext = React.createContext<
+  React.CSSProperties | undefined
+>(undefined)
 
 function SourceOriginChip({ origin }: { origin: SourceOrigin }) {
   return (
     <span
       className={cn(
-        "inline-flex h-3.5 items-center rounded-sm border px-1 text-[9px] font-semibold uppercase tracking-wide",
+        "inline-flex h-3.5 items-center rounded-sm border px-1 text-[9px] font-semibold tracking-wide uppercase",
         origin === "tauri"
           ? "border-amber-500/30 bg-amber-500/15 text-amber-600 dark:text-amber-400"
           : "border-sky-500/30 bg-sky-500/15 text-sky-600 dark:text-sky-400"
@@ -507,7 +595,7 @@ function GridLabel({ label, meta }: { label: string; meta?: GridEntryMeta }) {
     <Tooltip>
       <TooltipTrigger
         render={
-          <span className="cursor-help underline decoration-dotted decoration-muted-foreground/40 underline-offset-4" />
+          <span className="cursor-help underline decoration-muted-foreground/40 decoration-dotted underline-offset-4" />
         }
       >
         {label}
@@ -526,7 +614,7 @@ function GridLabel({ label, meta }: { label: string; meta?: GridEntryMeta }) {
             title={copied ? "Copied!" : "Click to copy"}
             className="group relative flex-1 overflow-hidden rounded-sm bg-muted px-1.5 py-1 text-left font-mono text-[10px] leading-4 text-foreground transition-colors hover:bg-muted/70 active:bg-muted/50"
           >
-            <pre className="whitespace-pre-wrap break-all">{meta.code}</pre>
+            <pre className="break-all whitespace-pre-wrap">{meta.code}</pre>
             <span
               className={cn(
                 "pointer-events-none absolute inset-0 flex items-center justify-center rounded-sm bg-popover/95 text-[10px] font-semibold text-foreground transition-opacity",
@@ -542,11 +630,7 @@ function GridLabel({ label, meta }: { label: string; meta?: GridEntryMeta }) {
   )
 }
 
-function KeyValueGrid({
-  entries,
-}: {
-  entries: ReadonlyArray<GridEntry>
-}) {
+function KeyValueGrid({ entries }: { entries: ReadonlyArray<GridEntry> }) {
   return (
     <dl className="grid text-[11px] leading-5">
       {entries.map((entry, index) => {
@@ -598,10 +682,25 @@ function EntryHighlight() {
 
 export function DebugPanel() {
   const [open, setOpen] = React.useState(false)
-  const [panelSide, setPanelSide] = React.useState<DebugPanelSide>("right")
-  const [activeTab, setActiveTab] = React.useState<DebugPanelTab>("overview")
-  const [attached, setAttached] = React.useState(false)
-  const [tauriReady, setTauriReady] = React.useState(false)
+  const [panelSide, setPanelSide] = useSessionStorageValue(
+    DEBUG_PANEL_SIDE_KEY,
+    "right" as DebugPanelSide,
+    parseDebugPanelSide,
+    serializeIdentity
+  )
+  const [activeTab, setActiveTab] = useSessionStorageValue(
+    DEBUG_PANEL_TAB_KEY,
+    "overview" as DebugPanelTab,
+    parseDebugPanelTab,
+    serializeIdentity
+  )
+  const [attached, setAttached] = useSessionStorageValue(
+    DEBUG_PANEL_ATTACH_KEY,
+    false,
+    parseBoolean,
+    serializeBoolean
+  )
+  const tauriReady = useTauriRuntime() === true
   const [appInfo, setAppInfo] = React.useState<AppDiagnostics>({
     name: null,
     version: null,
@@ -633,20 +732,21 @@ export function DebugPanel() {
     appConfigDir: null,
     resourceDir: null,
   })
-  const [localeDefaults, setLocaleDefaults] = React.useState<LocaleDefaultsDiagnostics>({
-    localeChain: [],
-    navigatorLanguage: "",
-    intlLocale: "Unavailable",
-    region: null,
-    timeZone: "Unavailable",
-    calendar: "Unavailable",
-    numberingSystem: "Unavailable",
-    hourCycle: "Unavailable",
-    hour12: null,
-    firstDayOfWeek: "Unavailable",
-    documentLang: "",
-    documentDir: "",
-  })
+  const [localeDefaults, setLocaleDefaults] =
+    React.useState<LocaleDefaultsDiagnostics>({
+      localeChain: [],
+      navigatorLanguage: "",
+      intlLocale: "Unavailable",
+      region: null,
+      timeZone: "Unavailable",
+      calendar: "Unavailable",
+      numberingSystem: "Unavailable",
+      hourCycle: "Unavailable",
+      hour12: null,
+      firstDayOfWeek: "Unavailable",
+      documentLang: "",
+      documentDir: "",
+    })
   const [accessibilityDefaults, setAccessibilityDefaults] =
     React.useState<AccessibilityDefaultsDiagnostics>({
       colorScheme: "light",
@@ -656,40 +756,46 @@ export function DebugPanel() {
       invertedColors: "none",
       reducedTransparency: "no-preference",
     })
-  const [inputDefaults, setInputDefaults] = React.useState<InputDefaultsDiagnostics>({
-    platform: "Unavailable",
-    userAgent: "",
-    maxTouchPoints: 0,
-    touchCapable: false,
-    pointer: "none",
-    anyPointer: "none",
-    hover: false,
-    anyHover: false,
-    hardwareConcurrency: null,
-    deviceMemory: null,
-  })
-  const [displayDefaults, setDisplayDefaults] = React.useState<DisplayDefaultsDiagnostics>({
-    viewport: "Unavailable",
-    screen: "Unavailable",
-    availableScreen: "Unavailable",
-    devicePixelRatio: 1,
-    orientation: "Unavailable",
-    colorGamut: "unknown",
-    dynamicRange: "standard",
-    monochrome: false,
-  })
-  const [networkDefaults, setNetworkDefaults] = React.useState<NetworkDefaultsDiagnostics>({
-    online: true,
-    effectiveType: "Unavailable",
-    saveData: null,
-    downlink: null,
-    rtt: null,
-  })
+  const [inputDefaults, setInputDefaults] =
+    React.useState<InputDefaultsDiagnostics>({
+      platform: "Unavailable",
+      userAgent: "",
+      maxTouchPoints: 0,
+      touchCapable: false,
+      pointer: "none",
+      anyPointer: "none",
+      hover: false,
+      anyHover: false,
+      hardwareConcurrency: null,
+      deviceMemory: null,
+    })
+  const [displayDefaults, setDisplayDefaults] =
+    React.useState<DisplayDefaultsDiagnostics>({
+      viewport: "Unavailable",
+      screen: "Unavailable",
+      availableScreen: "Unavailable",
+      devicePixelRatio: 1,
+      orientation: "Unavailable",
+      colorGamut: "unknown",
+      dynamicRange: "standard",
+      monochrome: false,
+    })
+  const [networkDefaults, setNetworkDefaults] =
+    React.useState<NetworkDefaultsDiagnostics>({
+      online: true,
+      effectiveType: "Unavailable",
+      saveData: null,
+      downlink: null,
+      rtt: null,
+    })
   const [externalLinks, setExternalLinks] = React.useState<string[]>([])
   const [invokeLogs, setInvokeLogs] = React.useState<DebugEvent[]>([])
-  const [runtimeEvents, setRuntimeEvents] = React.useState<RuntimeEventDebugEvent[]>([])
+  const [runtimeEvents, setRuntimeEvents] = React.useState<
+    RuntimeEventDebugEvent[]
+  >([])
   const [logEntries, setLogEntries] = React.useState<LogDebugEvent[]>([])
-  const [highlightedRuntimeEventIds, setHighlightedRuntimeEventIds] = React.useState<string[]>([])
+  const [highlightedRuntimeEventIds, setHighlightedRuntimeEventIds] =
+    React.useState<string[]>([])
   const [highlightedLogIds, setHighlightedLogIds] = React.useState<string[]>([])
   const [errors, setErrors] = React.useState<ErrorLog[]>([])
   const [copied, setCopied] = React.useState(false)
@@ -702,10 +808,6 @@ export function DebugPanel() {
   const highlightTimeoutsRef = React.useRef<number[]>([])
 
   React.useEffect(() => {
-    setTauriReady(isTauri())
-  }, [])
-
-  React.useEffect(() => {
     return () => {
       for (const timeoutId of highlightTimeoutsRef.current) {
         window.clearTimeout(timeoutId)
@@ -714,57 +816,17 @@ export function DebugPanel() {
   }, [])
 
   React.useEffect(() => {
-    if (typeof window === "undefined") {
-      return
-    }
-
-    const savedSide = window.sessionStorage.getItem(DEBUG_PANEL_SIDE_KEY)
-
-    if (savedSide && isDebugPanelSide(savedSide)) {
-      setPanelSide(savedSide)
-    }
-
-    const savedTab = window.sessionStorage.getItem(DEBUG_PANEL_TAB_KEY)
-
-    if (savedTab && isDebugPanelTab(savedTab)) {
-      setActiveTab(savedTab)
-    }
-
-    setAttached(window.sessionStorage.getItem(DEBUG_PANEL_ATTACH_KEY) === "true")
-  }, [])
-
-  React.useEffect(() => {
-    if (typeof window === "undefined") {
-      return
-    }
-
-    window.sessionStorage.setItem(DEBUG_PANEL_SIDE_KEY, panelSide)
-  }, [panelSide])
-
-  React.useEffect(() => {
-    if (typeof window === "undefined") {
-      return
-    }
-
-    window.sessionStorage.setItem(DEBUG_PANEL_TAB_KEY, activeTab)
-  }, [activeTab])
-
-  React.useEffect(() => {
-    if (typeof window === "undefined") {
-      return
-    }
-
-    window.sessionStorage.setItem(DEBUG_PANEL_ATTACH_KEY, String(attached))
-  }, [attached])
-
-  React.useEffect(() => {
     function updateThemeInfo() {
       const htmlClass = document.documentElement.className
-      const system = window.matchMedia(COLOR_SCHEME_QUERY).matches ? "dark" : "light"
+      const system = window.matchMedia(COLOR_SCHEME_QUERY).matches
+        ? "dark"
+        : "light"
 
       setThemeInfo({
         system,
-        current: document.documentElement.classList.contains("dark") ? "dark" : "light",
+        current: document.documentElement.classList.contains("dark")
+          ? "dark"
+          : "light",
         htmlClass,
       })
     }
@@ -872,11 +934,15 @@ export function DebugPanel() {
           ? "reduce"
           : "no-preference",
         contrast: getContrastPreference(),
-        forcedColors: matchesMediaQuery("(forced-colors: active)") ? "active" : "none",
+        forcedColors: matchesMediaQuery("(forced-colors: active)")
+          ? "active"
+          : "none",
         invertedColors: matchesMediaQuery("(inverted-colors: inverted)")
           ? "inverted"
           : "none",
-        reducedTransparency: matchesMediaQuery("(prefers-reduced-transparency: reduce)")
+        reducedTransparency: matchesMediaQuery(
+          "(prefers-reduced-transparency: reduce)"
+        )
           ? "reduce"
           : "no-preference",
       })
@@ -912,7 +978,9 @@ export function DebugPanel() {
           window.screen.orientation?.type ??
           (window.innerWidth >= window.innerHeight ? "landscape" : "portrait"),
         colorGamut: getColorGamut(),
-        dynamicRange: matchesMediaQuery("(dynamic-range: high)") ? "high" : "standard",
+        dynamicRange: matchesMediaQuery("(dynamic-range: high)")
+          ? "high"
+          : "standard",
         monochrome: matchesMediaQuery("(monochrome)"),
       })
 
@@ -1223,7 +1291,10 @@ export function DebugPanel() {
     window.addEventListener("unhandledrejection", handleRejection)
 
     return () => {
-      window.removeEventListener(DEBUG_EVENT_NAME, handleDebugEvent as EventListener)
+      window.removeEventListener(
+        DEBUG_EVENT_NAME,
+        handleDebugEvent as EventListener
+      )
       window.removeEventListener("error", handleError)
       window.removeEventListener("unhandledrejection", handleRejection)
     }
@@ -1398,7 +1469,10 @@ export function DebugPanel() {
 
   const isBottomDock = panelSide === "bottom"
   const runtimeCount =
-    invokeLogs.length + externalLinks.length + runtimeEvents.length + logEntries.length
+    invokeLogs.length +
+    externalLinks.length +
+    runtimeEvents.length +
+    logEntries.length
   const overviewLayoutClassName = isBottomDock
     ? "grid min-h-full content-start gap-3 pr-1 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,0.9fr)]"
     : "h-full space-y-3 overflow-y-auto pr-1"
@@ -1430,7 +1504,9 @@ export function DebugPanel() {
               className="size-7"
               onClick={() => setAttached((current) => !current)}
               aria-pressed={attached}
-              aria-label={attached ? "Detach debug panel" : "Attach debug panel"}
+              aria-label={
+                attached ? "Detach debug panel" : "Attach debug panel"
+              }
               title={attached ? "Detach debug panel" : "Attach debug panel"}
             >
               <PinIcon className="size-3.5" />
@@ -1467,14 +1543,20 @@ export function DebugPanel() {
                   }}
                 >
                   <DropdownMenuLabel>Dock</DropdownMenuLabel>
-                  <DropdownMenuRadioItem value="left">Left</DropdownMenuRadioItem>
-                  <DropdownMenuRadioItem value="right">Right</DropdownMenuRadioItem>
-                  <DropdownMenuRadioItem value="bottom">Bottom</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="left">
+                    Left
+                  </DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="right">
+                    Right
+                  </DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="bottom">
+                    Bottom
+                  </DropdownMenuRadioItem>
                 </DropdownMenuRadioGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem disabled>
                   Toggle panel
-                <DropdownMenuShortcut>⌘/Ctrl+D</DropdownMenuShortcut>
+                  <DropdownMenuShortcut>⌘/Ctrl+D</DropdownMenuShortcut>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -1501,24 +1583,42 @@ export function DebugPanel() {
         className="min-h-0 flex-1 gap-0 px-3"
       >
         <TabsList className="-mx-3 grid h-9 w-[calc(100%+1.5rem)] grid-cols-4 justify-start border-y border-border/20 bg-muted p-0">
-          <TabsTrigger value="overview" className="h-9 rounded-none border-r border-border/20 px-2 text-[12px] font-medium">
+          <TabsTrigger
+            value="overview"
+            className="h-9 rounded-none border-r border-border/20 px-2 text-[12px] font-medium"
+          >
             Overview
           </TabsTrigger>
-          <TabsTrigger value="runtime" className="h-9 rounded-none border-r border-border/20 px-2 text-[12px] font-medium">
+          <TabsTrigger
+            value="runtime"
+            className="h-9 rounded-none border-r border-border/20 px-2 text-[12px] font-medium"
+          >
             Runtime
             {runtimeCount ? (
-              <Badge variant="secondary" className="ml-1 h-4 min-w-4 rounded-sm px-1 text-[10px]">
+              <Badge
+                variant="secondary"
+                className="ml-1 h-4 min-w-4 rounded-sm px-1 text-[10px]"
+              >
                 {runtimeCount}
               </Badge>
             ) : null}
           </TabsTrigger>
-          <TabsTrigger value="system" className="h-9 rounded-none border-r border-border/20 px-2 text-[12px] font-medium">
+          <TabsTrigger
+            value="system"
+            className="h-9 rounded-none border-r border-border/20 px-2 text-[12px] font-medium"
+          >
             System
           </TabsTrigger>
-          <TabsTrigger value="errors" className="h-9 rounded-none px-2 text-[12px] font-medium">
+          <TabsTrigger
+            value="errors"
+            className="h-9 rounded-none px-2 text-[12px] font-medium"
+          >
             Errors
             {errors.length ? (
-              <Badge variant="destructive" className="ml-1 h-4 min-w-4 rounded-sm px-1 text-[10px]">
+              <Badge
+                variant="destructive"
+                className="ml-1 h-4 min-w-4 rounded-sm px-1 text-[10px]"
+              >
                 {errors.length}
               </Badge>
             ) : null}
@@ -1527,7 +1627,10 @@ export function DebugPanel() {
 
         <TabsContent
           value="overview"
-          className={cn("min-h-0 flex-1 pt-2", isBottomDock ? "overflow-y-auto" : "overflow-hidden")}
+          className={cn(
+            "min-h-0 flex-1 pt-2",
+            isBottomDock ? "overflow-y-auto" : "overflow-hidden"
+          )}
         >
           <div className={overviewLayoutClassName}>
             <DebugSection
@@ -1536,16 +1639,59 @@ export function DebugPanel() {
             >
               <KeyValueGrid
                 entries={[
-                  ["Route", locationState.pathname || "/", { code: "window.location.pathname", origin: "web" }],
-                  ["URL", locationState.href || "Unavailable", { code: "window.location.href", origin: "web" }],
-                  ["Search", locationState.search || "(none)", { code: "window.location.search", origin: "web" }],
-                  ["Hash", locationState.hash || "(none)", { code: "window.location.hash", origin: "web" }],
-                  ["Bridge", tauriReady ? "Tauri" : "Web", { code: "isTauri()", origin: "tauri" }],
-                  ["Name", appInfo.name ?? "Unavailable", { code: "await getName()", origin: "tauri" }],
-                  ["Version", appInfo.version ?? "Unavailable", { code: "await getVersion()", origin: "tauri" }],
-                  ["Identifier", appInfo.identifier ?? "Unavailable", { code: "await getIdentifier()", origin: "tauri" }],
-                  ["Tauri", appInfo.tauriVersion ?? "Unavailable", { code: "await getTauriVersion()", origin: "tauri" }],
-                  ["Webview", windowInfo.label, { code: "getCurrentWebviewWindow().label", origin: "tauri" }],
+                  [
+                    "Route",
+                    locationState.pathname || "/",
+                    { code: "window.location.pathname", origin: "web" },
+                  ],
+                  [
+                    "URL",
+                    locationState.href || "Unavailable",
+                    { code: "window.location.href", origin: "web" },
+                  ],
+                  [
+                    "Search",
+                    locationState.search || "(none)",
+                    { code: "window.location.search", origin: "web" },
+                  ],
+                  [
+                    "Hash",
+                    locationState.hash || "(none)",
+                    { code: "window.location.hash", origin: "web" },
+                  ],
+                  [
+                    "Bridge",
+                    tauriReady ? "Tauri" : "Web",
+                    { code: "isTauri()", origin: "tauri" },
+                  ],
+                  [
+                    "Name",
+                    appInfo.name ?? "Unavailable",
+                    { code: "await getName()", origin: "tauri" },
+                  ],
+                  [
+                    "Version",
+                    appInfo.version ?? "Unavailable",
+                    { code: "await getVersion()", origin: "tauri" },
+                  ],
+                  [
+                    "Identifier",
+                    appInfo.identifier ?? "Unavailable",
+                    { code: "await getIdentifier()", origin: "tauri" },
+                  ],
+                  [
+                    "Tauri",
+                    appInfo.tauriVersion ?? "Unavailable",
+                    { code: "await getTauriVersion()", origin: "tauri" },
+                  ],
+                  [
+                    "Webview",
+                    windowInfo.label,
+                    {
+                      code: "getCurrentWebviewWindow().label",
+                      origin: "tauri",
+                    },
+                  ],
                   ["Shortcut", "Cmd/Ctrl + D"],
                 ]}
               />
@@ -1557,42 +1703,107 @@ export function DebugPanel() {
             >
               <KeyValueGrid
                 entries={[
-                  ["Label", windowInfo.label, { code: "getCurrentWindow().label", origin: "tauri" }],
-                  ["Title", windowInfo.title ?? "Unavailable", { code: "await getCurrentWindow().title()", origin: "tauri" }],
+                  [
+                    "Label",
+                    windowInfo.label,
+                    { code: "getCurrentWindow().label", origin: "tauri" },
+                  ],
+                  [
+                    "Title",
+                    windowInfo.title ?? "Unavailable",
+                    {
+                      code: "await getCurrentWindow().title()",
+                      origin: "tauri",
+                    },
+                  ],
                   [
                     "Viewport",
                     windowInfo.viewportSize
                       ? `${windowInfo.viewportSize.width} × ${windowInfo.viewportSize.height}`
                       : "Unavailable",
-                    { code: "window.innerWidth × window.innerHeight", origin: "web" },
+                    {
+                      code: "window.innerWidth × window.innerHeight",
+                      origin: "web",
+                    },
                   ],
                   [
                     "Tauri inner",
                     windowInfo.tauriInnerSize
                       ? `${windowInfo.tauriInnerSize.width} × ${windowInfo.tauriInnerSize.height}`
                       : "Unavailable",
-                    { code: "await getCurrentWindow().innerSize()", origin: "tauri" },
+                    {
+                      code: "await getCurrentWindow().innerSize()",
+                      origin: "tauri",
+                    },
                   ],
                   [
                     "Window outer",
                     windowInfo.outerSize
                       ? `${windowInfo.outerSize.width} × ${windowInfo.outerSize.height}`
                       : "Unavailable",
-                    { code: "await getCurrentWindow().outerSize()", origin: "tauri" },
+                    {
+                      code: "await getCurrentWindow().outerSize()",
+                      origin: "tauri",
+                    },
                   ],
                   [
                     "Position",
                     windowInfo.outerPosition
                       ? `${windowInfo.outerPosition.x}, ${windowInfo.outerPosition.y}`
                       : "Unavailable",
-                    { code: "await getCurrentWindow().outerPosition()", origin: "tauri" },
+                    {
+                      code: "await getCurrentWindow().outerPosition()",
+                      origin: "tauri",
+                    },
                   ],
-                  ["Scale", windowInfo.scaleFactor ?? "Unavailable", { code: "await getCurrentWindow().scaleFactor()", origin: "tauri" }],
-                  ["Focused", String(windowInfo.focused), { code: "await getCurrentWindow().isFocused()", origin: "tauri" }],
-                  ["Visible", String(windowInfo.visible), { code: "await getCurrentWindow().isVisible()", origin: "tauri" }],
-                  ["Maximized", String(windowInfo.maximized), { code: "await getCurrentWindow().isMaximized()", origin: "tauri" }],
-                  ["Fullscreen", String(windowInfo.fullscreen), { code: "await getCurrentWindow().isFullscreen()", origin: "tauri" }],
-                  ["Decorated", String(windowInfo.decorated), { code: "await getCurrentWindow().isDecorated()", origin: "tauri" }],
+                  [
+                    "Scale",
+                    windowInfo.scaleFactor ?? "Unavailable",
+                    {
+                      code: "await getCurrentWindow().scaleFactor()",
+                      origin: "tauri",
+                    },
+                  ],
+                  [
+                    "Focused",
+                    String(windowInfo.focused),
+                    {
+                      code: "await getCurrentWindow().isFocused()",
+                      origin: "tauri",
+                    },
+                  ],
+                  [
+                    "Visible",
+                    String(windowInfo.visible),
+                    {
+                      code: "await getCurrentWindow().isVisible()",
+                      origin: "tauri",
+                    },
+                  ],
+                  [
+                    "Maximized",
+                    String(windowInfo.maximized),
+                    {
+                      code: "await getCurrentWindow().isMaximized()",
+                      origin: "tauri",
+                    },
+                  ],
+                  [
+                    "Fullscreen",
+                    String(windowInfo.fullscreen),
+                    {
+                      code: "await getCurrentWindow().isFullscreen()",
+                      origin: "tauri",
+                    },
+                  ],
+                  [
+                    "Decorated",
+                    String(windowInfo.decorated),
+                    {
+                      code: "await getCurrentWindow().isDecorated()",
+                      origin: "tauri",
+                    },
+                  ],
                   [
                     "Monitor",
                     windowInfo.monitor
@@ -1610,15 +1821,78 @@ export function DebugPanel() {
             >
               <KeyValueGrid
                 entries={[
-                  ["Current", themeInfo.current, { code: 'document.documentElement.classList.contains("dark")', origin: "web" }],
-                  ["System", themeInfo.system, { code: 'matchMedia("(prefers-color-scheme: dark)")', origin: "web" }],
-                  ["HTML class", themeInfo.htmlClass || "(none)", { code: "document.documentElement.className", origin: "web" }],
-                  ["Color scheme", accessibilityDefaults.colorScheme, { code: 'matchMedia("(prefers-color-scheme: dark)")', origin: "web" }],
-                  ["Reduced motion", accessibilityDefaults.reducedMotion, { code: 'matchMedia("(prefers-reduced-motion: reduce)")', origin: "web" }],
-                  ["Contrast", accessibilityDefaults.contrast, { code: 'matchMedia("(prefers-contrast: more | less | custom)")', origin: "web" }],
-                  ["Forced colors", accessibilityDefaults.forcedColors, { code: 'matchMedia("(forced-colors: active)")', origin: "web" }],
-                  ["Inverted colors", accessibilityDefaults.invertedColors, { code: 'matchMedia("(inverted-colors: inverted)")', origin: "web" }],
-                  ["Transparency", accessibilityDefaults.reducedTransparency, { code: 'matchMedia("(prefers-reduced-transparency: reduce)")', origin: "web" }],
+                  [
+                    "Current",
+                    themeInfo.current,
+                    {
+                      code: 'document.documentElement.classList.contains("dark")',
+                      origin: "web",
+                    },
+                  ],
+                  [
+                    "System",
+                    themeInfo.system,
+                    {
+                      code: 'matchMedia("(prefers-color-scheme: dark)")',
+                      origin: "web",
+                    },
+                  ],
+                  [
+                    "HTML class",
+                    themeInfo.htmlClass || "(none)",
+                    {
+                      code: "document.documentElement.className",
+                      origin: "web",
+                    },
+                  ],
+                  [
+                    "Color scheme",
+                    accessibilityDefaults.colorScheme,
+                    {
+                      code: 'matchMedia("(prefers-color-scheme: dark)")',
+                      origin: "web",
+                    },
+                  ],
+                  [
+                    "Reduced motion",
+                    accessibilityDefaults.reducedMotion,
+                    {
+                      code: 'matchMedia("(prefers-reduced-motion: reduce)")',
+                      origin: "web",
+                    },
+                  ],
+                  [
+                    "Contrast",
+                    accessibilityDefaults.contrast,
+                    {
+                      code: 'matchMedia("(prefers-contrast: more | less | custom)")',
+                      origin: "web",
+                    },
+                  ],
+                  [
+                    "Forced colors",
+                    accessibilityDefaults.forcedColors,
+                    {
+                      code: 'matchMedia("(forced-colors: active)")',
+                      origin: "web",
+                    },
+                  ],
+                  [
+                    "Inverted colors",
+                    accessibilityDefaults.invertedColors,
+                    {
+                      code: 'matchMedia("(inverted-colors: inverted)")',
+                      origin: "web",
+                    },
+                  ],
+                  [
+                    "Transparency",
+                    accessibilityDefaults.reducedTransparency,
+                    {
+                      code: 'matchMedia("(prefers-reduced-transparency: reduce)")',
+                      origin: "web",
+                    },
+                  ],
                 ]}
               />
             </DebugSection>
@@ -1627,7 +1901,10 @@ export function DebugPanel() {
 
         <TabsContent
           value="runtime"
-          className={cn("min-h-0 flex-1 pt-2", isBottomDock ? "overflow-y-auto" : "overflow-hidden")}
+          className={cn(
+            "min-h-0 flex-1 pt-2",
+            isBottomDock ? "overflow-y-auto" : "overflow-hidden"
+          )}
         >
           <div className={runtimeLayoutClassName}>
             <DebugSection
@@ -1648,12 +1925,21 @@ export function DebugPanel() {
                     }
 
                     return (
-                      <div key={entry.id} className="rounded-md border border-border/20 bg-card p-2.5">
+                      <div
+                        key={entry.id}
+                        className="rounded-md border border-border/20 bg-card p-2.5"
+                      >
                         <div className="mb-1.5 flex items-center justify-between gap-3">
-                          <div className="font-mono text-[11px]">{entry.command}</div>
+                          <div className="font-mono text-[11px]">
+                            {entry.command}
+                          </div>
                           <div className="flex items-center gap-2">
                             <Badge
-                              variant={entry.status === "success" ? "secondary" : "destructive"}
+                              variant={
+                                entry.status === "success"
+                                  ? "secondary"
+                                  : "destructive"
+                              }
                               className="h-4 rounded-sm px-1 text-[10px]"
                             >
                               {entry.status}
@@ -1698,11 +1984,19 @@ export function DebugPanel() {
                   )}
                 >
                   {newestFirst(runtimeEvents).map((entry) => (
-                    <li key={entry.id} className="relative rounded-md border border-border/20 bg-card p-2.5">
-                      {highlightedRuntimeEventIds.includes(entry.id) ? <EntryHighlight /> : null}
+                    <li
+                      key={entry.id}
+                      className="relative rounded-md border border-border/20 bg-card p-2.5"
+                    >
+                      {highlightedRuntimeEventIds.includes(entry.id) ? (
+                        <EntryHighlight />
+                      ) : null}
                       <div className="mb-1 flex items-center justify-between gap-3">
                         <span className="font-mono">{entry.name}</span>
-                        <Badge variant="outline" className="h-4 rounded-sm px-1 text-[10px]">
+                        <Badge
+                          variant="outline"
+                          className="h-4 rounded-sm px-1 text-[10px]"
+                        >
                           {entry.source}
                         </Badge>
                       </div>
@@ -1740,8 +2034,13 @@ export function DebugPanel() {
                     const parsed = parsePluginLogMessage(entry.message)
 
                     return (
-                      <li key={entry.id} className="relative rounded-md border border-border/20 bg-card p-2.5">
-                        {highlightedLogIds.includes(entry.id) ? <EntryHighlight /> : null}
+                      <li
+                        key={entry.id}
+                        className="relative rounded-md border border-border/20 bg-card p-2.5"
+                      >
+                        {highlightedLogIds.includes(entry.id) ? (
+                          <EntryHighlight />
+                        ) : null}
                         {parsed ? (
                           <div className="space-y-2">
                             <div className="flex items-start justify-between gap-3">
@@ -1749,7 +2048,7 @@ export function DebugPanel() {
                                 <div className="flex min-w-0 items-center gap-2">
                                   <span
                                     className={cn(
-                                      "inline-flex rounded-sm border px-1 py-0.5 text-[10px] font-medium uppercase tracking-wide",
+                                      "inline-flex rounded-sm border px-1 py-0.5 text-[10px] font-medium tracking-wide uppercase",
                                       getLogLevelClasses(parsed.level)
                                     )}
                                   >
@@ -1765,19 +2064,24 @@ export function DebugPanel() {
                                 <div>{parsed.date}</div>
                               </div>
                             </div>
-                            <p className="font-mono break-words text-[11px] text-foreground">{parsed.text}</p>
+                            <p className="font-mono text-[11px] break-words text-foreground">
+                              {parsed.text}
+                            </p>
                           </div>
                         ) : (
                           <>
                             <div className="mb-1 flex items-center justify-between gap-3">
-                              <Badge variant="outline" className="h-4 rounded-sm px-1 text-[10px]">
+                              <Badge
+                                variant="outline"
+                                className="h-4 rounded-sm px-1 text-[10px]"
+                              >
                                 {entry.level}
                               </Badge>
                               <span className="text-[10px] text-muted-foreground">
                                 {formatTimestamp(entry.timestamp)}
                               </span>
                             </div>
-                            <p className="font-mono break-words text-[11px] text-foreground">
+                            <p className="font-mono text-[11px] break-words text-foreground">
                               {entry.message}
                             </p>
                           </>
@@ -1806,7 +2110,10 @@ export function DebugPanel() {
                   )}
                 >
                   {externalLinks.map((href, index) => (
-                    <li key={`${href}-${index}`} className="flex gap-2 rounded-md border border-border/20 bg-card p-2">
+                    <li
+                      key={`${href}-${index}`}
+                      className="flex gap-2 rounded-md border border-border/20 bg-card p-2"
+                    >
                       <ExternalLinkIcon className="mt-0.5 size-3 shrink-0 text-muted-foreground" />
                       <span className="font-mono break-all">{href}</span>
                     </li>
@@ -1823,7 +2130,10 @@ export function DebugPanel() {
 
         <TabsContent
           value="system"
-          className={cn("min-h-0 flex-1 pt-2", isBottomDock ? "overflow-y-auto" : "overflow-hidden")}
+          className={cn(
+            "min-h-0 flex-1 pt-2",
+            isBottomDock ? "overflow-y-auto" : "overflow-hidden"
+          )}
         >
           <div className={systemLayoutClassName}>
             <DebugSection
@@ -1831,22 +2141,36 @@ export function DebugPanel() {
               description="Resolved Tauri application directories."
             >
               <div className="space-y-1.5">
-                {([
-                  ["App data", pathInfo.appDataDir, "await appDataDir()"],
-                  ["App config", pathInfo.appConfigDir, "await appConfigDir()"],
-                  ["Resources", pathInfo.resourceDir, "await resourceDir()"],
-                ] as const).map(([label, value, code]) => (
+                {(
+                  [
+                    ["App data", pathInfo.appDataDir, "await appDataDir()"],
+                    [
+                      "App config",
+                      pathInfo.appConfigDir,
+                      "await appConfigDir()",
+                    ],
+                    ["Resources", pathInfo.resourceDir, "await resourceDir()"],
+                  ] as const
+                ).map(([label, value, code]) => (
                   <div
                     key={label}
                     className="grid grid-cols-[92px_minmax(0,1fr)_auto] items-start gap-3 border-t border-border/20 py-1 text-[11px] first:border-t-0 first:pt-0"
                   >
                     <div className="text-muted-foreground">
-                      <GridLabel label={label} meta={{ code, origin: "tauri" }} />
+                      <GridLabel
+                        label={label}
+                        meta={{ code, origin: "tauri" }}
+                      />
                     </div>
                     <div className="font-mono break-all text-foreground">
                       {value ?? "Unavailable"}
                     </div>
-                    <Button variant="ghost" size="sm" disabled={!value} onClick={() => value && void handleCopyText(value)}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      disabled={!value}
+                      onClick={() => value && void handleCopyText(value)}
+                    >
                       <CopyIcon className="size-3.5" />
                       Copy
                     </Button>
@@ -1861,14 +2185,61 @@ export function DebugPanel() {
             >
               <KeyValueGrid
                 entries={[
-                  ["Viewport", displayDefaults.viewport, { code: "window.innerWidth × window.innerHeight", origin: "web" }],
-                  ["Screen", displayDefaults.screen, { code: "window.screen.width × window.screen.height", origin: "web" }],
-                  ["Available", displayDefaults.availableScreen, { code: "window.screen.availWidth × window.screen.availHeight", origin: "web" }],
-                  ["DPR", displayDefaults.devicePixelRatio, { code: "window.devicePixelRatio", origin: "web" }],
-                  ["Orientation", displayDefaults.orientation, { code: "window.screen.orientation?.type", origin: "web" }],
-                  ["Color gamut", displayDefaults.colorGamut, { code: 'matchMedia("(color-gamut: rec2020 | p3 | srgb)")', origin: "web" }],
-                  ["Dynamic range", displayDefaults.dynamicRange, { code: 'matchMedia("(dynamic-range: high)")', origin: "web" }],
-                  ["Monochrome", String(displayDefaults.monochrome), { code: 'matchMedia("(monochrome)")', origin: "web" }],
+                  [
+                    "Viewport",
+                    displayDefaults.viewport,
+                    {
+                      code: "window.innerWidth × window.innerHeight",
+                      origin: "web",
+                    },
+                  ],
+                  [
+                    "Screen",
+                    displayDefaults.screen,
+                    {
+                      code: "window.screen.width × window.screen.height",
+                      origin: "web",
+                    },
+                  ],
+                  [
+                    "Available",
+                    displayDefaults.availableScreen,
+                    {
+                      code: "window.screen.availWidth × window.screen.availHeight",
+                      origin: "web",
+                    },
+                  ],
+                  [
+                    "DPR",
+                    displayDefaults.devicePixelRatio,
+                    { code: "window.devicePixelRatio", origin: "web" },
+                  ],
+                  [
+                    "Orientation",
+                    displayDefaults.orientation,
+                    { code: "window.screen.orientation?.type", origin: "web" },
+                  ],
+                  [
+                    "Color gamut",
+                    displayDefaults.colorGamut,
+                    {
+                      code: 'matchMedia("(color-gamut: rec2020 | p3 | srgb)")',
+                      origin: "web",
+                    },
+                  ],
+                  [
+                    "Dynamic range",
+                    displayDefaults.dynamicRange,
+                    {
+                      code: 'matchMedia("(dynamic-range: high)")',
+                      origin: "web",
+                    },
+                  ],
+                  [
+                    "Monochrome",
+                    String(displayDefaults.monochrome),
+                    { code: 'matchMedia("(monochrome)")', origin: "web" },
+                  ],
                 ]}
               />
             </DebugSection>
@@ -1884,25 +2255,89 @@ export function DebugPanel() {
                     localeDefaults.localeChain.length
                       ? localeDefaults.localeChain.join(", ")
                       : "Unavailable",
-                    { code: "[...navigator.languages, navigator.language]", origin: "web" },
+                    {
+                      code: "[...navigator.languages, navigator.language]",
+                      origin: "web",
+                    },
                   ],
-                  ["Navigator", localeDefaults.navigatorLanguage, { code: "navigator.language", origin: "web" }],
-                  ["Intl locale", localeDefaults.intlLocale, { code: "new Intl.DateTimeFormat().resolvedOptions().locale", origin: "web" }],
-                  ["Region", localeDefaults.region ?? "Unavailable", { code: "new Intl.Locale(locale).region", origin: "web" }],
-                  ["Time zone", localeDefaults.timeZone, { code: "new Intl.DateTimeFormat().resolvedOptions().timeZone", origin: "web" }],
-                  ["Calendar", localeDefaults.calendar, { code: "new Intl.DateTimeFormat().resolvedOptions().calendar", origin: "web" }],
-                  ["Numbering", localeDefaults.numberingSystem, { code: "new Intl.DateTimeFormat().resolvedOptions().numberingSystem", origin: "web" }],
-                  ["Hour cycle", localeDefaults.hourCycle, { code: "new Intl.DateTimeFormat().resolvedOptions().hourCycle", origin: "web" }],
+                  [
+                    "Navigator",
+                    localeDefaults.navigatorLanguage,
+                    { code: "navigator.language", origin: "web" },
+                  ],
+                  [
+                    "Intl locale",
+                    localeDefaults.intlLocale,
+                    {
+                      code: "new Intl.DateTimeFormat().resolvedOptions().locale",
+                      origin: "web",
+                    },
+                  ],
+                  [
+                    "Region",
+                    localeDefaults.region ?? "Unavailable",
+                    { code: "new Intl.Locale(locale).region", origin: "web" },
+                  ],
+                  [
+                    "Time zone",
+                    localeDefaults.timeZone,
+                    {
+                      code: "new Intl.DateTimeFormat().resolvedOptions().timeZone",
+                      origin: "web",
+                    },
+                  ],
+                  [
+                    "Calendar",
+                    localeDefaults.calendar,
+                    {
+                      code: "new Intl.DateTimeFormat().resolvedOptions().calendar",
+                      origin: "web",
+                    },
+                  ],
+                  [
+                    "Numbering",
+                    localeDefaults.numberingSystem,
+                    {
+                      code: "new Intl.DateTimeFormat().resolvedOptions().numberingSystem",
+                      origin: "web",
+                    },
+                  ],
+                  [
+                    "Hour cycle",
+                    localeDefaults.hourCycle,
+                    {
+                      code: "new Intl.DateTimeFormat().resolvedOptions().hourCycle",
+                      origin: "web",
+                    },
+                  ],
                   [
                     "12-hour",
                     localeDefaults.hour12 === null
                       ? "Unavailable"
                       : String(localeDefaults.hour12),
-                    { code: "new Intl.DateTimeFormat().resolvedOptions().hour12", origin: "web" },
+                    {
+                      code: "new Intl.DateTimeFormat().resolvedOptions().hour12",
+                      origin: "web",
+                    },
                   ],
-                  ["First day", localeDefaults.firstDayOfWeek, { code: "new Intl.Locale(locale).weekInfo?.firstDay", origin: "web" }],
-                  ["HTML lang", localeDefaults.documentLang, { code: "document.documentElement.lang", origin: "web" }],
-                  ["HTML dir", localeDefaults.documentDir, { code: "document.documentElement.dir", origin: "web" }],
+                  [
+                    "First day",
+                    localeDefaults.firstDayOfWeek,
+                    {
+                      code: "new Intl.Locale(locale).weekInfo?.firstDay",
+                      origin: "web",
+                    },
+                  ],
+                  [
+                    "HTML lang",
+                    localeDefaults.documentLang,
+                    { code: "document.documentElement.lang", origin: "web" },
+                  ],
+                  [
+                    "HTML dir",
+                    localeDefaults.documentDir,
+                    { code: "document.documentElement.dir", origin: "web" },
+                  ],
                 ]}
               />
             </DebugSection>
@@ -1913,13 +2348,53 @@ export function DebugPanel() {
             >
               <KeyValueGrid
                 entries={[
-                  ["Platform", inputDefaults.platform, { code: "navigator.userAgentData?.platform ?? navigator.platform", origin: "web" }],
-                  ["Pointer", inputDefaults.pointer, { code: 'matchMedia("(pointer: fine | coarse)")', origin: "web" }],
-                  ["Any pointer", inputDefaults.anyPointer, { code: 'matchMedia("(any-pointer: fine | coarse)")', origin: "web" }],
-                  ["Hover", String(inputDefaults.hover), { code: 'matchMedia("(hover: hover)")', origin: "web" }],
-                  ["Any hover", String(inputDefaults.anyHover), { code: 'matchMedia("(any-hover: hover)")', origin: "web" }],
-                  ["Touch points", inputDefaults.maxTouchPoints, { code: "navigator.maxTouchPoints", origin: "web" }],
-                  ["Touch capable", String(inputDefaults.touchCapable), { code: 'maxTouchPoints > 0 || matchMedia("(pointer: coarse)") || "ontouchstart" in window', origin: "web" }],
+                  [
+                    "Platform",
+                    inputDefaults.platform,
+                    {
+                      code: "navigator.userAgentData?.platform ?? navigator.platform",
+                      origin: "web",
+                    },
+                  ],
+                  [
+                    "Pointer",
+                    inputDefaults.pointer,
+                    {
+                      code: 'matchMedia("(pointer: fine | coarse)")',
+                      origin: "web",
+                    },
+                  ],
+                  [
+                    "Any pointer",
+                    inputDefaults.anyPointer,
+                    {
+                      code: 'matchMedia("(any-pointer: fine | coarse)")',
+                      origin: "web",
+                    },
+                  ],
+                  [
+                    "Hover",
+                    String(inputDefaults.hover),
+                    { code: 'matchMedia("(hover: hover)")', origin: "web" },
+                  ],
+                  [
+                    "Any hover",
+                    String(inputDefaults.anyHover),
+                    { code: 'matchMedia("(any-hover: hover)")', origin: "web" },
+                  ],
+                  [
+                    "Touch points",
+                    inputDefaults.maxTouchPoints,
+                    { code: "navigator.maxTouchPoints", origin: "web" },
+                  ],
+                  [
+                    "Touch capable",
+                    String(inputDefaults.touchCapable),
+                    {
+                      code: 'maxTouchPoints > 0 || matchMedia("(pointer: coarse)") || "ontouchstart" in window',
+                      origin: "web",
+                    },
+                  ],
                   [
                     "CPU threads",
                     inputDefaults.hardwareConcurrency ?? "Unavailable",
@@ -1932,7 +2407,11 @@ export function DebugPanel() {
                       : `${inputDefaults.deviceMemory} GB`,
                     { code: "navigator.deviceMemory", origin: "web" },
                   ],
-                  ["User agent", inputDefaults.userAgent, { code: "navigator.userAgent", origin: "web" }],
+                  [
+                    "User agent",
+                    inputDefaults.userAgent,
+                    { code: "navigator.userAgent", origin: "web" },
+                  ],
                 ]}
               />
             </DebugSection>
@@ -1943,8 +2422,19 @@ export function DebugPanel() {
             >
               <KeyValueGrid
                 entries={[
-                  ["Online", String(networkDefaults.online), { code: "navigator.onLine", origin: "web" }],
-                  ["Effective type", networkDefaults.effectiveType, { code: "navigator.connection?.effectiveType", origin: "web" }],
+                  [
+                    "Online",
+                    String(networkDefaults.online),
+                    { code: "navigator.onLine", origin: "web" },
+                  ],
+                  [
+                    "Effective type",
+                    networkDefaults.effectiveType,
+                    {
+                      code: "navigator.connection?.effectiveType",
+                      origin: "web",
+                    },
+                  ],
                   [
                     "Save-Data",
                     networkDefaults.saveData === null
@@ -1972,7 +2462,10 @@ export function DebugPanel() {
           </div>
         </TabsContent>
 
-        <TabsContent value="errors" className="min-h-0 flex-1 overflow-hidden pt-2">
+        <TabsContent
+          value="errors"
+          className="min-h-0 flex-1 overflow-hidden pt-2"
+        >
           <div className="h-full overflow-y-auto pr-1">
             <DebugSection
               title="Recent errors"
@@ -2006,7 +2499,6 @@ export function DebugPanel() {
             </DebugSection>
           </div>
         </TabsContent>
-
       </Tabs>
     </>
   )
@@ -2028,7 +2520,10 @@ export function DebugPanel() {
             className={panelFrameClassName}
             style={
               panelSide === "bottom"
-                ? { ...debugPanelThemeStyle, height: `${BOTTOM_PANEL_HEIGHT}px` }
+                ? {
+                    ...debugPanelThemeStyle,
+                    height: `${BOTTOM_PANEL_HEIGHT}px`,
+                  }
                 : { ...debugPanelThemeStyle, width: `${SIDE_PANEL_WIDTH}px` }
             }
           >
