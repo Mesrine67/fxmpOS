@@ -153,6 +153,11 @@ for (const assetName of releaseAssets.keys()) {
       `The release contains unsupported non-Windows or unexpected asset ${assetName}`
     )
   }
+  if (isSignature && windowsInstallerAssets[2].test(bundleName)) {
+    throw new Error(
+      `The standalone experimental asset must not have a signature sidecar: ${assetName}`
+    )
+  }
   if (!isSignature && /-windows-x64-setup\.exe$/i.test(bundleName)) {
     hasNsisInstaller = true
   }
