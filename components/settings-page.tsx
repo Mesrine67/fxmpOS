@@ -21,7 +21,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 export function SettingsPage() {
   return (
-    <main className="min-h-0 flex-1 px-5 py-6 md:px-8">
+    <div className="min-h-0 flex-1 px-5 py-6 md:px-8">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
         <header className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex flex-col gap-2">
@@ -107,6 +107,6 @@ export function SettingsPage() {
           </TabsContent>
         </Tabs>
       </div>
-    </main>
+    </div>
   )
 }

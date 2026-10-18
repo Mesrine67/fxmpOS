@@ -291,7 +291,7 @@ export function AccountPage() {
     : 0
 
   return (
-    <main className="min-h-0 flex-1 px-5 py-6 md:px-8">
+    <div className="min-h-0 flex-1 px-5 py-6 md:px-8">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
         <header className="flex flex-wrap items-end justify-between gap-4">
           <div className="flex flex-col gap-2">
@@ -412,7 +412,7 @@ export function AccountPage() {
 
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               <MetricCard
-                detail={`${snapshot.physicalCores ?? snapshot.logicalProcessors} cœurs · ${snapshot.logicalProcessors} processeurs logiques${snapshot.cpuFrequencyMhz ? ` · ${numberFormat.format(snapshot.cpuFrequencyMhz / 1000)} GHz` : ""}`}
+                detail={`${snapshot.physicalCores === null ? "" : `${snapshot.physicalCores} cœurs physiques · `}${snapshot.logicalProcessors} processeurs logiques${snapshot.cpuFrequencyMhz ? ` · ${numberFormat.format(snapshot.cpuFrequencyMhz / 1000)} GHz` : ""}`}
                 icon={CpuIcon}
                 label="Processeur"
                 value={snapshot.cpuName || "Modèle indisponible"}
@@ -904,6 +904,6 @@ export function AccountPage() {
           </>
         ) : null}
       </div>
-    </main>
+    </div>
   )
 }
