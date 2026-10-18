@@ -9,8 +9,8 @@ import {
 const repository = "Mesrine67/fxmpOS"
 const asset = {
   id: 12345,
-  name: "fxmp-os_0.0.1_x64-setup.exe",
-  browser_download_url: `https://github.com/${repository}/releases/download/v0.0.1/fxmp-os_0.0.1_x64-setup.exe`,
+  name: "FXMP OS (x64).exe",
+  browser_download_url: `https://github.com/${repository}/releases/download/untagged-draft/FXMP%20OS%20(x64).exe`,
 }
 const releaseAssets = new Map([[asset.name, asset]])
 const releaseAssetsById = new Map([[String(asset.id), asset]])
@@ -43,7 +43,7 @@ test("accepts a tagged GitHub download URL for an asset in the release", () => {
   assert.equal(resolved, asset)
 })
 
-test("rewrites tauri-action REST asset URLs to public browser download URLs", () => {
+test("rewrites draft REST asset URLs to stable, version-tagged browser URLs", () => {
   const manifest = {
     version: "0.0.1",
     platforms: {
@@ -57,7 +57,7 @@ test("rewrites tauri-action REST asset URLs to public browser download URLs", ()
   assert.equal(normalizeUpdaterAssetUrls(manifest, context), 1)
   assert.equal(
     manifest.platforms["windows-x86_64"].url,
-    asset.browser_download_url
+    `https://github.com/${repository}/releases/download/v0.0.1/${encodeURIComponent(asset.name)}`
   )
 })
 

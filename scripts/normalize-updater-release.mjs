@@ -63,7 +63,6 @@ for (const asset of release.assets) {
     typeof asset.name !== "string" ||
     !assetNamePattern.test(asset.name) ||
     !Number.isSafeInteger(asset.id) ||
-    typeof asset.browser_download_url !== "string" ||
     releaseAssets.has(asset.name) ||
     releaseAssetsById.has(String(asset.id))
   ) {
