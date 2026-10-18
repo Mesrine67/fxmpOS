@@ -435,11 +435,17 @@ export function AccountPage() {
                 detail={
                   areMonitorsLoading
                     ? "Détection en cours…"
-                    : "Détectés par Windows"
+                    : monitorError
+                      ? "Détection échouée"
+                      : "Détectés par Windows"
                 }
                 icon={MonitorIcon}
                 label="Écrans"
-                value={`${monitors.length} ${monitors.length === 1 ? "écran" : "écrans"}`}
+                value={
+                  monitorError
+                    ? "Indisponibles"
+                    : `${monitors.length} ${monitors.length === 1 ? "écran" : "écrans"}`
+                }
               />
             </div>
 

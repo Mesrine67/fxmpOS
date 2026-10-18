@@ -72,7 +72,7 @@
         "minHeight": 520,
         "center": true,
         "visible": false,
-        "userAgent": "FXMP.OS/0.0.2-dev"
+        "userAgent": "FXMP.OS/0.0.3-dev"
       },
       {
         "label": "overlay",

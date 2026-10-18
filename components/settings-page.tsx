@@ -98,7 +98,11 @@ export function SettingsPage() {
             <OverlaySettings />
           </TabsContent>
 
-          <TabsContent className="flex flex-col gap-4" value="updates">
+          <TabsContent
+            className="flex flex-col gap-4"
+            keepMounted
+            value="updates"
+          >
             <UpdaterSettings />
           </TabsContent>
         </Tabs>
