@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs"
-import { execFileSync } from "node:child_process"
+import { execFileSync, spawnSync } from "node:child_process"
 import process from "node:process"
 
 const packageVersion = JSON.parse(readFileSync("package.json", "utf8")).version
@@ -41,14 +41,23 @@ if (eventName === "push") {
   const taggedCommit = execFileSync("git", ["rev-parse", "HEAD"], {
     encoding: "utf8",
   }).trim()
-  const defaultBranchCommit = execFileSync(
+  const defaultBranchRef = `refs/remotes/origin/${defaultBranch}`
+  execFileSync(
     "git",
-    ["rev-parse", "--verify", `refs/remotes/origin/${defaultBranch}^{commit}`],
+    ["rev-parse", "--verify", `${defaultBranchRef}^{commit}`],
+    {
+      encoding: "utf8",
+    }
+  )
+  const ancestry = spawnSync(
+    "git",
+    ["merge-base", "--is-ancestor", taggedCommit, defaultBranchRef],
     { encoding: "utf8" }
-  ).trim()
-  if (taggedCommit !== defaultBranchCommit) {
+  )
+  if (ancestry.error) throw ancestry.error
+  if (ancestry.status !== 0) {
     throw new Error(
-      `Release tag commit ${taggedCommit} must equal the current ${defaultBranch} commit ${defaultBranchCommit}.`
+      `Release tag commit ${taggedCommit} must be reachable from the current ${defaultBranch} history.`
     )
   }
 } else if (eventName === "workflow_dispatch") {

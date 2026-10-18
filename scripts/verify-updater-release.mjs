@@ -127,14 +127,8 @@ for (const asset of release.assets) {
 
 const escapedVersion = expectedVersion.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
 const windowsInstallerAssets = [
-  new RegExp(
-    `^FXMP(?: OS|\\.OS)-${escapedVersion}-windows-x64-setup\\.exe$`,
-    "i"
-  ),
-  new RegExp(
-    `^FXMP(?: OS|\\.OS)-${escapedVersion}-windows-x64\\.msi$`,
-    "i"
-  ),
+  new RegExp(`^FXMP\\.OS-${escapedVersion}-windows-x64-setup\\.exe$`, "i"),
+  new RegExp(`^FXMP\\.OS-${escapedVersion}-windows-x64\\.msi$`, "i"),
   new RegExp(
     `^FXMP-OS-${escapedVersion}-windows-x64-standalone-experimental\\.exe$`,
     "i"
