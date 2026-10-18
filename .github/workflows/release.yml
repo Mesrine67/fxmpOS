@@ -6,8 +6,8 @@ on:
       verifyOnly:
         description: Verify assets already present in the draft release without rebuilding.
         type: boolean
-        required: false
-        default: false
+        required: true
+        default: true
   push:
     tags:
       - "v*"
@@ -29,7 +29,12 @@ jobs:
         shell: bash
         env:
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          VERIFY_ONLY: ${{ inputs.verifyOnly }}
         run: |
+          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" && "$VERIFY_ONLY" != "true" ]]; then
+            echo "::error::Manual release runs are verification-only. Set verifyOnly=true."
+            exit 1
+          fi
           version="$(node scripts/validate-release-source.mjs)"
           semver_without_build="${version%%+*}"
           if [[ "$semver_without_build" == *-* ]]; then

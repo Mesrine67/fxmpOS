@@ -47,7 +47,7 @@ Les versions de `package.json`, `src-tauri/tauri.conf.json` et `src-tauri/Cargo.
 
 La publication/build est déclenchée par un tag poussé une fois. Ne pas utiliser `workflow_dispatch` pour créer ou reconstruire une release, ne pas réutiliser un tag et ne pas retagger une version publiée. Pour corriger des artefacts déjà publiés, incrémenter la version et créer une nouvelle release.
 
-Si un build a téléversé ses artefacts dans un draft mais que leur vérification a échoué, on peut relancer uniquement cette vérification depuis `main` :
+Si un build a téléversé ses artefacts dans un draft mais que leur vérification a échoué, on peut relancer uniquement cette vérification depuis `main`. `verifyOnly` est obligatoire et doit rester à `true`; une exécution manuelle avec `false` échoue au lieu de terminer en succès sans action :
 
 ```powershell
 gh workflow run release.yml `
@@ -58,7 +58,7 @@ gh workflow run release.yml `
 
 Cette option ne reconstruit aucun paquet. Elle ne s'applique qu'à une release brouillon existante, jamais à une release publiée.
 
-Le job de vérification confirme que les URLs de `latest.json` pointent vers les actifs de la release attendue, que chaque entrée updater Windows (`windows-x86_64`) porte une signature Minisign valide liée à la version et que les sommes SHA-256 correspondent. Une release en échec reste brouillon.
+Le job de vérification confirme que les URLs de `latest.json` pointent vers les actifs de la release attendue, que seuls les formats Windows x64 NSIS/MSI sont présents, que chaque entrée updater Windows porte une signature Minisign valide liée à la version et que les sommes SHA-256 correspondent. Tout manifeste ou asset macOS/Linux/Android/iOS entraîne un échec; une release en échec reste brouillon.
 
 ## Installation Windows
 

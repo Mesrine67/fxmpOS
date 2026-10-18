@@ -57,6 +57,15 @@ if (platforms.length === 0) {
 
 const requiredPlatformTargets = ["windows-x86_64"]
 const platformNames = platforms.map(([platform]) => platform)
+const allowedPlatformTarget = /^windows-x86_64(?:-(?:nsis|msi))?$/
+for (const platform of platformNames) {
+  if (!allowedPlatformTarget.test(platform)) {
+    throw new Error(
+      `latest.json contains unsupported platform target ${platform}; only Windows x86_64 NSIS/MSI updates are allowed`
+    )
+  }
+}
+
 for (const target of requiredPlatformTargets) {
   if (
     !platformNames.some(
@@ -115,6 +124,21 @@ for (const asset of release.assets) {
   }
   releaseAssets.set(asset.name, asset)
 }
+
+const windowsInstallerAsset =
+  /^[A-Za-z0-9._-]+-\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?-windows-x64(?:-setup|-standalone-experimental)?\.(?:exe|msi)$/i
+for (const assetName of releaseAssets.keys()) {
+  if (assetName === "latest.json" || assetName === "SHA256SUMS.txt") continue
+  const bundleName = assetName.endsWith(".sig")
+    ? assetName.slice(0, -".sig".length)
+    : assetName
+  if (!windowsInstallerAsset.test(bundleName)) {
+    throw new Error(
+      `The release contains unsupported non-Windows or unexpected asset ${assetName}`
+    )
+  }
+}
+
 if (!releaseAssets.has("latest.json")) {
   throw new Error("The draft release does not contain latest.json")
 }
