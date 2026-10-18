@@ -52,11 +52,7 @@ jobs:
 
   publish-tauri:
     needs: validate-release-source
-    if: >-
-      ${{
-        !inputs.verifyOnly &&
-        (github.event_name == 'push' || inputs.platform == 'all' || startsWith(matrix.name, inputs.platform))
-      }}
+    if: ${{ !inputs.verifyOnly }}
     permissions:
       contents: write
     strategy:
@@ -218,6 +214,7 @@ jobs:
           fi
 
       - name: Build and publish signed update artifacts
+        if: ${{ github.event_name == 'push' || inputs.platform == 'all' || startsWith(matrix.name, inputs.platform) }}
         id: tauri
         uses: tauri-apps/tauri-action@1deb371b0cd8bd54025b384f1cd735e725c4060f # action-v1.0.0
         env:
@@ -272,7 +269,7 @@ jobs:
           }
 
       - name: Upload experimental Windows standalone executable
-        if: matrix.standaloneUpload
+        if: ${{ matrix.standaloneUpload && (github.event_name == 'push' || inputs.platform == 'all' || startsWith(matrix.name, inputs.platform)) }}
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
