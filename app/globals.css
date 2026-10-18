@@ -127,3 +127,60 @@
     @apply font-mono;
     }
 }
+
+/* Keep native WebView controls, including scrollbars, in sync with the app theme. */
+html {
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
+/* Disable page-level overscroll and rubber-band scrolling so the UI feels more desktop-native. */
+html,
+body {
+  height: 100%;
+}
+
+body {
+  overflow: hidden;
+}
+
+/* Keep the rounded app frame fixed while its contents scroll inside it. */
+[data-ui-app-shell] {
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+[data-ui-scroll-container] {
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: none;
+}
+
+@layer base {
+  /* Desktop UIs often feel cleaner with accidental text selection disabled by default. */
+  body {
+    @apply select-none;
+  }
+
+  /* Keep editing and code surfaces selectable so inputs and diagnostics still work normally. */
+  input,
+  textarea,
+  [contenteditable="true"],
+  pre,
+  code {
+    @apply select-text;
+  }
+}
+
+@layer utilities {
+  /* Opt back into selection for any generated UI surface that should behave like regular text. */
+  .ui-selectable {
+    @apply select-text;
+  }
+}

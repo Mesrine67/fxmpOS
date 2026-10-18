@@ -2,6 +2,9 @@ import { Geist, Geist_Mono } from "next/font/google"
 
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
+import { TooltipProvider } from "@/components/ui/tooltip"
+import { ExternalLinkGuard } from "@/components/external-link-guard"
+import { DebugPanel } from "@/components/debug-panel"
 import { cn } from "@/lib/utils";
 
 const fontSans = Geist({
@@ -23,7 +26,15 @@ export default function RootLayout({
       className={cn("antialiased", fontSans.variable, "font-mono", geistMono.variable)}
     >
       <body>
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          <TooltipProvider>
+            <div data-ui-app-shell>
+              <ExternalLinkGuard />
+              {process.env.NODE_ENV === "development" ? <DebugPanel /> : null}
+              {children}
+            </div>
+          </TooltipProvider>
+        </ThemeProvider>
       </body>
     </html>
   )

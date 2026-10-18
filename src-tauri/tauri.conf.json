@@ -1,0 +1,213 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "mainBinaryName": "fxmp-os",
+  "productName": "FXMP OS",
+  "version": "0.0.1",
+  "identifier": "org.computer.os",
+  "build": {
+    "beforeDevCommand": "pnpm dev",
+    "beforeBuildCommand": "pnpm build",
+    "devUrl": "http://localhost:3000",
+    "frontendDist": "../out",
+    "removeUnusedCommands": true
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "createUpdaterArtifacts": true,
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "publisher": "FXMP",
+    "category": "Utility",
+    "shortDescription": "FXMP OS",
+    "longDescription": "FXMP OS.",
+    "copyright": "Copyright © 2026 FXMP. All rights reserved."
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEY4NkM2NjkzNUIwMDExMDgKUldRSUVRQmJrMlpzK1A4TnlDUnNGNWd0bjhkVk96bHZkWjFROHpFVzA0VlpnWVlkY0FPMk1Mc2kK",
+      "endpoints": [
+        "https://github.com/Mesrine67/fxmpOS/releases/latest/download/latest.json"
+      ]
+    },
+    "deep-link": {},
+    "opener": {},
+    "cli": {
+      "description": "CLI for FXMP OS",
+      "args": [
+        {
+          "short": "v",
+          "name": "verbose",
+          "description": "Verbosity level"
+        },
+        {
+          "name": "source",
+          "index": 1,
+          "takesValue": true
+        },
+        {
+          "name": "destination",
+          "index": 2,
+          "takesValue": true
+        },
+        {
+          "name": "type",
+          "short": "t",
+          "takesValue": true,
+          "multiple": true,
+          "possibleValues": ["foo", "bar"]
+        }
+      ],
+      "subcommands": {
+        "update": {},
+        "run": {
+          "description": "Run the application",
+          "args": [
+            {
+              "name": "debug",
+              "description": "Run application in debug mode"
+            },
+            {
+              "name": "release",
+              "description": "Run application in release mode"
+            }
+          ]
+        },
+        "branch": {
+          "args": []
+        },
+        "push": {
+          "args": []
+        }
+      }
+    },
+    "global-shortcut": {
+      "shortcuts": [
+        {
+          "shortcut": "CmdOrCtrl+Shift+X",
+          "action": "toggle-main-window"
+        }
+      ]
+    },
+    "notification": {
+      "defaultTitle": "FXMP OS",
+      "defaultBody": "Notification from FXMP OS"
+    },
+    "splashscreen": {
+      "enabled": true,
+      "windowLabel": "main",
+      "imagePath": "./resources/splashscreen.png",
+      "displayTime": 3000
+    },
+    "single-instance": {
+      "enabled": true
+    },
+    "system-tray": {
+      "iconPath": "./resources/tray-icon.png",
+      "menu": [
+        {
+          "id": "show",
+          "label": "Show"
+        },
+        {
+          "id": "hide",
+          "label": "Hide"
+        },
+        {
+          "id": "quit",
+          "label": "Quit"
+        }
+      ]
+    }
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "enableGTKAppId": true,
+    "windows": [
+      {
+        "label": "main",
+        "title": "FXMP OS",
+        "width": 1400,
+        "height": 918,
+        "minWidth": 720,
+        "minHeight": 520,
+        "center": true,
+        "visible": false,
+        "userAgent": "FXMP.OS/0.0.1-dev"
+      }
+    ],
+    "security": {
+      "capabilities": [
+        {
+          "identifier": "fxmp-capability",
+          "description": "FXMP OS capability for the main window",
+          "windows": ["*"],
+          "platforms": ["linux", "macOS", "windows"],
+          "permissions": [
+            "core:default",
+            "opener:default",
+            "log:default",
+            "core:window:allow-set-title",
+            "cli:default",
+            "updater:default",
+            "process:default"
+          ]
+        },
+        {
+          "identifier": "explorator-capability",
+          "description": "Explorator capability for the main window",
+          "windows": ["*"],
+          "platforms": ["windows"],
+          "permissions": [
+            "core:default",
+            "opener:default",
+            "log:default",
+            "core:window:allow-set-title"
+          ]
+        },
+        {
+          "identifier": "terminal-capability",
+          "description": "Terminal capability for the main window",
+          "windows": ["*"],
+          "platforms": ["windows"],
+          "permissions": [
+            "core:default",
+            "opener:default",
+            "log:default",
+            "core:window:allow-set-title"
+          ]
+        },
+        {
+          "identifier": "browser-capability",
+          "description": "Browser capability for the main window",
+          "windows": ["*"],
+          "platforms": ["windows"],
+          "permissions": [
+            "core:default",
+            "opener:default",
+            "log:default",
+            "core:window:allow-set-title"
+          ]
+        },
+        {
+          "identifier": "kernel-capability",
+          "description": "Kernel capability for the main window",
+          "windows": ["*"],
+          "platforms": ["windows"],
+          "permissions": [
+            "core:default",
+            "opener:default",
+            "log:default",
+            "core:window:allow-set-title"
+          ]
+        }
+      ],
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: http: https:; media-src 'self' data: blob: http: https:; connect-src ipc: http://ipc.localhost"
+    }
+  }
+}
