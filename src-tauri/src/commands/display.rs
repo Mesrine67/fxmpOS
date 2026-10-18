@@ -56,7 +56,7 @@ pub(crate) fn overlay_positioning_supported(app: &AppHandle) -> Result<bool, Str
     }
 }
 
-#[cfg(any(test, target_os = "linux"))]
+#[cfg(target_os = "linux")]
 fn supports_global_window_positioning(selected_backend: Option<gdk::Backend>) -> bool {
     selected_backend.is_some_and(|backend| backend.is_x11())
 }

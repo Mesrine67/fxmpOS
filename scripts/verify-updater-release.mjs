@@ -125,10 +125,6 @@ for (const asset of release.assets) {
   }
   releaseAssets.set(asset.name, asset)
 }
-const releaseAssetsById = new Map(
-  [...releaseAssets.values()].map((asset) => [String(asset.id), asset])
-)
-
 if (!releaseAssets.has("latest.json")) {
   throw new Error("The draft release does not contain latest.json")
 }
@@ -220,7 +216,6 @@ try {
       expectedVersion,
       repository,
       releaseAssets,
-      releaseAssetsById,
     })
     const assetName = asset.name
     const sidecar = releaseAssets.get(`${assetName}.sig`)

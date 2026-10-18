@@ -1,10 +1,17 @@
 import assert from "node:assert/strict"
 import test from "node:test"
 
-import { resolveUpdaterAsset } from "./updater-release-url.mjs"
+import {
+  normalizeUpdaterAssetUrls,
+  resolveUpdaterAsset,
+} from "./updater-release-url.mjs"
 
 const repository = "Mesrine67/fxmpOS"
-const asset = { id: 12345, name: "fxmp-os_0.0.1_x64-setup.exe" }
+const asset = {
+  id: 12345,
+  name: "fxmp-os_0.0.1_x64-setup.exe",
+  browser_download_url: `https://github.com/${repository}/releases/download/v0.0.1/fxmp-os_0.0.1_x64-setup.exe`,
+}
 const releaseAssets = new Map([[asset.name, asset]])
 const releaseAssetsById = new Map([[String(asset.id), asset]])
 const context = {
@@ -14,14 +21,16 @@ const context = {
   releaseAssetsById,
 }
 
-test("accepts the REST asset URL emitted by tauri-action when it belongs to the release", () => {
-  const resolved = resolveUpdaterAsset(
-    `https://api.github.com/repos/${repository}/releases/assets/${asset.id}`,
-    "windows-x86_64",
-    context
+test("rejects REST asset URLs because the Tauri updater cannot download them directly", () => {
+  assert.throws(
+    () =>
+      resolveUpdaterAsset(
+        `https://api.github.com/repos/${repository}/releases/assets/${asset.id}`,
+        "windows-x86_64",
+        context
+      ),
+    /points outside the expected GitHub release/
   )
-
-  assert.equal(resolved, asset)
 })
 
 test("accepts a tagged GitHub download URL for an asset in the release", () => {
@@ -34,16 +43,34 @@ test("accepts a tagged GitHub download URL for an asset in the release", () => {
   assert.equal(resolved, asset)
 })
 
-test("rejects REST asset IDs that are not part of the expected release", () => {
-  assert.throws(
-    () =>
-      resolveUpdaterAsset(
-        `https://api.github.com/repos/${repository}/releases/assets/12346`,
-        "windows-x86_64",
-        context
-      ),
-    /does not reference an asset in the expected release/
+test("rewrites tauri-action REST asset URLs to public browser download URLs", () => {
+  const manifest = {
+    version: "0.0.1",
+    platforms: {
+      "windows-x86_64": {
+        url: `https://api.github.com/repos/${repository}/releases/assets/${asset.id}`,
+        signature: "signature",
+      },
+    },
+  }
+
+  assert.equal(normalizeUpdaterAssetUrls(manifest, context), 1)
+  assert.equal(
+    manifest.platforms["windows-x86_64"].url,
+    asset.browser_download_url
   )
+})
+
+test("rejects an API asset URL that does not belong to the expected release", () => {
+  const manifest = {
+    platforms: {
+      "windows-x86_64": {
+        url: `https://api.github.com/repos/${repository}/releases/assets/12346`,
+      },
+    },
+  }
+
+  assert.throws(() => normalizeUpdaterAssetUrls(manifest, context))
 })
 
 test("rejects URLs outside the expected repository, release, and asset", () => {
