@@ -1,7 +1,7 @@
 use serde::Deserialize;
 use tauri::{AppHandle, Manager, PhysicalPosition, WebviewWindow, WebviewWindowBuilder};
 
-use crate::commands::display::monitor_identifier;
+use crate::commands::display::{monitor_identifier, overlay_positioning_supported};
 
 const OVERLAY_LABEL: &str = "overlay";
 const OVERLAY_WIDTH: f64 = 380.0;
@@ -50,6 +50,12 @@ fn apply_overlay_settings(
     window: &WebviewWindow,
     settings: &OverlaySettings,
 ) -> Result<(), String> {
+    if !overlay_positioning_supported() {
+        return Err(
+            "Le placement personnalisé de l’overlay n’est pas disponible sous Wayland. Utilisez une session X11 pour choisir l’écran et le coin.".into(),
+        );
+    }
+
     if !(35..=100).contains(&settings.opacity_percent) {
         return Err("L’opacité de l’overlay doit être comprise entre 35 et 100 %.".into());
     }

@@ -12,6 +12,7 @@ import { pipeline } from "node:stream/promises"
 import path from "node:path"
 import process from "node:process"
 import { spawnSync } from "node:child_process"
+import { resolveUpdaterAsset } from "./updater-release-url.mjs"
 
 const [expectedVersion] = process.argv.slice(2)
 const repository = "Mesrine67/fxmpOS"
@@ -124,6 +125,9 @@ for (const asset of release.assets) {
   }
   releaseAssets.set(asset.name, asset)
 }
+const releaseAssetsById = new Map(
+  [...releaseAssets.values()].map((asset) => [String(asset.id), asset])
+)
 
 if (!releaseAssets.has("latest.json")) {
   throw new Error("The draft release does not contain latest.json")
@@ -188,47 +192,6 @@ async function downloadAsset(asset, destination) {
   return hash.digest("hex")
 }
 
-function assetNameFromUpdaterUrl(value, platform) {
-  if (typeof value !== "string") {
-    throw new Error(`Updater entry ${platform} has no URL`)
-  }
-
-  const updateUrl = new URL(value)
-  const expectedPath = `/${repository}/releases/download/v${expectedVersion}/`
-  if (
-    updateUrl.protocol !== "https:" ||
-    updateUrl.hostname !== "github.com" ||
-    updateUrl.port !== "" ||
-    updateUrl.username !== "" ||
-    updateUrl.password !== "" ||
-    updateUrl.search !== "" ||
-    updateUrl.hash !== "" ||
-    !updateUrl.pathname.startsWith(expectedPath)
-  ) {
-    throw new Error(
-      `Updater entry ${platform} points outside the expected GitHub release`
-    )
-  }
-
-  const encodedAssetName = updateUrl.pathname.slice(expectedPath.length)
-  if (!encodedAssetName || encodedAssetName.includes("/")) {
-    throw new Error(
-      `Updater entry ${platform} does not point to a single release asset`
-    )
-  }
-
-  let assetName
-  try {
-    assetName = decodeURIComponent(encodedAssetName)
-  } catch {
-    throw new Error(`Updater entry ${platform} contains an invalid asset name`)
-  }
-  if (!/^[A-Za-z0-9][A-Za-z0-9 _().+-]{0,254}$/.test(assetName)) {
-    throw new Error(`Updater entry ${platform} contains an invalid asset name`)
-  }
-  return assetName
-}
-
 function assertSignedVersion(signatureText, assetName) {
   const trustedLine = signatureText
     .split(/\r?\n/)
@@ -253,8 +216,13 @@ try {
       throw new Error(`Updater entry ${platform} has no signature`)
     }
 
-    const assetName = assetNameFromUpdaterUrl(update.url, platform)
-    const asset = releaseAssets.get(assetName)
+    const asset = resolveUpdaterAsset(update.url, platform, {
+      expectedVersion,
+      repository,
+      releaseAssets,
+      releaseAssetsById,
+    })
+    const assetName = asset.name
     const sidecar = releaseAssets.get(`${assetName}.sig`)
     if (!asset || !sidecar) {
       throw new Error(`The release is missing ${assetName} or its .sig asset`)

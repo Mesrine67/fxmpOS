@@ -69,6 +69,7 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            commands::greet::greet,
             commands::system::get_system_snapshot,
             commands::system::get_overlay_snapshot,
             commands::display::get_display_monitors,
