@@ -116,13 +116,13 @@ export function normalizeUpdaterAssetUrls(
       }
 
       const asset = releaseAssetsById.get(originalAssetId)
-      if (!asset || typeof asset.browser_download_url !== "string") {
+      if (!asset) {
         throw new Error(
           `Updater entry ${platform} does not reference a downloadable asset in the expected release`
         )
       }
 
-      update.url = asset.browser_download_url
+      update.url = `https://github.com/${repository}/releases/download/v${expectedVersion}/${encodeURIComponent(asset.name)}`
       normalizedCount += 1
     }
 
