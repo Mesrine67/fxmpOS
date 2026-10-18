@@ -16,7 +16,7 @@ Revue ciblée effectuée le 18 octobre 2026 sur les surfaces OpenClaw liées à 
 
 ## Choix OpenClaw qui ne sont pas importés
 
-- Le Windows Hub d'OpenClaw est une application native WinUI; le compagnon Tauri vise principalement Linux et sert de solution de repli sur Windows. FXMP OS garde son shell Tauri au lieu de réécrire l'interface en WinUI.
+- Le Windows Hub d'OpenClaw est une application native WinUI; FXMP OS cible actuellement Windows uniquement, avec Tauri comme shell desktop. Les builds macOS/Linux restent désactivés jusqu'à décision explicite de réactivation; le changement de cible ne retire pas les dépendances Linux transitives ni l'alerte glib suivie dans l'issue #7.
 - Les Gateways WSL, services gérés, connexions distantes, jumelage d'appareils, commandes d'agents, MCP et politiques multi-profils répondent aux fonctions d'assistant d'OpenClaw; FXMP OS n'a pas ces surfaces.
 - Les capacités séparées sont utiles quand une app possède plusieurs WebViews de confiance différente. FXMP OS a deux fenêtres locales; chacune reçoit sa propre capacité étroite.
 

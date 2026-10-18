@@ -125,8 +125,13 @@ for (const asset of release.assets) {
   releaseAssets.set(asset.name, asset)
 }
 
-const windowsInstallerAsset =
-  /^[A-Za-z0-9._-]+-\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?-windows-x64(?:-setup|-standalone-experimental)?\.(?:exe|msi)$/i
+const escapedVersion = expectedVersion.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+const windowsInstallerAsset = new RegExp(
+  `^FXMP OS-${escapedVersion}-windows-x64(?:-setup|-standalone-experimental)?\\.(?:exe|msi)$`,
+  "i"
+)
+let hasNsisInstaller = false
+let hasMsiInstaller = false
 for (const assetName of releaseAssets.keys()) {
   if (assetName === "latest.json" || assetName === "SHA256SUMS.txt") continue
   const bundleName = assetName.endsWith(".sig")
@@ -137,6 +142,13 @@ for (const assetName of releaseAssets.keys()) {
       `The release contains unsupported non-Windows or unexpected asset ${assetName}`
     )
   }
+  if (bundleName.endsWith("-windows-x64-setup.exe")) hasNsisInstaller = true
+  if (bundleName.endsWith("-windows-x64.msi")) hasMsiInstaller = true
+}
+if (!hasNsisInstaller || !hasMsiInstaller) {
+  throw new Error(
+    "The draft release must contain both the Windows NSIS setup (.exe) and MSI installer."
+  )
 }
 
 if (!releaseAssets.has("latest.json")) {

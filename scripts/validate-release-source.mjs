@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs"
+import { execFileSync } from "node:child_process"
 import process from "node:process"
 
 const packageVersion = JSON.parse(readFileSync("package.json", "utf8")).version
@@ -31,6 +32,23 @@ if (eventName === "push") {
   ) {
     throw new Error(
       `Release tag ${process.env.GITHUB_REF_NAME ?? "<missing>"} must match the configured version v${tauriVersion}.`
+    )
+  }
+  const defaultBranch = process.env.DEFAULT_BRANCH
+  if (!defaultBranch) {
+    throw new Error("DEFAULT_BRANCH must be set to validate a release tag.")
+  }
+  const taggedCommit = execFileSync("git", ["rev-parse", "HEAD"], {
+    encoding: "utf8",
+  }).trim()
+  const defaultBranchCommit = execFileSync(
+    "git",
+    ["rev-parse", "--verify", `refs/remotes/origin/${defaultBranch}^{commit}`],
+    { encoding: "utf8" }
+  ).trim()
+  if (taggedCommit !== defaultBranchCommit) {
+    throw new Error(
+      `Release tag commit ${taggedCommit} must equal the current ${defaultBranch} commit ${defaultBranchCommit}.`
     )
   }
 } else if (eventName === "workflow_dispatch") {
