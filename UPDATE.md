@@ -56,7 +56,7 @@ gh workflow run release.yml `
   -f verifyOnly=true
 ```
 
-Cette option ne reconstruit aucun paquet. Elle ne s'applique qu'à une release brouillon existante, jamais à une release publiée.
+Cette option ne reconstruit aucun paquet. Elle ne s'applique qu'à une release brouillon existante, jamais à une release publiée. Le workflow vérifie aussi que le tag correspondant existe et que son commit appartient à l'historique de `main`.
 
 Le job de vérification confirme que les URLs de `latest.json` pointent vers les actifs de la release attendue, que seuls les formats Windows x64 NSIS/MSI sont présents, que chaque entrée updater Windows porte une signature Minisign valide liée à la version et que les sommes SHA-256 correspondent. Tout manifeste ou asset macOS/Linux/Android/iOS entraîne un échec; une release en échec reste brouillon.
 
