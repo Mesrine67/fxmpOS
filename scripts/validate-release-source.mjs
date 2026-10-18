@@ -37,7 +37,7 @@ if (eventName === "push") {
   const defaultBranch = process.env.DEFAULT_BRANCH
   if (!defaultBranch || ref !== `refs/heads/${defaultBranch}`) {
     throw new Error(
-      `Manual releases must run from the repository default branch (${defaultBranch ?? "<missing>"}).`
+      `Manual release verification must run from the repository default branch (${defaultBranch ?? "<missing>"}).`
     )
   }
 } else if (eventName) {

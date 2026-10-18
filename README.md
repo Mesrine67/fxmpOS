@@ -16,6 +16,8 @@ La page **Settings** configure aussi un overlay transparent : activation au lanc
 
 La page **Settings** permet de vérifier les mises à jour Tauri signées et de les installer après confirmation. Le manifeste doit porter la même version que celle liée à la signature Minisign. Les versions sont distribuées par les releases publiques de GitHub; le vérificateur ne met rien à jour automatiquement. Voir [UPDATE.md](UPDATE.md) pour la publication, les secrets de signature et la procédure de version.
 
+Sous Windows, le setup NSIS installe FXMP OS pour l'utilisateur courant sans demander les droits administrateur. Il suit la langue de Windows (français ou anglais), utilise l'icône FXMP OS et crée le raccourci Menu Démarrer; le runtime WebView2 est vérifié et son bootstrapper est lancé silencieusement uniquement s'il manque. L'installation MSI reste également disponible. Voir [UPDATE.md](UPDATE.md) pour la signature Authenticode et les avertissements SmartScreen.
+
 Les pratiques d'OpenClaw pertinentes pour cette application et celles qui ne correspondent pas à son architecture sont résumées dans [OPENCLAW_PRACTICES.md](OPENCLAW_PRACTICES.md).
 
 Les choix réutilisables d'OpenHuman concernant la séparation Rust/interface, les permissions, les futures actions système et la protection des secrets sont évalués dans [OPENHUMAN_PRACTICES.md](OPENHUMAN_PRACTICES.md).
@@ -59,11 +61,11 @@ Commandes utiles :
 - `src-tauri/tauri.conf.json` : URL de développement, fenêtre et configuration Tauri.
 - `src-tauri/capabilities/` : permissions frontend séparées pour les fenêtres `main` et `overlay`.
 - `.github/workflows/release.yml` : génération des installateurs et du manifeste Tauri signés pour les tags `v*`.
-- `.github/workflows/ci.yml` : vérification frontend, compilation Rust sur Linux, Windows et macOS, et contrôle du MSRV Rust 1.95 lors des PR et des pushes sur `main`.
+- `.github/workflows/ci.yml` : vérification frontend et compilation Rust pour Windows; contrôle du MSRV Rust 1.95 également sous Windows lors des PR et des pushes sur `main`.
 - `.github/dependabot.yml` : propositions hebdomadaires de mise à jour des dépendances npm/pnpm, Cargo et des actions GitHub.
 - `scripts/validate-release-source.mjs`, `scripts/normalize-updater-release.mjs`, `scripts/verify-updater-release.mjs` et `scripts/github-release.mjs` : garde-fous de version, normalisation d'URLs et vérification des assets de release brouillon avant publication.
 
-Les actions GitHub des workflows sont épinglées sur des SHA complets et suivies par Dependabot. Les artefacts updater sont signés avec Minisign. La signature Authenticode Windows et la signature/notarisation macOS utilisent des certificats fournis en secrets GitHub; sans ces certificats, les releases générées restent en brouillon jusqu'à publication manuelle et les installateurs système peuvent afficher des avertissements. Le binaire Windows autonome est expérimental et n'est pas un mode portable Tauri officiellement pris en charge.
+La distribution et les builds Rust natifs sont limités à Windows (NSIS et MSI). Aucun paquet macOS, Linux, Android ou iOS n'est produit pour l'instant; le contrôle frontend générique utilise un runner Linux. Les artefacts updater Windows sont signés avec Minisign et Authenticode se configure avec les secrets GitHub. Le binaire Windows autonome est expérimental et n'est pas un mode portable Tauri officiellement pris en charge.
 
 ## Architecture Tauri et dépendances
 

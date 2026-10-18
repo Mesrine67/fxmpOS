@@ -55,12 +55,7 @@ if (platforms.length === 0) {
   throw new Error("latest.json contains no updater platforms")
 }
 
-const requiredPlatformTargets = [
-  "windows-x86_64",
-  "darwin-aarch64",
-  "darwin-x86_64",
-  "linux-x86_64",
-]
+const requiredPlatformTargets = ["windows-x86_64"]
 const platformNames = platforms.map(([platform]) => platform)
 for (const target of requiredPlatformTargets) {
   if (

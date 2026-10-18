@@ -13,7 +13,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": ["nsis", "msi"],
     "createUpdaterArtifacts": true,
     "icon": [
       "icons/32x32.png",
@@ -24,9 +24,24 @@
     ],
     "publisher": "FXMP",
     "category": "Utility",
-    "shortDescription": "FXMP OS",
-    "longDescription": "FXMP OS.",
-    "copyright": "Copyright © 2026 FXMP. All rights reserved."
+    "shortDescription": "PC monitoring and desktop overlay",
+    "longDescription": "FXMP OS is a desktop PC monitoring app with a configurable system overlay.",
+    "copyright": "Copyright © 2026 FXMP. All rights reserved.",
+    "windows": {
+      "allowDowngrades": false,
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper",
+        "silent": true
+      },
+      "nsis": {
+        "installMode": "currentUser",
+        "languages": ["French", "English"],
+        "displayLanguageSelector": false,
+        "startMenuFolder": "FXMP OS",
+        "installerIcon": "icons/icon.ico",
+        "uninstallerIcon": "icons/icon.ico"
+      }
+    }
   },
   "plugins": {
     "updater": {
