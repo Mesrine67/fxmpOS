@@ -54,7 +54,9 @@ export function OverlaySettings() {
 
   const loadMonitors = useCallback(async () => {
     try {
-      setMonitors(await trackedInvoke<DisplayMonitor[]>("get_display_monitors"))
+      setMonitors(
+        await trackedInvoke<DisplayMonitor[]>("get_display_monitors")
+      )
     } catch (cause) {
       setError(errorMessage(cause))
     }
@@ -143,9 +145,7 @@ export function OverlaySettings() {
   )
 
   const selectedMonitorId =
-    preferences.monitorId ??
-    monitors.find((monitor) => monitor.primary)?.id ??
-    ""
+    preferences.monitorId ?? monitors.find((monitor) => monitor.primary)?.id ?? ""
 
   return (
     <Card>
@@ -255,9 +255,7 @@ export function OverlaySettings() {
               <select
                 aria-label="Écran de l’overlay"
                 className="h-9 w-full rounded-md border border-input bg-background py-1 pr-3 pl-9 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/40 disabled:opacity-50"
-                disabled={
-                  saving || desktopRuntime !== true || monitors.length === 0
-                }
+                disabled={saving || desktopRuntime !== true || monitors.length === 0}
                 onChange={(event) =>
                   void applyPreferences({
                     ...preferences,
@@ -272,8 +270,8 @@ export function OverlaySettings() {
                   monitors.map((monitor, index) => (
                     <option key={monitor.id + index} value={monitor.id}>
                       {monitor.name || `Écran ${index + 1}`}
-                      {monitor.primary ? " · principal" : ""} — {monitor.width}{" "}
-                      × {monitor.height}
+                      {monitor.primary ? " · principal" : ""} — {monitor.width} ×{" "}
+                      {monitor.height}
                     </option>
                   ))
                 )}
@@ -315,7 +313,7 @@ export function OverlaySettings() {
         <label className="block space-y-2 text-sm">
           <span className="flex items-center justify-between gap-4">
             <span className="font-medium">Opacité</span>
-            <span className="text-xs text-muted-foreground tabular-nums">
+            <span className="text-xs tabular-nums text-muted-foreground">
               {preferences.opacityPercent}%
             </span>
           </span>
@@ -346,20 +344,13 @@ export function OverlaySettings() {
           </p>
         )}
         {error && (
-          <p
-            aria-live="polite"
-            className="text-xs text-destructive"
-            role="status"
-          >
+          <p aria-live="polite" className="text-xs text-destructive" role="status">
             {error}
           </p>
         )}
         {saving && (
           <p className="flex items-center gap-2 text-xs text-muted-foreground">
-            <LoaderCircleIcon
-              aria-hidden="true"
-              className="size-3.5 animate-spin"
-            />
+            <LoaderCircleIcon aria-hidden="true" className="size-3.5 animate-spin" />
             Application des réglages…
           </p>
         )}
@@ -371,9 +362,7 @@ export function OverlaySettings() {
           </p>
           <div className="flex gap-2">
             <Button
-              disabled={
-                saving || desktopRuntime !== true || !preferences.enabled
-              }
+              disabled={saving || desktopRuntime !== true || !preferences.enabled}
               onClick={() => void loadMonitors()}
               type="button"
               variant="outline"
