@@ -61,7 +61,7 @@ Commandes utiles :
 - `.github/workflows/release.yml` : génération des installateurs et du manifeste Tauri signés pour les tags `v*`.
 - `.github/workflows/ci.yml` : vérification frontend, compilation Rust sur Linux, Windows et macOS, et contrôle du MSRV Rust 1.95 lors des PR et des pushes sur `main`.
 - `.github/dependabot.yml` : propositions hebdomadaires de mise à jour des dépendances npm/pnpm, Cargo et des actions GitHub.
-- `scripts/validate-release-source.mjs` et `scripts/verify-updater-release.mjs` : garde-fous de version, de manifeste et de signature avant publication.
+- `scripts/validate-release-source.mjs`, `scripts/normalize-updater-release.mjs`, `scripts/verify-updater-release.mjs` et `scripts/github-release.mjs` : garde-fous de version, normalisation d'URLs et vérification des assets de release brouillon avant publication.
 
 Les actions GitHub des workflows sont épinglées sur des SHA complets et suivies par Dependabot. Les artefacts updater sont signés avec Minisign. La signature Authenticode Windows et la signature/notarisation macOS utilisent des certificats fournis en secrets GitHub; sans ces certificats, les releases générées restent en brouillon jusqu'à publication manuelle et les installateurs système peuvent afficher des avertissements. Le binaire Windows autonome est expérimental et n'est pas un mode portable Tauri officiellement pris en charge.
 
