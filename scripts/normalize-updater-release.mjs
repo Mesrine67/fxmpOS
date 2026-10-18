@@ -2,6 +2,7 @@ import { readFileSync, writeFileSync } from "node:fs"
 import path from "node:path"
 import process from "node:process"
 
+import { fetchReleaseByTag } from "./github-release.mjs"
 import { normalizeUpdaterAssetUrls } from "./updater-release-url.mjs"
 
 const [expectedVersion] = process.argv.slice(2)
@@ -41,17 +42,11 @@ const apiHeaders = {
   "X-GitHub-Api-Version": "2022-11-28",
   "User-Agent": "fxmpOS-updater-release-normalizer",
 }
-const releaseResponse = await fetch(
-  `https://api.github.com/repos/${repository}/releases/tags/v${expectedVersion}`,
-  { headers: apiHeaders }
-)
-if (!releaseResponse.ok) {
-  throw new Error(
-    `GitHub release lookup failed with HTTP ${releaseResponse.status}`
-  )
-}
-
-const release = await releaseResponse.json()
+const release = await fetchReleaseByTag({
+  repository,
+  tag: `v${expectedVersion}`,
+  headers: apiHeaders,
+})
 if (release.tag_name !== `v${expectedVersion}` || release.draft !== true) {
   throw new Error(
     "The release tag or draft state does not match the validated source"

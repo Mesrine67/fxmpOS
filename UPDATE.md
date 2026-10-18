@@ -29,6 +29,15 @@ La version actuelle est 0.0.1. Pour amorcer le canal, pousser le tag v0.0.1; le 
 3. Créer un tag correspondant exactement à la version, par exemple v0.0.2, puis le pousser. Le workflow démarre sur les tags v*.
 4. GitHub Actions construit Windows (NSIS et MSI), macOS et Linux, signe les paquets Tauri avec Minisign et crée ou actualise latest.json. Avant vérification, le job final convertit les URLs REST de téléchargement générées par `tauri-action` en URLs navigateur `/releases/download/` utilisables par le plugin updater par défaut, puis vérifie le manifeste, les signatures et les sommes SHA-256. Le build Windows ajoute aussi un exécutable autonome expérimental; ce n'est pas un mode portable officiellement pris en charge par Tauri et il nécessite le runtime WebView2.
 5. Le job `validate-release-source` refuse un tag qui ne correspond pas à la version Tauri et marque automatiquement les versions SemVer préliminaires comme préliminaires GitHub. Une exécution manuelle doit partir de la branche par défaut. Le job `verify-updater-release` confirme avec l'API GitHub que chaque URL navigateur du manifeste correspond à un actif de la release brouillon attendue, puis télécharge et vérifie chaque paquet dans des fichiers temporaires à noms fixes. Il contrôle la signature Minisign avec la clé publique intégrée et exige que le commentaire de confiance signé contienne la même version que le manifeste. Enfin, il calcule les SHA-256 des autres artefacts et ajoute `SHA256SUMS.txt` à la release.
+   Pour relancer uniquement le contrôle des actifs déjà téléversés, depuis `main`
+   et sans reconstruire les plateformes :
+
+   ```powershell
+   gh workflow run release.yml `
+     --repo github.com/Mesrine67/fxmpOS `
+     --ref main `
+     -f verifyOnly=true
+   ```
 6. Quand tous les jobs sont verts, vérifier le brouillon, le statut de signature système des installateurs et les sommes SHA-256, puis publier la release GitHub manuellement. Les clients consultent uniquement la dernière release publiée; une release qui échoue à la validation reste en brouillon.
 
 ## Secrets GitHub Actions

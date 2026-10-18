@@ -2,6 +2,12 @@ name: Release
 
 on:
   workflow_dispatch:
+    inputs:
+      verifyOnly:
+        description: Verify assets already present in the draft release without rebuilding.
+        type: boolean
+        required: false
+        default: false
   push:
     tags:
       - "v*"
@@ -36,6 +42,7 @@ jobs:
 
   publish-tauri:
     needs: validate-release-source
+    if: ${{ !inputs.verifyOnly }}
     permissions:
       contents: write
     strategy:
@@ -301,7 +308,13 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
   verify-updater-release:
-    needs: publish-tauri
+    needs: [validate-release-source, publish-tauri]
+    if: >-
+      ${{
+        always() &&
+        needs.validate-release-source.result == 'success' &&
+        (inputs.verifyOnly || needs.publish-tauri.result == 'success')
+      }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
