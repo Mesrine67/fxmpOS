@@ -40,6 +40,9 @@ struct Win32VideoController {
 pub struct SystemSnapshot {
     hostname: String,
     windows_user: Option<String>,
+    windows_domain: Option<String>,
+    windows_profile_path: Option<String>,
+    windows_session: Option<String>,
     platform: String,
     architecture: String,
     os_version: String,
@@ -189,6 +192,15 @@ fn read_system_snapshot() -> SystemSnapshot {
     SystemSnapshot {
         hostname: tauri_plugin_os::hostname(),
         windows_user: std::env::var("USERNAME")
+            .ok()
+            .filter(|value| !value.is_empty()),
+        windows_domain: std::env::var("USERDOMAIN")
+            .ok()
+            .filter(|value| !value.is_empty()),
+        windows_profile_path: std::env::var("USERPROFILE")
+            .ok()
+            .filter(|value| !value.is_empty()),
+        windows_session: std::env::var("SESSIONNAME")
             .ok()
             .filter(|value| !value.is_empty()),
         platform: tauri_plugin_os::platform().to_owned(),

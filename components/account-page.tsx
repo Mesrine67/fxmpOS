@@ -63,6 +63,9 @@ type DisplayMonitorInfo = {
 type SystemSnapshot = {
   hostname: string
   windowsUser: string | null
+  windowsDomain: string | null
+  windowsProfilePath: string | null
+  windowsSession: string | null
   platform: string
   architecture: string
   osVersion: string
@@ -492,7 +495,24 @@ export function AccountPage() {
                           label="Utilisateur Windows"
                           value={snapshot.windowsUser}
                         />
+                        <DetailRow
+                          label="Domaine ou ordinateur"
+                          value={snapshot.windowsDomain}
+                        />
+                        <DetailRow
+                          label="Dossier du profil"
+                          value={snapshot.windowsProfilePath}
+                        />
+                        <DetailRow
+                          label="Session Windows"
+                          value={snapshot.windowsSession}
+                        />
                       </dl>
+                      <p className="mt-3 border-t pt-3 text-xs text-muted-foreground">
+                        Ces champs décrivent la session Windows active. FXMP OS
+                        ne lit pas les mots de passe, jetons ni informations de
+                        connexion en ligne.
+                      </p>
                     </CardContent>
                   </Card>
 

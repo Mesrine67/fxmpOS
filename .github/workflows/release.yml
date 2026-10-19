@@ -19,6 +19,7 @@ jobs:
       contents: read
     outputs:
       prerelease: ${{ steps.validate.outputs.prerelease }}
+      version: ${{ steps.validate.outputs.version }}
 
     steps:
       - name: Checkout release source
@@ -45,6 +46,7 @@ jobs:
             prerelease=false
           fi
           echo "prerelease=$prerelease" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "Validated release source for FXMP OS $version ($GITHUB_REF)."
 
   publish-tauri:
@@ -70,6 +72,13 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
+
+      - name: Prepare versioned release notes
+        id: release-notes
+        shell: pwsh
+        env:
+          RELEASE_VERSION: ${{ needs.validate-release-source.outputs.version }}
+        run: node scripts/get-release-notes.mjs $env:RELEASE_VERSION
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
@@ -151,9 +160,7 @@ jobs:
         with:
           tagName: v__VERSION__
           releaseName: v__VERSION__
-          releaseBody: |
-            See the assets below to download this version.
-            The experimental Windows standalone executable is not an officially supported portable build and requires the Microsoft Edge WebView2 Runtime.
+          releaseBody: ${{ steps.release-notes.outputs.body }}
           releaseDraft: true
           prerelease: ${{ needs.validate-release-source.outputs.prerelease }}
           generateReleaseNotes: true

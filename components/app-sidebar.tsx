@@ -15,7 +15,22 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
-import { LayoutDashboardIcon, ListIcon, ChartBarIcon, FolderIcon, UsersIcon, CameraIcon, FileTextIcon, CircleHelpIcon, SearchIcon, DatabaseIcon, FileChartColumnIcon, FileIcon, CommandIcon } from "lucide-react"
+import {
+  LayoutDashboardIcon,
+  ListIcon,
+  ChartBarIcon,
+  FolderIcon,
+  UsersIcon,
+  CameraIcon,
+  FileTextIcon,
+  CircleHelpIcon,
+  SearchIcon,
+  DatabaseIcon,
+  FileChartColumnIcon,
+  FileIcon,
+  CommandIcon,
+  AppWindowIcon,
+} from "lucide-react"
 
 const data = {
   user: {
@@ -141,6 +156,11 @@ const data = {
     },
   ],
   documents: [
+    {
+      name: "Applications",
+      url: "/apps/",
+      icon: <AppWindowIcon />,
+    },
     {
       name: "Data Library",
       url: "#",
