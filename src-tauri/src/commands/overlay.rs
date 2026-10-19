@@ -1,4 +1,6 @@
 use serde::{Deserialize, Serialize};
+use std::sync::{Mutex, OnceLock};
+use std::time::{Duration, Instant};
 use tauri::{AppHandle, Emitter, Manager, PhysicalPosition, WebviewWindow, WebviewWindowBuilder};
 
 use crate::commands::display::{monitor_identifier, overlay_positioning_supported};
@@ -7,6 +9,7 @@ const OVERLAY_LABEL: &str = "overlay";
 const OVERLAY_WIDTH: f64 = 380.0;
 const OVERLAY_HEIGHT: f64 = 104.0;
 const OVERLAY_MARGIN: f64 = 16.0;
+static PROGRAMMATIC_POSITION: OnceLock<Mutex<Option<(i32, i32, Instant)>>> = OnceLock::new();
 
 #[derive(Clone, Copy, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -118,6 +121,11 @@ fn apply_overlay_settings(
         anchor_position(settings.anchor, left, right, top, bottom)
     };
 
+    *PROGRAMMATIC_POSITION
+        .get_or_init(|| Mutex::new(None))
+        .lock()
+        .map_err(|_| "Impossible de synchroniser le placement de l’overlay.".to_owned())? =
+        Some((x, y, Instant::now()));
     window
         .set_position(PhysicalPosition::new(x, y))
         .map_err(|error| format!("Impossible de placer l’overlay : {error}"))
@@ -151,6 +159,17 @@ fn track_overlay_position(window: &WebviewWindow) {
     let tracked_window = window.clone();
     window.on_window_event(move |event| {
         if let tauri::WindowEvent::Moved(position) = event {
+            let programmatic_position = PROGRAMMATIC_POSITION.get_or_init(|| Mutex::new(None));
+            if let Ok(mut expected) = programmatic_position.lock() {
+                if let Some((x, y, requested_at)) = expected.take() {
+                    if requested_at.elapsed() <= Duration::from_secs(1)
+                        && position.x == x
+                        && position.y == y
+                    {
+                        return;
+                    }
+                }
+            }
             let monitor_id = tracked_window
                 .current_monitor()
                 .ok()

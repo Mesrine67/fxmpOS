@@ -34,6 +34,9 @@ export function OverlayWindow() {
   const desktopRuntime = useTauriRuntime()
   const [snapshot, setSnapshot] = useState<OverlaySnapshot | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [positionSaveError, setPositionSaveError] = useState<string | null>(
+    null
+  )
 
   const refreshSnapshot = useCallback(async () => {
     try {
@@ -66,7 +69,7 @@ export function OverlayWindow() {
       else stopListening = unlisten
     })
     void listen<string>("overlay-position-save-error", ({ payload }) => {
-      setError(payload)
+      setPositionSaveError(payload)
     }).then((unlisten) => {
       if (disposed) unlisten()
       else stopPositionErrorListening = unlisten
@@ -168,12 +171,12 @@ export function OverlayWindow() {
           </button>
         </header>
 
-        {error && (
+        {(positionSaveError || error) && (
           <p
             className="px-3 pt-1 text-[9px] leading-tight text-red-300"
             role="status"
           >
-            {error}
+            {positionSaveError || error}
           </p>
         )}
 
