@@ -16,6 +16,8 @@ Revue ciblée effectuée le 18 octobre 2026 à partir du README, de `AGENTS.md`,
 
 La sonde de latence suit aussi cette frontière d'architecture : le frontend ne choisit pas la destination, la commande Rust utilise une cible TCP fixe et des tentatives bornées, et seule la fenêtre `main` peut la déclencher.
 
+L'historique des versions est la seule autre lecture distante de la fenêtre principale : il interroge sans authentification l'API publique GitHub pour les métadonnées et changelogs des releases. Aucune information système ou d'identité locale n'est incluse dans cette requête; l'installation reste exclusivement contrôlée par le vérificateur Tauri signé.
+
 ## Ce qui n'est pas repris
 
 - Le cœur d'agents, l'autonomie, les appels d'outils, la mémoire, les canaux, MCP et OAuth n'apportent rien à l'écran Account ni au dashboard actuel.

@@ -2,6 +2,23 @@
 
 Chaque version publiée possède sa propre section. Le workflow de release réutilise ces notes dans la release GitHub et dans le manifeste de l’updater Tauri.
 
+## [0.0.5] - 2026-10-19
+
+### Ajouts
+
+- L’onglet Mises à jour affiche l’historique des releases stables publiées, avec recherche par version et contenu.
+- Chaque version affiche son changelog complet, sa date, ses fichiers, leur taille, le nombre de téléchargements et leurs empreintes SHA-256 quand GitHub les fournit.
+- Les fichiers des anciennes releases peuvent être ouverts depuis leur page GitHub; les brouillons et versions de prépublication ne sont pas inclus.
+
+### Sécurité et confidentialité
+
+- L’historique est lu publiquement depuis l’API GitHub sans authentification. Aucune information du PC n’est envoyée; l’installation continue de passer par l’updater Tauri et sa signature Minisign obligatoire.
+
+### Compatibilité
+
+- Windows x64, installateurs NSIS et MSI. WebView2 est requis.
+- macOS, Linux, Android et iOS ne sont pas distribués pour cette version.
+
 ## [0.0.4] - 2026-10-19
 
 ### Ajouts
