@@ -2,7 +2,8 @@
 
 import { useMemo, useSyncExternalStore } from "react"
 
-export type OverlayAnchor = "topLeft" | "topRight" | "bottomLeft" | "bottomRight"
+export type OverlayAnchor =
+  "topLeft" | "topRight" | "bottomLeft" | "bottomRight"
 
 export type OverlayPreferences = {
   enabled: boolean
@@ -11,6 +12,8 @@ export type OverlayPreferences = {
   opacityPercent: number
   anchor: OverlayAnchor
   monitorId: string | null
+  positionX: number | null
+  positionY: number | null
 }
 
 export const OVERLAY_PREFERENCES_KEY = "fxmp.overlay.preferences.v1"
@@ -22,12 +25,12 @@ export const DEFAULT_OVERLAY_PREFERENCES: OverlayPreferences = {
   opacityPercent: 92,
   anchor: "topRight",
   monitorId: null,
+  positionX: null,
+  positionY: null,
 }
 
 const PREFERENCES_CHANGED_EVENT = "fxmp:overlay-preferences-changed"
-const DEFAULT_PREFERENCES_SNAPSHOT = JSON.stringify(
-  DEFAULT_OVERLAY_PREFERENCES
-)
+const DEFAULT_PREFERENCES_SNAPSHOT = JSON.stringify(DEFAULT_OVERLAY_PREFERENCES)
 
 const anchors: OverlayAnchor[] = [
   "topLeft",
@@ -70,6 +73,16 @@ export function normalizeOverlayPreferences(
         : DEFAULT_OVERLAY_PREFERENCES.anchor,
     monitorId:
       typeof candidate.monitorId === "string" ? candidate.monitorId : null,
+    positionX:
+      typeof candidate.positionX === "number" &&
+      Number.isSafeInteger(candidate.positionX)
+        ? candidate.positionX
+        : null,
+    positionY:
+      typeof candidate.positionY === "number" &&
+      Number.isSafeInteger(candidate.positionY)
+        ? candidate.positionY
+        : null,
   }
 }
 

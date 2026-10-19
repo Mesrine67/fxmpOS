@@ -34,6 +34,9 @@ export function OverlayWindow() {
   const desktopRuntime = useTauriRuntime()
   const [snapshot, setSnapshot] = useState<OverlaySnapshot | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [positionSaveError, setPositionSaveError] = useState<string | null>(
+    null
+  )
 
   const refreshSnapshot = useCallback(async () => {
     try {
@@ -58,16 +61,24 @@ export function OverlayWindow() {
 
     let disposed = false
     let stopListening: (() => void) | undefined
+    let stopPositionErrorListening: (() => void) | undefined
     void listen<OverlayPreferences>("overlay-settings-changed", (event) => {
       writeOverlayPreferences(normalizeOverlayPreferences(event.payload))
     }).then((unlisten) => {
       if (disposed) unlisten()
       else stopListening = unlisten
     })
+    void listen<string>("overlay-position-save-error", ({ payload }) => {
+      setPositionSaveError(payload)
+    }).then((unlisten) => {
+      if (disposed) unlisten()
+      else stopPositionErrorListening = unlisten
+    })
 
     return () => {
       disposed = true
       stopListening?.()
+      stopPositionErrorListening?.()
       delete document.documentElement.dataset.fxmpOverlay
     }
   }, [])
@@ -159,6 +170,15 @@ export function OverlayWindow() {
             <XIcon aria-hidden="true" className="size-3.5" />
           </button>
         </header>
+
+        {(positionSaveError || error) && (
+          <p
+            className="px-3 pt-1 text-[9px] leading-tight text-red-300"
+            role="status"
+          >
+            {positionSaveError || error}
+          </p>
+        )}
 
         <div className="space-y-1.5 px-3 py-2">
           <div className="flex items-center justify-between gap-3 text-[11px]">

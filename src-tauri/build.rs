@@ -3,9 +3,11 @@ fn main() {
         tauri_build::AppManifest::new().commands(&[
             "greet",
             "get_system_snapshot",
+            "get_installed_apps",
             "get_overlay_snapshot",
             "get_display_monitors",
             "set_overlay_state",
+            "measure_network_latency",
         ]),
     ))
     .expect("failed to build Tauri application metadata");

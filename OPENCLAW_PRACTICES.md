@@ -14,6 +14,8 @@ Revue ciblée effectuée le 18 octobre 2026 sur les surfaces OpenClaw liées à 
 | Origine de release | Un tag doit correspondre à la version Tauri. L'exécution manuelle de publication est limitée à la branche par défaut.                                                                                                                                                                                                                                                                                    |
 | Vie privée         | Les détails du PC et les dimensions/positions d'écran sont lus localement. FXMP OS n'expose pas de numéros de série, EDID ou identifiants matériels uniques et ne transmet pas ces informations au manifeste de mise à jour.                                                                                                                                                                                |
 
+La mesure de latence est une action explicite depuis la fenêtre `main`, vers la cible TCP fixe `1.1.1.1:443` avec des tentatives bornées. Elle n'accorde aucune capacité réseau à l'overlay et n'est pas présentée comme une mesure ICMP.
+
 ## Choix OpenClaw qui ne sont pas importés
 
 - Le Windows Hub d'OpenClaw est une application native WinUI; FXMP OS cible actuellement Windows uniquement, avec Tauri comme shell desktop. Les builds macOS/Linux restent désactivés jusqu'à décision explicite de réactivation; le changement de cible ne retire pas les dépendances Linux transitives ni l'alerte glib suivie dans l'issue #7.

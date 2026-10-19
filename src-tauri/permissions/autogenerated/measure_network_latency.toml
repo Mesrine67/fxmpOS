@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-measure-network-latency"
+description = "Enables the measure_network_latency command without any pre-configured scope."
+commands.allow = ["measure_network_latency"]
+
+[[permission]]
+identifier = "deny-measure-network-latency"
+description = "Denies the measure_network_latency command without any pre-configured scope."
+commands.deny = ["measure_network_latency"]

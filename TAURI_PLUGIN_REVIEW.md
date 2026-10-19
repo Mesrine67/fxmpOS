@@ -51,7 +51,7 @@ Ces plugins officiels sont listés sur la page Tauri; les versions mobiles, perm
 | Updater | Déjà utilisé. |
 | Upload | Aucun envoi de fichier requis. |
 | Websocket | Aucun service temps réel distant. |
-| Window State | Non nécessaire pour l'overlay fixe : les préférences conservent écran et ancrage, puis la position physique est recalculée à partir de la géométrie actuelle. |
+| Window State | Non nécessaire : les coordonnées physiques et l'écran géométrique de l'overlay sont conservés dans ses préférences locales, puis bornés à la zone de travail au lancement. |
 
 La table de compatibilité de la page contient aussi les entrées `torch`, `system-tray` et `window-customization`; le tray et la personnalisation des fenêtres utilisés ici relèvent déjà des API Tauri et aucun besoin de calcul Torch n'est présent.
 
