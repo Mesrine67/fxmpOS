@@ -6,6 +6,7 @@ fn main() {
             "get_overlay_snapshot",
             "get_display_monitors",
             "set_overlay_state",
+            "measure_network_latency",
         ]),
     ))
     .expect("failed to build Tauri application metadata");

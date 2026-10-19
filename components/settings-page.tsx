@@ -7,6 +7,7 @@ import {
 } from "lucide-react"
 
 import { AutostartSettings } from "@/components/autostart-settings"
+import { NetworkLatency } from "@/components/network-latency"
 import { OverlaySettings } from "@/components/overlay-settings"
 import { UpdaterSettings } from "@/components/updater-settings"
 import { Badge } from "@/components/ui/badge"
@@ -96,6 +97,7 @@ export function SettingsPage() {
 
           <TabsContent className="flex flex-col gap-4" value="overlay">
             <OverlaySettings />
+            <NetworkLatency />
           </TabsContent>
 
           <TabsContent

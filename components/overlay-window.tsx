@@ -15,6 +15,7 @@ import {
 } from "@/lib/overlay-settings"
 import { trackedEmit, trackedInvoke } from "@/lib/tauri"
 import { useTauriRuntime } from "@/hooks/use-tauri-runtime"
+import { NetworkLatency } from "@/components/network-latency"
 
 type OverlaySnapshot = {
   hostname: string
@@ -188,6 +189,7 @@ export function OverlayWindow() {
             />
           </div>
         </div>
+        <NetworkLatency autoRefresh={preferences.enabled} compact />
       </section>
     </main>
   )

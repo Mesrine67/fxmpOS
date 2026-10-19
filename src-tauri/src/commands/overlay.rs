@@ -1,5 +1,5 @@
-use serde::Deserialize;
-use tauri::{AppHandle, Manager, PhysicalPosition, WebviewWindow, WebviewWindowBuilder};
+use serde::{Deserialize, Serialize};
+use tauri::{AppHandle, Emitter, Manager, PhysicalPosition, WebviewWindow, WebviewWindowBuilder};
 
 use crate::commands::display::{monitor_identifier, overlay_positioning_supported};
 
@@ -31,6 +31,8 @@ pub struct OverlaySettings {
     opacity_percent: u8,
     anchor: OverlayAnchor,
     monitor_id: Option<String>,
+    position_x: Option<i32>,
+    position_y: Option<i32>,
 }
 
 impl Default for OverlaySettings {
@@ -42,6 +44,8 @@ impl Default for OverlaySettings {
             opacity_percent: 92,
             anchor: OverlayAnchor::TopRight,
             monitor_id: None,
+            position_x: None,
+            position_y: None,
         }
     }
 }
@@ -97,16 +101,73 @@ fn apply_overlay_settings(
         .saturating_add(i32::try_from(work_area.size.height).unwrap_or(i32::MAX))
         .saturating_sub(height)
         .saturating_sub(margin);
-    let (x, y) = match settings.anchor {
-        OverlayAnchor::TopLeft => (left, top),
-        OverlayAnchor::TopRight => (right, top),
-        OverlayAnchor::BottomLeft => (left, bottom),
-        OverlayAnchor::BottomRight => (right, bottom),
+    let (x, y) = if settings.position_x.is_some() && settings.position_y.is_some() {
+        let saved_monitor_is_available = settings
+            .monitor_id
+            .as_deref()
+            .is_some_and(|id| monitor_identifier(target) == id);
+        if saved_monitor_is_available {
+            (
+                settings.position_x.unwrap().clamp(left, right.max(left)),
+                settings.position_y.unwrap().clamp(top, bottom.max(top)),
+            )
+        } else {
+            anchor_position(settings.anchor, left, right, top, bottom)
+        }
+    } else {
+        anchor_position(settings.anchor, left, right, top, bottom)
     };
 
     window
         .set_position(PhysicalPosition::new(x, y))
         .map_err(|error| format!("Impossible de placer l’overlay : {error}"))
+}
+
+fn anchor_position(
+    anchor: OverlayAnchor,
+    left: i32,
+    right: i32,
+    top: i32,
+    bottom: i32,
+) -> (i32, i32) {
+    match anchor {
+        OverlayAnchor::TopLeft => (left, top),
+        OverlayAnchor::TopRight => (right, top),
+        OverlayAnchor::BottomLeft => (left, bottom),
+        OverlayAnchor::BottomRight => (right, bottom),
+    }
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct OverlayPositionChanged {
+    x: i32,
+    y: i32,
+    monitor_id: Option<String>,
+}
+
+fn track_overlay_position(window: &WebviewWindow) {
+    let app = window.app_handle().clone();
+    let tracked_window = window.clone();
+    window.on_window_event(move |event| {
+        if let tauri::WindowEvent::Moved(position) = event {
+            let monitor_id = tracked_window
+                .current_monitor()
+                .ok()
+                .flatten()
+                .as_ref()
+                .map(monitor_identifier);
+            let _ = app.emit_to(
+                "main",
+                "overlay-position-changed",
+                OverlayPositionChanged {
+                    x: position.x,
+                    y: position.y,
+                    monitor_id,
+                },
+            );
+        }
+    });
 }
 
 fn validate_overlay_settings(app: &AppHandle, settings: &OverlaySettings) -> Result<(), String> {
@@ -166,6 +227,7 @@ pub async fn set_overlay_state(
         .build()
         .map_err(|error| format!("Impossible de créer l’overlay : {error}"))?;
 
+    track_overlay_position(&window);
     apply_overlay_settings(&window, &settings)?;
     window
         .show()

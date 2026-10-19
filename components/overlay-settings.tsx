@@ -260,6 +260,8 @@ export function OverlaySettings() {
                   void applyPreferences({
                     ...preferences,
                     monitorId: event.currentTarget.value || null,
+                    positionX: null,
+                    positionY: null,
                   })
                 }
                 value={selectedMonitorId}
@@ -287,7 +289,8 @@ export function OverlaySettings() {
           <label className="space-y-2 text-sm">
             <span className="font-medium">Position</span>
             <span className="block text-xs text-muted-foreground">
-              Ancrage dans la zone de travail de l’écran.
+              Glissez l’overlay pour choisir une position libre. Ses coordonnées
+              et son écran seront restaurés au prochain lancement.
             </span>
             <select
               aria-label="Position de l’overlay"
@@ -297,6 +300,8 @@ export function OverlaySettings() {
                 void applyPreferences({
                   ...preferences,
                   anchor: event.currentTarget.value as OverlayAnchor,
+                  positionX: null,
+                  positionY: null,
                 })
               }
               value={preferences.anchor}

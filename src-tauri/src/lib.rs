@@ -72,6 +72,7 @@ pub fn run() {
             commands::greet::greet,
             commands::system::get_system_snapshot,
             commands::system::get_overlay_snapshot,
+            commands::network::measure_network_latency,
             commands::display::get_display_monitors,
             commands::overlay::set_overlay_state
         ])

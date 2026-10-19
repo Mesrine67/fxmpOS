@@ -15,6 +15,7 @@
     "allow-greet",
     "allow-get-system-snapshot",
     "allow-get-display-monitors",
+    "allow-measure-network-latency",
     "allow-set-overlay-state"
   ]
 }
