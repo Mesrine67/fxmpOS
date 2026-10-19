@@ -55,7 +55,7 @@ fn read_installed_apps() -> Vec<InstalledApp> {
         };
 
         for subkey in subkeys {
-            let Ok(entry) = uninstall_key.open_subkey_with_flags(subkey, KEY_READ) else {
+            let Ok(entry) = uninstall_key.open_subkey_with_flags(subkey, flags) else {
                 continue;
             };
             let Ok(name) = entry.get_value::<String, _>("DisplayName") else {
