@@ -336,7 +336,7 @@ export function UpdaterSettings() {
       .toLocaleLowerCase("fr-FR")
       .includes(releaseSearch.trim().toLocaleLowerCase("fr-FR"))
   )
-  const selectedRelease = releases.find(
+  const visibleSelectedRelease = filteredReleases.find(
     (release) => release.tag === selectedReleaseTag
   )
 
@@ -733,25 +733,26 @@ export function UpdaterSettings() {
                 </p>
               )}
 
-              {selectedRelease && (
+              {visibleSelectedRelease && (
                 <Card className="bg-muted/20">
                   <CardHeader className="gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="flex flex-col gap-1">
                       <CardTitle className="flex flex-wrap items-center gap-2">
-                        {selectedRelease.name}
-                        {selectedRelease.version === currentVersion && (
+                        {visibleSelectedRelease.name}
+                        {visibleSelectedRelease.version === currentVersion && (
                           <Badge variant="outline">Version installée</Badge>
                         )}
-                        {selectedRelease.version === availableVersion && (
+                        {visibleSelectedRelease.version ===
+                          availableVersion && (
                           <Badge>Disponible pour installation</Badge>
                         )}
                       </CardTitle>
                       <CardDescription>
                         Publiée le{" "}
-                        {formatReleaseDate(selectedRelease.publishedAt)}
+                        {formatReleaseDate(visibleSelectedRelease.publishedAt)}
                         {" · "}
-                        {selectedRelease.assets.length} fichiers ·{" "}
-                        {selectedRelease.assets
+                        {visibleSelectedRelease.assets.length} fichiers ·{" "}
+                        {visibleSelectedRelease.assets
                           .reduce((sum, asset) => sum + asset.downloadCount, 0)
                           .toLocaleString("fr-FR")}{" "}
                         téléchargements
@@ -759,7 +760,7 @@ export function UpdaterSettings() {
                     </div>
                     <a
                       className="inline-flex shrink-0 items-center gap-1.5 text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-                      href={selectedRelease.url}
+                      href={visibleSelectedRelease.url}
                       rel="noreferrer"
                       target="_blank"
                     >
@@ -770,9 +771,9 @@ export function UpdaterSettings() {
                   <CardContent className="flex flex-col gap-5">
                     <div>
                       <h3 className="mb-2 font-medium">Changelog complet</h3>
-                      {selectedRelease.notes ? (
+                      {visibleSelectedRelease.notes ? (
                         <div className="flex flex-col gap-1 rounded-md border bg-background/50 p-4 text-sm text-muted-foreground">
-                          {renderReleaseNotes(selectedRelease.notes)}
+                          {renderReleaseNotes(visibleSelectedRelease.notes)}
                         </div>
                       ) : (
                         <p className="rounded-md border p-4 text-sm text-muted-foreground">
@@ -785,9 +786,9 @@ export function UpdaterSettings() {
                       <h3 className="font-medium">
                         Fichiers et sommes de contrôle
                       </h3>
-                      {selectedRelease.assets.length > 0 ? (
+                      {visibleSelectedRelease.assets.length > 0 ? (
                         <ul className="flex flex-col divide-y rounded-md border">
-                          {selectedRelease.assets.map((asset) => (
+                          {visibleSelectedRelease.assets.map((asset) => (
                             <li
                               className="flex flex-col gap-1 p-3 sm:flex-row sm:items-start sm:justify-between"
                               key={asset.name}
