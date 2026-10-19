@@ -14,6 +14,8 @@ Revue ciblée effectuée le 18 octobre 2026 à partir du README, de `AGENTS.md`,
 | Les actions sensibles sont traçables après coup. | Pour toute future fonction ayant un effet de bord, journaliser l'action, son résultat et l'erreur utile sans valeur secrète ni identifiant matériel unique. | À appliquer lors de l'ajout d'actions système. |
 | Le guide de contribution expose les versions et vérifications réellement utilisées. | Maintenir dans `AGENTS.md` et `README.md` les commandes PNPM, Rust et Tauri qui correspondent aux scripts du dépôt; éviter de copier la matrice de CI et les conventions de test très spécifiques d'OpenHuman. | Le dépôt documente déjà les commandes courantes. |
 
+La sonde de latence suit aussi cette frontière d'architecture : le frontend ne choisit pas la destination, la commande Rust utilise une cible TCP fixe et des tentatives bornées, et seule la fenêtre `main` peut la déclencher.
+
 ## Ce qui n'est pas repris
 
 - Le cœur d'agents, l'autonomie, les appels d'outils, la mémoire, les canaux, MCP et OAuth n'apportent rien à l'écran Account ni au dashboard actuel.

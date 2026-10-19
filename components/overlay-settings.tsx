@@ -304,8 +304,18 @@ export function OverlaySettings() {
                   positionY: null,
                 })
               }
-              value={preferences.anchor}
+              value={
+                preferences.positionX !== null && preferences.positionY !== null
+                  ? "custom"
+                  : preferences.anchor
+              }
             >
+              {preferences.positionX !== null &&
+                preferences.positionY !== null && (
+                  <option value="custom" disabled>
+                    Position personnalisée
+                  </option>
+                )}
               {Object.entries(anchorLabels).map(([anchor, label]) => (
                 <option key={anchor} value={anchor}>
                   {label}

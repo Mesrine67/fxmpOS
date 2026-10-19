@@ -78,7 +78,15 @@ jobs:
         shell: pwsh
         env:
           RELEASE_VERSION: ${{ needs.validate-release-source.outputs.version }}
-        run: node scripts/get-release-notes.mjs $env:RELEASE_VERSION
+        run: |
+          $releaseBody = (node scripts/get-release-notes.mjs "$env:RELEASE_VERSION" | Out-String).TrimEnd()
+          if ($LASTEXITCODE -ne 0) {
+            throw "Could not prepare release notes."
+          }
+          $delimiter = "FXMP_RELEASE_NOTES_$([guid]::NewGuid().ToString('N'))"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "body<<$delimiter"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value $releaseBody
+          Add-Content -Path $env:GITHUB_OUTPUT -Value $delimiter
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable

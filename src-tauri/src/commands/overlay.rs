@@ -90,20 +90,22 @@ fn apply_overlay_settings(
     let width = (OVERLAY_WIDTH * scale).round() as i32;
     let height = (OVERLAY_HEIGHT * scale).round() as i32;
     let margin = (OVERLAY_MARGIN * scale).round() as i32;
-    let left = work_area.position.x.saturating_add(margin);
-    let top = work_area.position.y.saturating_add(margin);
-    let right = work_area
+    let work_left = work_area.position.x;
+    let work_top = work_area.position.y;
+    let work_right = work_area
         .position
         .x
         .saturating_add(i32::try_from(work_area.size.width).unwrap_or(i32::MAX))
-        .saturating_sub(width)
-        .saturating_sub(margin);
-    let bottom = work_area
+        .saturating_sub(width);
+    let work_bottom = work_area
         .position
         .y
         .saturating_add(i32::try_from(work_area.size.height).unwrap_or(i32::MAX))
-        .saturating_sub(height)
-        .saturating_sub(margin);
+        .saturating_sub(height);
+    let left = work_left.saturating_add(margin);
+    let top = work_top.saturating_add(margin);
+    let right = work_right.saturating_sub(margin);
+    let bottom = work_bottom.saturating_sub(margin);
     let (x, y) = if settings.position_x.is_some() && settings.position_y.is_some() {
         let saved_monitor_is_available = settings
             .monitor_id
@@ -111,8 +113,14 @@ fn apply_overlay_settings(
             .is_some_and(|id| monitor_identifier(target) == id);
         if saved_monitor_is_available {
             (
-                settings.position_x.unwrap().clamp(left, right.max(left)),
-                settings.position_y.unwrap().clamp(top, bottom.max(top)),
+                settings
+                    .position_x
+                    .unwrap()
+                    .clamp(work_left, work_right.max(work_left)),
+                settings
+                    .position_y
+                    .unwrap()
+                    .clamp(work_top, work_bottom.max(work_top)),
             )
         } else {
             anchor_position(settings.anchor, left, right, top, bottom)

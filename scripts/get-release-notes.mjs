@@ -1,5 +1,4 @@
-import { appendFileSync, readFileSync } from "node:fs"
-import { randomUUID } from "node:crypto"
+import { readFileSync } from "node:fs"
 
 const version = process.argv[2]
 if (
@@ -40,11 +39,4 @@ const body = [
   "- [Journal complet des modifications](https://github.com/Mesrine67/fxmpOS/blob/main/CHANGELOG.md)",
 ].join("\n")
 
-const outputPath = process.env.GITHUB_OUTPUT
-if (!outputPath) throw new Error("GITHUB_OUTPUT is not configured")
-const delimiter = `FXMP_RELEASE_NOTES_${randomUUID()}`
-appendFileSync(
-  outputPath,
-  `body<<${delimiter}\n${body}\n${delimiter}\n`,
-  "utf8"
-)
+process.stdout.write(body)
