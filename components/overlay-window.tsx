@@ -15,7 +15,6 @@ import {
 } from "@/lib/overlay-settings"
 import { trackedEmit, trackedInvoke } from "@/lib/tauri"
 import { useTauriRuntime } from "@/hooks/use-tauri-runtime"
-import { NetworkLatency } from "@/components/network-latency"
 
 type OverlaySnapshot = {
   hostname: string
@@ -59,16 +58,24 @@ export function OverlayWindow() {
 
     let disposed = false
     let stopListening: (() => void) | undefined
+    let stopPositionErrorListening: (() => void) | undefined
     void listen<OverlayPreferences>("overlay-settings-changed", (event) => {
       writeOverlayPreferences(normalizeOverlayPreferences(event.payload))
     }).then((unlisten) => {
       if (disposed) unlisten()
       else stopListening = unlisten
     })
+    void listen<string>("overlay-position-save-error", ({ payload }) => {
+      setError(payload)
+    }).then((unlisten) => {
+      if (disposed) unlisten()
+      else stopPositionErrorListening = unlisten
+    })
 
     return () => {
       disposed = true
       stopListening?.()
+      stopPositionErrorListening?.()
       delete document.documentElement.dataset.fxmpOverlay
     }
   }, [])
@@ -161,6 +168,15 @@ export function OverlayWindow() {
           </button>
         </header>
 
+        {error && (
+          <p
+            className="px-3 pt-1 text-[9px] leading-tight text-red-300"
+            role="status"
+          >
+            {error}
+          </p>
+        )}
+
         <div className="space-y-1.5 px-3 py-2">
           <div className="flex items-center justify-between gap-3 text-[11px]">
             <span className="flex items-center gap-1.5 text-white/65">
@@ -189,7 +205,6 @@ export function OverlayWindow() {
             />
           </div>
         </div>
-        <NetworkLatency autoRefresh={preferences.enabled} compact />
       </section>
     </main>
   )

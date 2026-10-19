@@ -7,7 +7,6 @@
   "permissions": [
     "core:default",
     "core:window:allow-start-dragging",
-    "allow-get-overlay-snapshot",
-    "allow-measure-network-latency"
+    "allow-get-overlay-snapshot"
   ]
 }

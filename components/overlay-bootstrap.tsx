@@ -9,7 +9,7 @@ import {
   readOverlayPreferences,
   writeOverlayPreferences,
 } from "@/lib/overlay-settings"
-import { trackedInvoke } from "@/lib/tauri"
+import { trackedEmit, trackedInvoke } from "@/lib/tauri"
 
 export function OverlayBootstrap() {
   const desktopRuntime = useTauriRuntime()
@@ -26,7 +26,8 @@ export function OverlayBootstrap() {
       y: number
       monitorId: string | null
     } | null = null
-    const persistPendingPosition = () => {
+    let suppressPositionEventsUntil = 0
+    const persistPendingPosition = async () => {
       if (!pendingPosition) return
       const position = pendingPosition
       pendingPosition = null
@@ -50,6 +51,24 @@ export function OverlayBootstrap() {
           "Impossible d’enregistrer la position de l’overlay",
           error
         )
+        suppressPositionEventsUntil = Date.now() + 1000
+        try {
+          await trackedInvoke("set_overlay_state", {
+            visible: current.enabled,
+            settings: current,
+          })
+        } catch (rollbackError) {
+          const message = `La position n’a pas pu être enregistrée et sa restauration a échoué : ${rollbackError instanceof Error ? rollbackError.message : String(rollbackError)}`
+          console.error(message)
+          try {
+            await trackedEmit("overlay-position-save-error", message)
+          } catch (eventError) {
+            console.error(
+              "Impossible d’afficher l’erreur de restauration",
+              eventError
+            )
+          }
+        }
       }
     }
     void listen("overlay-hide-requested", () => {
@@ -67,9 +86,13 @@ export function OverlayBootstrap() {
     void listen<{ x: number; y: number; monitorId: string | null }>(
       "overlay-position-changed",
       ({ payload }) => {
+        if (Date.now() < suppressPositionEventsUntil) return
         pendingPosition = payload
         window.clearTimeout(positionSaveTimer)
-        positionSaveTimer = window.setTimeout(persistPendingPosition, 250)
+        positionSaveTimer = window.setTimeout(
+          () => void persistPendingPosition(),
+          250
+        )
       }
     ).then((unlisten) => {
       if (disposed) unlisten()
@@ -95,7 +118,7 @@ export function OverlayBootstrap() {
       stopListening?.()
       stopPositionListening?.()
       window.clearTimeout(positionSaveTimer)
-      persistPendingPosition()
+      void persistPendingPosition()
       window.clearTimeout(timer)
     }
   }, [desktopRuntime])

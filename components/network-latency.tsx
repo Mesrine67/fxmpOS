@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useRef, useState } from "react"
 import { ActivityIcon, LoaderCircleIcon, RefreshCwIcon } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
@@ -53,13 +53,7 @@ function LatencyValues({ snapshot }: { snapshot: LatencySnapshot | null }) {
   )
 }
 
-export function NetworkLatency({
-  compact = false,
-  autoRefresh = false,
-}: {
-  compact?: boolean
-  autoRefresh?: boolean
-}) {
+export function NetworkLatency() {
   const desktopRuntime = useTauriRuntime()
   const [snapshot, setSnapshot] = useState<LatencySnapshot | null>(null)
   const [loading, setLoading] = useState(false)
@@ -83,68 +77,9 @@ export function NetworkLatency({
     }
   }, [desktopRuntime])
 
-  useEffect(() => {
-    if (!autoRefresh || desktopRuntime !== true) return
-    const initial = window.setTimeout(() => void refresh(), 0)
-    const interval = window.setInterval(() => void refresh(), 15_000)
-    return () => {
-      window.clearTimeout(initial)
-      window.clearInterval(interval)
-    }
-  }, [autoRefresh, desktopRuntime, refresh])
-
   const lossPercent = snapshot
     ? Math.round((snapshot.lostProbes / snapshot.totalProbes) * 100)
     : null
-  const content = (
-    <>
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-2">
-          <ActivityIcon
-            aria-hidden="true"
-            className="size-3.5 shrink-0 text-primary"
-          />
-          <span className="truncate text-xs font-medium">
-            {snapshot?.medianMs == null
-              ? (error ??
-                (loading
-                  ? "Mesure en cours…"
-                  : snapshot
-                    ? "Aucune réponse"
-                    : "Latence réseau"))
-              : `${snapshot.medianMs.toFixed(1)} ms`}
-          </span>
-          {lossPercent !== null && (
-            <Badge variant={lossPercent === 0 ? "outline" : "destructive"}>
-              {lossPercent}% perte
-            </Badge>
-          )}
-        </div>
-        <Button
-          aria-label="Mesurer la latence réseau"
-          disabled={desktopRuntime !== true || loading}
-          onClick={() => void refresh()}
-          size="icon-sm"
-          type="button"
-          variant="ghost"
-        >
-          {loading ? (
-            <LoaderCircleIcon aria-hidden="true" className="animate-spin" />
-          ) : (
-            <RefreshCwIcon aria-hidden="true" />
-          )}
-        </Button>
-      </div>
-      {snapshot && <LatencyValues snapshot={snapshot} />}
-      <p className="text-[10px] leading-relaxed text-muted-foreground">
-        {desktopRuntime === false
-          ? "Mesure disponible dans l’application Windows."
-          : `Connexion TCP vers ${snapshot?.target ?? "1.1.1.1:443"} · médiane de 5 essais. Ce n’est pas une mesure ICMP.`}
-      </p>
-    </>
-  )
-
-  if (compact) return <div className="space-y-1.5 px-3 py-2">{content}</div>
 
   return (
     <Card>
@@ -177,11 +112,16 @@ export function NetworkLatency({
         </Button>
       </CardHeader>
       <CardContent className="space-y-4">
+        {lossPercent !== null && (
+          <Badge variant={lossPercent === 0 ? "outline" : "destructive"}>
+            {lossPercent}% de pertes
+          </Badge>
+        )}
         <LatencyValues snapshot={snapshot} />
         <p className="text-xs text-muted-foreground">
           {error ??
             (snapshot
-              ? `${snapshot.samplesMs.length}/${snapshot.totalProbes} essais réussis · ${snapshot.lostProbes} en échec · ${snapshot.target}. Mesure TCP, différente d’un ping ICMP.`
+              ? `${snapshot.samplesMs.length}/${snapshot.totalProbes} essais réussis · ${snapshot.lostProbes} en échec · ${snapshot.target} · délai max. 750 ms par essai. Mesure TCP, différente d’un ping ICMP.`
               : "5 connexions TCP vers 1.1.1.1:443, avec un délai maximal de 750 ms par essai. Aucun service FXMP ne reçoit ces mesures.")}
         </p>
       </CardContent>
