@@ -2,6 +2,24 @@
 
 Chaque version publiée possède sa propre section. Le workflow de release réutilise ces notes dans la release GitHub et dans le manifeste de l’updater Tauri.
 
+## [0.0.6] - 2026-10-23
+
+### Ajouts
+
+- Un bouton de mise à jour est accessible directement depuis la barre latérale, à côté des actions rapides.
+- L’indicateur signale une nouvelle version stable et ouvre ses notes de version, sa date de publication et sa page GitHub.
+- Le téléchargement signé affiche sa progression et redémarre FXMP OS lorsque l’installation Tauri est terminée.
+
+### Sécurité et confidentialité
+
+- La détection et l'installation utilisent l'updater Tauri signé déjà configuré. Aucune donnée système n'est transmise pour vérifier une mise à jour.
+- Le bouton n’apparaît que dans l’application de bureau Tauri; le comportement de la page Web reste inchangé.
+
+### Compatibilité
+
+- Windows x64, installateurs NSIS et MSI. WebView2 est requis.
+- macOS, Linux, Android et iOS ne sont pas distribués pour cette version.
+
 ## [0.0.5] - 2026-10-19
 
 ### Ajouts
