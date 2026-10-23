@@ -2,6 +2,13 @@
 
 Chaque version publiée possède sa propre section. Le workflow de release réutilise ces notes dans la release GitHub et dans le manifeste de l’updater Tauri.
 
+## [0.0.8] - 2026-10-24
+
+### Améliorations
+
+- Les infobulles des actions icônes de la barre latérale utilisent maintenant le composant shadcn Base UI, avec le même style, positionnement et comportement clavier/souris.
+- Le bouton de mise à jour affiche son état dynamique dans une infobulle accessible, sans infobulle native HTML.
+
 ## [0.0.7] - 2026-10-23
 
 ### Améliorations
