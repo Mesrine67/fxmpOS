@@ -10,6 +10,11 @@ import {
 } from "@/components/ui/sidebar"
 import { CirclePlusIcon, MailIcon } from "lucide-react"
 import { SidebarUpdaterAction } from "@/components/sidebar-updater-action"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 export function NavMain({
   items,
@@ -32,14 +37,23 @@ export function NavMain({
               <CirclePlusIcon />
               <span>Quick Create</span>
             </SidebarMenuButton>
-            <Button
-              size="icon"
-              className="size-8 group-data-[collapsible=icon]:opacity-0"
-              variant="outline"
-            >
-              <MailIcon />
-              <span className="sr-only">Inbox</span>
-            </Button>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    size="icon"
+                    className="size-8 group-data-[collapsible=icon]:opacity-0"
+                    variant="outline"
+                  />
+                }
+              >
+                <MailIcon />
+                <span className="sr-only">Inbox</span>
+              </TooltipTrigger>
+              <TooltipContent side="right" align="center">
+                Inbox
+              </TooltipContent>
+            </Tooltip>
             <SidebarUpdaterAction />
           </SidebarMenuItem>
         </SidebarMenu>

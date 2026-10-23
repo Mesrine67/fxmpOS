@@ -16,6 +16,11 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react"
 
 import { Button } from "@/components/ui/button"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { useTauriRuntime } from "@/hooks/use-tauri-runtime"
 
 type UpdateStatus =
@@ -157,27 +162,35 @@ export function SidebarUpdaterAction() {
       }}
       disablePointerDismissal={status === "installing"}
     >
-      <Dialog.Trigger
-        render={
-          <Button
-            aria-label={label}
-            className="relative size-8 shrink-0 group-data-[collapsible=icon]:opacity-0"
-            title={label}
-            variant={status === "available" ? "default" : "outline"}
-            size="icon"
-          />
-        }
-      >
-        {busy ? (
-          <LoaderCircleIcon className="animate-spin" />
-        ) : (
-          <ArrowDownToLineIcon />
-        )}
-        {status === "available" && (
-          <span className="absolute -top-0.5 -right-0.5 size-2.5 rounded-full border-2 border-sidebar bg-primary" />
-        )}
-        <span className="sr-only">Mises à jour</span>
-      </Dialog.Trigger>
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <Dialog.Trigger
+              render={
+                <Button
+                  aria-label={label}
+                  className="relative size-8 shrink-0 group-data-[collapsible=icon]:opacity-0"
+                  variant={status === "available" ? "default" : "outline"}
+                  size="icon"
+                />
+              }
+            />
+          }
+        >
+          {busy ? (
+            <LoaderCircleIcon className="animate-spin" />
+          ) : (
+            <ArrowDownToLineIcon />
+          )}
+          {status === "available" && (
+            <span className="absolute -top-0.5 -right-0.5 size-2.5 rounded-full border-2 border-sidebar bg-primary" />
+          )}
+          <span className="sr-only">Mises à jour</span>
+        </TooltipTrigger>
+        <TooltipContent side="right" align="center">
+          {label}
+        </TooltipContent>
+      </Tooltip>
 
       <Dialog.Portal>
         <Dialog.Backdrop className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm data-ending-style:opacity-0 data-starting-style:opacity-0" />
