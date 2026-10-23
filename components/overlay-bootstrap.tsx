@@ -31,7 +31,7 @@ export function OverlayBootstrap() {
       if (!pendingPosition) return
       const position = pendingPosition
       pendingPosition = null
-      const current = readOverlayPreferences()
+      const current = await readOverlayPreferences()
       if (
         current.positionX === position.x &&
         current.positionY === position.y &&
@@ -40,7 +40,7 @@ export function OverlayBootstrap() {
         return
       }
       try {
-        writeOverlayPreferences({
+        await writeOverlayPreferences({
           ...current,
           positionX: position.x,
           positionY: position.y,
@@ -72,12 +72,13 @@ export function OverlayBootstrap() {
       }
     }
     void listen("overlay-hide-requested", () => {
-      void trackedInvoke("set_overlay_state", {
-        visible: false,
-        settings: readOverlayPreferences(),
-      }).catch((error) => {
-        console.error("Impossible de masquer l’overlay FXMP OS", error)
-      })
+      void readOverlayPreferences()
+        .then((settings) =>
+          trackedInvoke("set_overlay_state", { visible: false, settings })
+        )
+        .catch((error) => {
+          console.error("Impossible de masquer l’overlay FXMP OS", error)
+        })
     }).then((unlisten) => {
       if (disposed) unlisten()
       else stopListening = unlisten
@@ -102,15 +103,17 @@ export function OverlayBootstrap() {
     const timer = window.setTimeout(() => {
       if (getCurrentWindow().label !== "main") return
 
-      const preferences = readOverlayPreferences()
-      if (!preferences.enabled) return
-
-      void trackedInvoke("set_overlay_state", {
-        visible: true,
-        settings: preferences,
-      }).catch((error) => {
-        console.error("Impossible de restaurer l’overlay FXMP OS", error)
-      })
+      void readOverlayPreferences()
+        .then((preferences) => {
+          if (!preferences.enabled) return
+          return trackedInvoke("set_overlay_state", {
+            visible: true,
+            settings: preferences,
+          })
+        })
+        .catch((error) => {
+          console.error("Impossible de restaurer l’overlay FXMP OS", error)
+        })
     }, 0)
 
     return () => {
