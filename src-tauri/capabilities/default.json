@@ -17,6 +17,10 @@
     "allow-get-installed-apps",
     "allow-get-display-monitors",
     "allow-measure-network-latency",
-    "allow-set-overlay-state"
+    "allow-set-overlay-state",
+    "store:allow-load",
+    "store:allow-get",
+    "store:allow-set",
+    "store:allow-save"
   ]
 }

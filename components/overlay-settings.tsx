@@ -1,7 +1,6 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
-import { listen } from "@tauri-apps/api/event"
 import { Layers3Icon, LoaderCircleIcon, MonitorIcon } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
@@ -16,13 +15,14 @@ import {
 import { useTauriRuntime } from "@/hooks/use-tauri-runtime"
 import { Switch } from "@/components/ui/switch"
 import {
-  normalizeOverlayPreferences,
+  initializeOverlayPreferences,
   useOverlayPreferences,
+  useOverlayPreferencesReady,
   writeOverlayPreferences,
   type OverlayAnchor,
   type OverlayPreferences,
 } from "@/lib/overlay-settings"
-import { trackedEmit, trackedInvoke } from "@/lib/tauri"
+import { trackedInvoke } from "@/lib/tauri"
 
 type DisplayMonitor = {
   id: string
@@ -49,6 +49,7 @@ function errorMessage(error: unknown) {
 export function OverlaySettings() {
   const desktopRuntime = useTauriRuntime()
   const preferences = useOverlayPreferences()
+  const preferencesReady = useOverlayPreferencesReady()
   const [monitors, setMonitors] = useState<DisplayMonitor[]>([])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -65,17 +66,12 @@ export function OverlaySettings() {
     if (desktopRuntime !== true) return
 
     let disposed = false
-    let stopListening: (() => void) | undefined
-    void listen<OverlayPreferences>("overlay-settings-changed", (event) => {
-      writeOverlayPreferences(normalizeOverlayPreferences(event.payload))
-    }).then((unlisten) => {
-      if (disposed) unlisten()
-      else stopListening = unlisten
+    void initializeOverlayPreferences().catch((cause: unknown) => {
+      if (!disposed) setError(errorMessage(cause))
     })
 
     return () => {
       disposed = true
-      stopListening?.()
     }
   }, [desktopRuntime])
 
@@ -88,6 +84,7 @@ export function OverlaySettings() {
 
   const applyPreferences = useCallback(
     async (next: OverlayPreferences, applyWindowState = true) => {
+      if (!preferencesReady) return
       setError(null)
 
       if (desktopRuntime === true) setSaving(true)
@@ -106,7 +103,7 @@ export function OverlaySettings() {
       }
 
       try {
-        writeOverlayPreferences(next)
+        await writeOverlayPreferences(next)
       } catch (cause) {
         let rollbackError: unknown
         if (desktopRuntime === true && applyWindowState) {
@@ -130,17 +127,9 @@ export function OverlaySettings() {
         return
       }
 
-      if (desktopRuntime === true) {
-        try {
-          await trackedEmit("overlay-settings-changed", next)
-        } catch (cause) {
-          setError(errorMessage(cause))
-        } finally {
-          setSaving(false)
-        }
-      }
+      if (desktopRuntime === true) setSaving(false)
     },
-    [desktopRuntime, preferences]
+    [desktopRuntime, preferences, preferencesReady]
   )
 
   const selectedMonitorId =
@@ -181,7 +170,7 @@ export function OverlaySettings() {
             aria-label="Afficher l’overlay au lancement de FXMP OS"
             checked={preferences.enabled}
             className="mt-1"
-            disabled={saving}
+            disabled={saving || !preferencesReady}
             onCheckedChange={(enabled) =>
               void applyPreferences({
                 ...preferences,
@@ -205,7 +194,7 @@ export function OverlaySettings() {
               aria-label="Toujours au premier plan"
               checked={preferences.alwaysOnTop}
               className="mt-1"
-              disabled={saving || desktopRuntime !== true}
+              disabled={saving || !preferencesReady || desktopRuntime !== true}
               onCheckedChange={(alwaysOnTop) =>
                 void applyPreferences({
                   ...preferences,
@@ -228,7 +217,7 @@ export function OverlaySettings() {
               aria-label="Laisser passer les clics"
               checked={preferences.clickThrough}
               className="mt-1"
-              disabled={saving || desktopRuntime !== true}
+              disabled={saving || !preferencesReady || desktopRuntime !== true}
               onCheckedChange={(clickThrough) =>
                 void applyPreferences({
                   ...preferences,
@@ -254,7 +243,10 @@ export function OverlaySettings() {
                 aria-label="Écran de l’overlay"
                 className="h-9 w-full rounded-md border border-input bg-background py-1 pr-3 pl-9 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/40 disabled:opacity-50"
                 disabled={
-                  saving || desktopRuntime !== true || monitors.length === 0
+                  saving ||
+                  !preferencesReady ||
+                  desktopRuntime !== true ||
+                  monitors.length === 0
                 }
                 onChange={(event) =>
                   void applyPreferences({
@@ -295,7 +287,7 @@ export function OverlaySettings() {
             <select
               aria-label="Position de l’overlay"
               className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/40 disabled:opacity-50"
-              disabled={saving || desktopRuntime !== true}
+              disabled={saving || !preferencesReady || desktopRuntime !== true}
               onChange={(event) =>
                 void applyPreferences({
                   ...preferences,
@@ -335,7 +327,7 @@ export function OverlaySettings() {
           <input
             aria-label="Opacité de l’overlay"
             className="w-full accent-primary"
-            disabled={saving}
+            disabled={saving || !preferencesReady}
             max={100}
             min={35}
             onChange={(event) =>
@@ -354,8 +346,8 @@ export function OverlaySettings() {
 
         {desktopRuntime === false && (
           <p className="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
-            Les commandes de fenêtre sont disponibles dans l’application FXMP OS
-            de bureau. Les préférences restent enregistrées localement.
+            Mode aperçu navigateur : les réglages sont temporaires et l’overlay
+            natif est disponible uniquement dans l’application FXMP OS.
           </p>
         )}
         {error && (
@@ -376,6 +368,11 @@ export function OverlaySettings() {
             Application des réglages…
           </p>
         )}
+        {!preferencesReady && desktopRuntime === true && !error && (
+          <p className="text-xs text-muted-foreground">
+            Chargement des préférences de l’overlay…
+          </p>
+        )}
 
         <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4">
           <p className="max-w-xl text-xs text-muted-foreground">
@@ -385,7 +382,10 @@ export function OverlaySettings() {
           <div className="flex gap-2">
             <Button
               disabled={
-                saving || desktopRuntime !== true || !preferences.enabled
+                saving ||
+                !preferencesReady ||
+                desktopRuntime !== true ||
+                !preferences.enabled
               }
               onClick={() => void loadMonitors()}
               type="button"
@@ -394,7 +394,7 @@ export function OverlaySettings() {
               Actualiser les écrans
             </Button>
             <Button
-              disabled={saving || desktopRuntime !== true}
+              disabled={saving || !preferencesReady || desktopRuntime !== true}
               onClick={() =>
                 void applyPreferences({ ...preferences, enabled: true })
               }

@@ -8,9 +8,8 @@ import { ActivityIcon, MemoryStickIcon, XIcon } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import {
-  normalizeOverlayPreferences,
   useOverlayPreferences,
-  type OverlayPreferences,
+  useOverlayPreferencesReady,
   writeOverlayPreferences,
 } from "@/lib/overlay-settings"
 import { trackedEmit, trackedInvoke } from "@/lib/tauri"
@@ -31,6 +30,7 @@ function formatMemory(bytes: number) {
 
 export function OverlayWindow() {
   const preferences = useOverlayPreferences()
+  const preferencesReady = useOverlayPreferencesReady()
   const desktopRuntime = useTauriRuntime()
   const [snapshot, setSnapshot] = useState<OverlaySnapshot | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -60,14 +60,7 @@ export function OverlayWindow() {
     }
 
     let disposed = false
-    let stopListening: (() => void) | undefined
     let stopPositionErrorListening: (() => void) | undefined
-    void listen<OverlayPreferences>("overlay-settings-changed", (event) => {
-      writeOverlayPreferences(normalizeOverlayPreferences(event.payload))
-    }).then((unlisten) => {
-      if (disposed) unlisten()
-      else stopListening = unlisten
-    })
     void listen<string>("overlay-position-save-error", ({ payload }) => {
       setPositionSaveError(payload)
     }).then((unlisten) => {
@@ -77,7 +70,6 @@ export function OverlayWindow() {
 
     return () => {
       disposed = true
-      stopListening?.()
       stopPositionErrorListening?.()
       delete document.documentElement.dataset.fxmpOverlay
     }
@@ -110,7 +102,7 @@ export function OverlayWindow() {
   const hideOverlay = async () => {
     const next = { ...preferences, enabled: false }
     try {
-      writeOverlayPreferences(next)
+      await writeOverlayPreferences(next)
       await trackedEmit("overlay-hide-requested")
     } catch {
       setError("Impossible de masquer l’overlay")
@@ -162,7 +154,7 @@ export function OverlayWindow() {
           <button
             aria-label="Masquer l’overlay"
             className="rounded-md p-1 text-white/55 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-40"
-            disabled={preferences.clickThrough}
+            disabled={preferences.clickThrough || !preferencesReady}
             onClick={() => void hideOverlay()}
             title="Masquer l’overlay"
             type="button"

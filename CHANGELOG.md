@@ -2,6 +2,24 @@
 
 Chaque version publiée possède sa propre section. Le workflow de release réutilise ces notes dans la release GitHub et dans le manifeste de l’updater Tauri.
 
+## [0.0.7] - 2026-10-23
+
+### Améliorations
+
+- Les préférences durables de l’overlay sont maintenant enregistrées dans le store Tauri du dossier de données FXMP OS et partagées entre les fenêtres.
+- L’activation, l’écran, l’ancrage, la position physique, l’opacité et les options d’affichage sont restaurés depuis ce store.
+- Au premier lancement de cette version, les anciennes préférences d’overlay sont migrées automatiquement depuis le stockage WebView puis supprimées après sauvegarde réussie.
+
+### Sécurité et confidentialité
+
+- Les fenêtres n’obtiennent que les permissions Tauri Store de chargement, lecture, écriture et sauvegarde; aucune permission de suppression ou d’énumération n’est accordée.
+- Le panneau de debug conserve son état temporaire pour la session uniquement; aucun secret ou identifiant de compte n’est stocké dans ce store.
+
+### Compatibilité
+
+- Windows x64, installateurs NSIS et MSI. WebView2 est requis.
+- macOS, Linux, Android et iOS ne sont pas distribués pour cette version.
+
 ## [0.0.6] - 2026-10-23
 
 ### Ajouts
