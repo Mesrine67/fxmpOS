@@ -46,6 +46,7 @@ let preferencesSnapshot = DEFAULT_PREFERENCES_SNAPSHOT
 let preferencesReady = false
 let initialization: Promise<OverlayPreferences> | undefined
 let stopStoreListener: (() => void) | undefined
+let migrationNeedsSave = false
 
 export function normalizeOverlayPreferences(
   value: unknown
@@ -140,7 +141,12 @@ export function initializeOverlayPreferences() {
     if (storedValue === undefined) {
       storedValue = readLegacyPreferences() ?? DEFAULT_OVERLAY_PREFERENCES
       await preferencesStore.set(STORE_KEY, storedValue)
+      migrationNeedsSave = true
+    }
+
+    if (migrationNeedsSave) {
       await preferencesStore.save()
+      migrationNeedsSave = false
     }
 
     publishPreferences(storedValue)
@@ -231,7 +237,19 @@ export async function writeOverlayPreferences(value: OverlayPreferences) {
   }
 
   await initializeOverlayPreferences()
+  const previous = await preferencesStore.get<unknown>(STORE_KEY)
   await preferencesStore.set(STORE_KEY, next)
-  await preferencesStore.save()
+  try {
+    await preferencesStore.save()
+  } catch (error) {
+    // `set()` updates the shared in-memory store and notifies other windows
+    // before save completes. Restore that cache if persistence fails.
+    await preferencesStore.set(
+      STORE_KEY,
+      previous ?? DEFAULT_OVERLAY_PREFERENCES
+    )
+    await preferencesStore.save().catch(() => undefined)
+    throw error
+  }
   publishPreferences(next)
 }
