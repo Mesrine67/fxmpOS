@@ -2,6 +2,25 @@
 
 Chaque version publiée possède sa propre section. Le workflow de release réutilise ces notes dans la release GitHub et dans le manifeste de l’updater Tauri.
 
+## [0.0.11] - 2026-10-24
+
+### Améliorations
+
+- La recherche de mises à jour démarre dès que la fenêtre principale est prête, sans délai artificiel ni second contrôle depuis la page Paramètres.
+- FXMP OS vérifie les versions au démarrage, au retour au premier plan et toutes les minutes tant que la fenêtre principale est visible.
+- La barre latérale et la page Paramètres partagent le même état, le même changelog et le même téléchargement signé.
+
+### Sécurité et confidentialité
+
+- Seule la fenêtre principale interroge le manifeste GitHub; l’overlay ne lance pas de vérification supplémentaire.
+- Les mises à jour restent vérifiées par signature Minisign et l’installation nécessite toujours une action de l’utilisateur.
+- Aucune donnée système n’est ajoutée aux requêtes de mise à jour.
+
+### Compatibilité
+
+- Windows x64, installateurs NSIS et MSI. WebView2 est requis.
+- macOS, Linux, Android et iOS ne sont pas distribués pour cette version.
+
 ## [0.0.10] - 2026-10-24
 
 ### Améliorations

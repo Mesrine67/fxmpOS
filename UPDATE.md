@@ -74,7 +74,7 @@ Toutes les actions GitHub sont épinglées sur des SHA complets et Dependabot le
 
 ## Utilisation de l'updater
 
-Dans FXMP OS, ouvrir **Settings**, cliquer sur **Vérifier maintenant**, puis confirmer le téléchargement et l'installation lorsqu'une mise à jour est proposée. Tauri vérifie la signature avant installation et redémarre ensuite l'application.
+FXMP OS vérifie le manifeste signé au démarrage, au retour de la fenêtre principale au premier plan et toutes les 60 secondes lorsqu'elle reste visible. La barre latérale affiche le résultat et la page **Settings** partage ce même contrôle. L'utilisateur peut toujours lancer **Vérifier maintenant**, puis confirmer le téléchargement et l'installation. Tauri vérifie la signature avant installation et redémarre ensuite l'application. Le manifeste contient seulement les métadonnées de version; aucune mesure locale n'est envoyée.
 
 Le serveur `pnpm tauri dev` n'est pas une installation distribuée et ne valide pas le remplacement d'un binaire installé. Les détails Account sont lus localement; aucune clé privée ne passe dans la WebView.
 

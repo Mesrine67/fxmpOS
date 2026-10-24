@@ -6,14 +6,15 @@ import { TooltipProvider } from "@/components/ui/tooltip"
 import { ExternalLinkGuard } from "@/components/external-link-guard"
 import { DebugPanelGate } from "@/components/debug-panel-gate"
 import { OverlayBootstrap } from "@/components/overlay-bootstrap"
-import { cn } from "@/lib/utils";
+import { UpdaterProvider } from "@/components/updater-provider"
+import { cn } from "@/lib/utils"
 
 const fontSans = Geist({
   subsets: ["latin"],
   variable: "--font-sans",
 })
 
-const geistMono = Geist_Mono({subsets:['latin'],variable:'--font-mono'})
+const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-mono" })
 
 export default function RootLayout({
   children,
@@ -24,18 +25,27 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={cn("antialiased", fontSans.variable, "font-mono", geistMono.variable)}
+      className={cn(
+        "antialiased",
+        fontSans.variable,
+        "font-mono",
+        geistMono.variable
+      )}
     >
       <body>
         <ThemeProvider>
-          <TooltipProvider>
-            <div data-ui-app-shell>
-              <ExternalLinkGuard />
-              {process.env.NODE_ENV === "development" ? <DebugPanelGate /> : null}
-              <OverlayBootstrap />
-              {children}
-            </div>
-          </TooltipProvider>
+          <UpdaterProvider>
+            <TooltipProvider>
+              <div data-ui-app-shell>
+                <ExternalLinkGuard />
+                {process.env.NODE_ENV === "development" ? (
+                  <DebugPanelGate />
+                ) : null}
+                <OverlayBootstrap />
+                {children}
+              </div>
+            </TooltipProvider>
+          </UpdaterProvider>
         </ThemeProvider>
       </body>
     </html>
