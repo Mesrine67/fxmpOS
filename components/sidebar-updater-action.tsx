@@ -72,7 +72,7 @@ export function SidebarUpdaterAction() {
               render={
                 <Button
                   aria-label={label}
-                  className="relative size-8 shrink-0 group-data-[collapsible=icon]:opacity-0"
+                  className="relative size-8 shrink-0"
                   variant={status === "available" ? "default" : "outline"}
                   size="icon"
                 />

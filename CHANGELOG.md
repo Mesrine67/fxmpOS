@@ -2,6 +2,19 @@
 
 Chaque version publiée possède sa propre section. Le workflow de release réutilise ces notes dans la release GitHub et dans le manifeste de l’updater Tauri.
 
+## [0.0.14] - 2026-10-24
+
+### Corrections
+
+- Le raccourci de mise à jour reste dans l’en-tête du sidebar, aligné avec le nom de l’application, au lieu d’occuper une ligne isolée sous la navigation.
+- L’icône et son indicateur d’état restent visibles et accessibles dans le sidebar.
+- Les liens vers l’accueil, les applications, l’appareil et les paramètres gardent leur espacement et leur état actif.
+
+### Compatibilité
+
+- Windows x64, installateurs NSIS et MSI. WebView2 est requis.
+- macOS, Linux, Android et iOS ne sont pas distribués pour cette version.
+
 ## [0.0.13] - 2026-10-24
 
 ### Améliorations
