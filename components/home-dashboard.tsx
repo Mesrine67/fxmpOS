@@ -142,24 +142,41 @@ function MetricCard({
 function HomeContent() {
   const runtime = useTauriRuntime()
   const [snapshot, setSnapshot] = useState<SystemSnapshot | null>(null)
-  const [displays, setDisplays] = useState<DisplaySnapshot[]>([])
+  const [displays, setDisplays] = useState<DisplaySnapshot[] | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [displayError, setDisplayError] = useState<string | null>(null)
   const [updatedAt, setUpdatedAt] = useState<Date | null>(null)
 
   const refresh = useCallback(async () => {
     setIsLoading(true)
     setError(null)
     try {
-      const [system, monitors] = await Promise.all([
+      const [systemResult, displayResult] = await Promise.allSettled([
         trackedInvoke<SystemSnapshot>("get_system_snapshot"),
         trackedInvoke<DisplaySnapshot[]>("get_display_monitors"),
       ])
-      setSnapshot(system)
-      setDisplays(monitors)
-      setUpdatedAt(new Date())
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : String(reason))
+      if (systemResult.status === "fulfilled") {
+        setSnapshot(systemResult.value)
+        setError(null)
+        setUpdatedAt(new Date())
+      } else {
+        setError(
+          systemResult.reason instanceof Error
+            ? systemResult.reason.message
+            : String(systemResult.reason)
+        )
+      }
+      if (displayResult.status === "fulfilled") {
+        setDisplays(displayResult.value)
+        setDisplayError(null)
+      } else {
+        setDisplayError(
+          displayResult.reason instanceof Error
+            ? displayResult.reason.message
+            : String(displayResult.reason)
+        )
+      }
     } finally {
       setIsLoading(false)
     }
@@ -273,6 +290,22 @@ function HomeContent() {
             </Card>
           )}
 
+          {displayError && (
+            <Card className="border-muted">
+              <CardContent className="flex items-start gap-3 pt-4">
+                <MonitorIcon className="mt-0.5 text-muted-foreground" />
+                <div className="flex flex-col gap-1">
+                  <p className="font-medium">
+                    Informations d’écran indisponibles
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Les autres mesures système restent affichées. {displayError}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {isLoading && !snapshot ? (
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               {Array.from({ length: 4 }, (_, index) => (
@@ -322,7 +355,7 @@ function HomeContent() {
                 className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
               >
                 <MetricCard
-                  detail={`${snapshot.physicalCores ?? snapshot.logicalProcessors} cœurs · ${snapshot.logicalProcessors} processeurs logiques${snapshot.cpuFrequencyMhz ? ` · ${numberFormat.format(snapshot.cpuFrequencyMhz / 1000)} GHz` : ""}`}
+                  detail={`${snapshot.physicalCores === null ? "Cœurs physiques indisponibles" : `${snapshot.physicalCores} cœurs physiques`} · ${snapshot.logicalProcessors} processeurs logiques${snapshot.cpuFrequencyMhz ? ` · ${numberFormat.format(snapshot.cpuFrequencyMhz / 1000)} GHz` : ""}`}
                   icon={CpuIcon}
                   label="Processeur"
                   value={snapshot.cpuName || "Non détecté"}
@@ -344,12 +377,19 @@ function HomeContent() {
                 <MetricCard
                   detail={
                     displays
-                      .map((display) => `${display.width} × ${display.height}`)
-                      .join(" · ") || "Écrans détectés par Windows"
+                      ?.map((display) => `${display.width} × ${display.height}`)
+                      .join(" · ") ||
+                    (displays === null
+                      ? "Résolutions indisponibles"
+                      : "Écrans détectés par Windows")
                   }
                   icon={MonitorIcon}
                   label="Affichage"
-                  value={`${displays.length} écran${displays.length > 1 ? "s" : ""}`}
+                  value={
+                    displays === null
+                      ? "Indisponible"
+                      : `${displays.length} écran${displays.length > 1 ? "s" : ""}`
+                  }
                 />
               </section>
 
