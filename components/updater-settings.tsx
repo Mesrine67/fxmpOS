@@ -1,8 +1,5 @@
 "use client"
 
-import { getVersion } from "@tauri-apps/api/app"
-import { relaunch } from "@tauri-apps/plugin-process"
-import { check } from "@tauri-apps/plugin-updater"
 import {
   ArrowDownToLineIcon,
   CalendarDaysIcon,
@@ -22,6 +19,7 @@ import {
 } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
 
+import { useUpdater, type UpdaterStatus } from "@/components/updater-provider"
 import { Button } from "@/components/ui/button"
 import { useTauriRuntime } from "@/hooks/use-tauri-runtime"
 import {
@@ -71,15 +69,7 @@ import {
 } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
-type UpdateStatus =
-  | "idle"
-  | "browser"
-  | "checking"
-  | "current"
-  | "available"
-  | "installing"
-  | "error"
-type DownloadProgress = { downloaded: number; total: number | null }
+type UpdateStatus = UpdaterStatus | "browser"
 type ReleaseAsset = {
   name: string
   url: string
@@ -222,14 +212,19 @@ function formatReleaseDate(value: string) {
 
 export function UpdaterSettings() {
   const desktopRuntime = useTauriRuntime()
-  const [status, setStatus] = useState<UpdateStatus>("checking")
-  const [currentVersion, setCurrentVersion] = useState<string | null>(null)
-  const [availableVersion, setAvailableVersion] = useState<string | null>(null)
-  const [releaseNotes, setReleaseNotes] = useState<string | null>(null)
-  const [releaseDate, setReleaseDate] = useState<string | null>(null)
-  const [checkedAt, setCheckedAt] = useState<Date | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [progress, setProgress] = useState<DownloadProgress | null>(null)
+  const updater = useUpdater()
+  const {
+    status,
+    currentVersion,
+    availableVersion,
+    releaseNotes,
+    releaseDate,
+    checkedAt,
+    error,
+    progress,
+    checkForUpdates,
+    installUpdate,
+  } = updater
   const [releases, setReleases] = useState<PublishedRelease[]>([])
   const [selectedReleaseTag, setSelectedReleaseTag] = useState<string | null>(
     null
@@ -243,8 +238,6 @@ export function UpdaterSettings() {
     "loading" | "ready" | "error"
   >("loading")
   const [historyError, setHistoryError] = useState<string | null>(null)
-  const updateRef = useRef<Awaited<ReturnType<typeof check>>>(null)
-  const requestInFlight = useRef(false)
   const historyController = useRef<AbortController | null>(null)
   const manuallySelectedRelease = useRef(false)
 
@@ -265,46 +258,6 @@ export function UpdaterSettings() {
       setHistoryStatus("error")
     }
   }, [])
-
-  const checkForUpdates = useCallback(async () => {
-    if (requestInFlight.current) return
-
-    requestInFlight.current = true
-
-    try {
-      setCurrentVersion(await getVersion())
-      const previousUpdate = updateRef.current
-      updateRef.current = null
-      await previousUpdate?.close()
-
-      const update = await check()
-      updateRef.current = update
-      setAvailableVersion(update?.version ?? null)
-      setReleaseNotes(update?.body?.trim() || null)
-      setReleaseDate(update?.date ?? null)
-      setStatus(update ? "available" : "current")
-      setCheckedAt(new Date())
-    } catch (cause) {
-      setError(errorMessage(cause))
-      setStatus("error")
-    } finally {
-      requestInFlight.current = false
-    }
-  }, [])
-
-  useEffect(() => {
-    if (desktopRuntime !== true) return
-    const checkTimer = window.setTimeout(() => {
-      void checkForUpdates()
-    }, 0)
-
-    return () => {
-      window.clearTimeout(checkTimer)
-      const update = updateRef.current
-      updateRef.current = null
-      if (update) void update.close()
-    }
-  }, [desktopRuntime, checkForUpdates])
 
   useEffect(() => {
     const timer = window.setTimeout(() => void loadReleaseHistory(), 0)
@@ -329,34 +282,6 @@ export function UpdaterSettings() {
       : desktopRuntime === null
         ? "idle"
         : status
-
-  async function installUpdate() {
-    const update = updateRef.current
-    if (!update || status === "installing") return
-
-    setStatus("installing")
-    setError(null)
-    setProgress({ downloaded: 0, total: null })
-
-    let downloaded = 0
-    let total: number | null = null
-
-    try {
-      await update.downloadAndInstall((event) => {
-        if (event.event === "Started") {
-          total = event.data.contentLength ?? null
-          setProgress({ downloaded, total })
-        } else if (event.event === "Progress") {
-          downloaded += event.data.chunkLength
-          setProgress({ downloaded, total })
-        }
-      })
-      await relaunch()
-    } catch (cause) {
-      setError(errorMessage(cause))
-      setStatus("error")
-    }
-  }
 
   const busy =
     displayedStatus === "checking" || displayedStatus === "installing"
@@ -500,7 +425,8 @@ export function UpdaterSettings() {
             </CardTitle>
             <CardDescription>
               FXMP OS vérifie les versions publiées et valide leur signature
-              avant installation.
+              avant installation. Contrôle au démarrage, au retour dans
+              l’application et toutes les minutes lorsqu’elle est ouverte.
             </CardDescription>
           </div>
           <Badge variant="outline">
@@ -674,13 +600,7 @@ export function UpdaterSettings() {
           <Button
             type="button"
             variant="outline"
-            onClick={() => {
-              if (requestInFlight.current) return
-              setStatus("checking")
-              setError(null)
-              setProgress(null)
-              void checkForUpdates()
-            }}
+            onClick={() => void checkForUpdates()}
             disabled={busy || displayedStatus === "browser"}
           >
             <RefreshCwIcon />

@@ -1,9 +1,6 @@
 "use client"
 
-import { getVersion } from "@tauri-apps/api/app"
 import { Dialog } from "@base-ui/react/dialog"
-import { relaunch } from "@tauri-apps/plugin-process"
-import { check } from "@tauri-apps/plugin-updater"
 import {
   ArrowDownToLineIcon,
   CheckCircle2Icon,
@@ -13,8 +10,9 @@ import {
   TriangleAlertIcon,
   XIcon,
 } from "lucide-react"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useState } from "react"
 
+import { useUpdater } from "@/components/updater-provider"
 import { Button } from "@/components/ui/button"
 import {
   Tooltip,
@@ -22,10 +20,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { useTauriRuntime } from "@/hooks/use-tauri-runtime"
-
-type UpdateStatus =
-  "idle" | "checking" | "current" | "available" | "installing" | "error"
-type Progress = { downloaded: number; total: number | null }
 
 function formatBytes(bytes: number) {
   if (bytes < 1024) return `${bytes} o`
@@ -64,80 +58,20 @@ function ReleaseNotes({ notes }: { notes: string }) {
 
 export function SidebarUpdaterAction() {
   const runtime = useTauriRuntime()
-  const [status, setStatus] = useState<UpdateStatus>("idle")
+  const updater = useUpdater()
+  const {
+    status,
+    currentVersion,
+    availableVersion,
+    releaseNotes: notes,
+    releaseDate,
+    checkedAt,
+    error,
+    progress,
+    checkForUpdates,
+    installUpdate,
+  } = updater
   const [open, setOpen] = useState(false)
-  const [currentVersion, setCurrentVersion] = useState<string | null>(null)
-  const [availableVersion, setAvailableVersion] = useState<string | null>(null)
-  const [notes, setNotes] = useState<string | null>(null)
-  const [releaseDate, setReleaseDate] = useState<string | null>(null)
-  const [checkedAt, setCheckedAt] = useState<Date | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [progress, setProgress] = useState<Progress | null>(null)
-  const updateRef = useRef<Awaited<ReturnType<typeof check>>>(null)
-  const inFlight = useRef(false)
-
-  const checkForUpdates = useCallback(async () => {
-    if (runtime !== true || inFlight.current) return
-    inFlight.current = true
-    setStatus("checking")
-    setError(null)
-    try {
-      setCurrentVersion(await getVersion())
-      const oldUpdate = updateRef.current
-      updateRef.current = null
-      await oldUpdate?.close()
-      const update = await check()
-      updateRef.current = update
-      setAvailableVersion(update?.version ?? null)
-      setNotes(update?.body?.trim() || null)
-      setReleaseDate(update?.date ?? null)
-      setCheckedAt(new Date())
-      setStatus(update ? "available" : "current")
-    } catch (cause) {
-      inFlight.current = false
-      setError(cause instanceof Error ? cause.message : String(cause))
-      setStatus("error")
-    } finally {
-      inFlight.current = false
-    }
-  }, [runtime])
-
-  useEffect(() => {
-    if (runtime !== true) return
-    const timer = window.setTimeout(() => void checkForUpdates(), 1200)
-    return () => {
-      window.clearTimeout(timer)
-      const update = updateRef.current
-      updateRef.current = null
-      if (update) void update.close()
-    }
-  }, [runtime, checkForUpdates])
-
-  async function installUpdate() {
-    const update = updateRef.current
-    if (!update || status === "installing") return
-    inFlight.current = true
-    setStatus("installing")
-    setError(null)
-    setProgress({ downloaded: 0, total: null })
-    let downloaded = 0
-    let total: number | null = null
-    try {
-      await update.downloadAndInstall((event) => {
-        if (event.event === "Started") {
-          total = event.data.contentLength ?? null
-        } else if (event.event === "Progress") {
-          downloaded += event.data.chunkLength
-        }
-        setProgress({ downloaded, total })
-      })
-      await relaunch()
-    } catch (cause) {
-      inFlight.current = false
-      setError(cause instanceof Error ? cause.message : String(cause))
-      setStatus("error")
-    }
-  }
 
   if (runtime !== true) return null
 
