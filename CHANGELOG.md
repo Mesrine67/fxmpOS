@@ -2,6 +2,22 @@
 
 Chaque version publiée possède sa propre section. Le workflow de release réutilise ces notes dans la release GitHub et dans le manifeste de l’updater Tauri.
 
+## [0.0.13] - 2026-10-24
+
+### Améliorations
+
+- La page d’accueil devient un centre de contrôle PC avec le nom de l’appareil, la version Windows, le processeur, la mémoire, les volumes, les écrans, le GPU et le temps de fonctionnement réellement lus sur Windows.
+- Les alertes de mémoire et d’espace disque sont calculées depuis les mesures locales; aucun graphique de démonstration ni aucune statistique fictive n’est présenté comme une donnée réelle.
+- La navigation latérale est recentrée sur l’accueil, les applications, l’appareil et les paramètres; l’ancienne route `/dashboard` redirige vers l’accueil.
+- Le menu de profil affiche le compte Windows local et un résumé du PC. Les informations sont lues à l’ouverture du menu et ne comprennent ni adresse e-mail, ni chemin de profil, ni identifiant de connexion.
+- Des raccourcis donnent accès aux applications installées, aux détails de l’appareil et aux réglages de l’overlay.
+
+### Confidentialité et compatibilité
+
+- Les informations utilisées par l’accueil et le menu restent locales et réutilisent la commande système en lecture seule existante.
+- Windows x64, installateurs NSIS et MSI. WebView2 est requis.
+- macOS, Linux, Android et iOS ne sont pas distribués pour cette version.
+
 ## [0.0.12] - 2026-10-24
 
 ### Améliorations

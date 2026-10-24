@@ -1,6 +1,6 @@
 {
   "name": "mon-app",
-  "version": "0.0.12",
+  "version": "0.0.13",
   "type": "module",
   "private": true,
   "packageManager": "pnpm@12.3.4",
