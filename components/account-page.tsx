@@ -18,6 +18,12 @@ import type { LucideIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import {
+  Alert,
+  AlertAction,
+  AlertDescription,
+  AlertTitle,
+} from "@/components/ui/alert"
+import {
   Card,
   CardAction,
   CardContent,
@@ -26,6 +32,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useTauriRuntime } from "@/hooks/use-tauri-runtime"
 import { trackedInvoke } from "@/lib/tauri"
@@ -134,26 +141,6 @@ function DetailRow({ label, value }: { label: string; value?: string | null }) {
   )
 }
 
-function ProgressTrack({ label, value }: { label: string; value: number }) {
-  const percentage = formatPercent(value)
-
-  return (
-    <div
-      aria-label={label}
-      aria-valuemax={100}
-      aria-valuemin={0}
-      aria-valuenow={percentage}
-      className="h-2 overflow-hidden rounded-full bg-muted"
-      role="progressbar"
-    >
-      <div
-        className="h-full rounded-full bg-primary transition-[width]"
-        style={{ width: `${percentage}%` }}
-      />
-    </div>
-  )
-}
-
 function MetricCard({
   icon: Icon,
   label,
@@ -183,7 +170,7 @@ function MetricCard({
       <CardContent className="flex flex-col gap-3">
         <p className="min-h-5 text-xs text-muted-foreground">{detail}</p>
         {progress !== undefined && (
-          <ProgressTrack label={label} value={progress} />
+          <Progress aria-label={label} value={formatPercent(progress)} />
         )}
       </CardContent>
     </Card>
@@ -226,6 +213,7 @@ function LoadingState() {
 export function AccountPage() {
   const [snapshot, setSnapshot] = useState<SystemSnapshot | null>(null)
   const [monitors, setMonitors] = useState<DisplayMonitorInfo[]>([])
+  const [activeTab, setActiveTab] = useState("overview")
   const isDesktopRuntime = useTauriRuntime()
   const [isLoading, setIsLoading] = useState(true)
   const [areMonitorsLoading, setAreMonitorsLoading] = useState(true)
@@ -292,6 +280,20 @@ export function AccountPage() {
   const storagePercent = storageTotal
     ? formatPercent((storageUsed / storageTotal) * 100)
     : 0
+  const lowSpaceDisks =
+    snapshot?.disks.filter(
+      (disk) =>
+        disk.totalBytes > 0 && disk.availableBytes / disk.totalBytes < 0.05
+    ) ?? []
+
+  const showStorageDetails = () => {
+    setActiveTab("overview")
+    window.setTimeout(() => {
+      document
+        .getElementById("storage-volumes")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" })
+    }, 0)
+  }
 
   return (
     <div className="min-h-0 flex-1 px-5 py-6 md:px-8">
@@ -452,7 +454,58 @@ export function AccountPage() {
               />
             </div>
 
-            <Tabs className="gap-4" defaultValue="overview">
+            {lowSpaceDisks.length > 0 && (
+              <Alert
+                className="items-center gap-3 px-4 py-3"
+                variant="destructive"
+              >
+                <CircleAlertIcon aria-hidden="true" />
+                <div className="min-w-0">
+                  <AlertTitle className="text-sm">
+                    Espace disque presque saturé
+                  </AlertTitle>
+                  <AlertDescription className="mt-1">
+                    <p>
+                      Moins de 5 % d’espace libre sur{" "}
+                      {lowSpaceDisks.length === 1
+                        ? "ce volume"
+                        : "ces volumes"}
+                      .
+                    </p>
+                    <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1">
+                      {lowSpaceDisks.map((disk) => (
+                        <span key={disk.mountPoint}>
+                          <strong className="font-medium text-foreground">
+                            {disk.mountPoint || disk.name}
+                          </strong>{" "}
+                          {formatCapacity(disk.availableBytes)} libres (
+                          {formatPercent(
+                            (disk.availableBytes / disk.totalBytes) * 100
+                          )}
+                          %)
+                        </span>
+                      ))}
+                    </div>
+                  </AlertDescription>
+                </div>
+                <AlertAction className="static ml-auto shrink-0 self-center">
+                  <Button
+                    onClick={showStorageDetails}
+                    size="sm"
+                    type="button"
+                    variant="outline"
+                  >
+                    Voir les volumes
+                  </Button>
+                </AlertAction>
+              </Alert>
+            )}
+
+            <Tabs
+              className="gap-4"
+              onValueChange={(value) => setActiveTab(value)}
+              value={activeTab}
+            >
               <TabsList className="grid h-auto w-full grid-cols-3 sm:w-fit">
                 <TabsTrigger value="overview">Vue d’ensemble</TabsTrigger>
                 <TabsTrigger value="hardware">Matériel</TabsTrigger>
@@ -536,8 +589,8 @@ export function AccountPage() {
                               {formatCapacity(snapshot.memoryTotalBytes)}
                             </span>
                           </div>
-                          <ProgressTrack
-                            label="Utilisation de la mémoire vive"
+                          <Progress
+                            aria-label="Utilisation de la mémoire vive"
                             value={memoryPercent}
                           />
                           <p className="text-right text-muted-foreground">
@@ -560,8 +613,8 @@ export function AccountPage() {
                               {formatCapacity(snapshot.virtualMemoryTotalBytes)}
                             </span>
                           </div>
-                          <ProgressTrack
-                            label="Utilisation de la mémoire virtuelle"
+                          <Progress
+                            aria-label="Utilisation de la mémoire virtuelle"
                             value={
                               snapshot.virtualMemoryTotalBytes
                                 ? (snapshot.virtualMemoryUsedBytes /
@@ -606,7 +659,7 @@ export function AccountPage() {
                   </div>
                 </div>
 
-                <Card>
+                <Card className="scroll-mt-6" id="storage-volumes">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <HardDriveIcon aria-hidden="true" />
@@ -653,13 +706,23 @@ export function AccountPage() {
                                 {formatCapacity(disk.totalBytes)}
                               </p>
                             </div>
-                            <ProgressTrack
-                              label={`Utilisation du volume ${disk.mountPoint}`}
+                            <Progress
+                              aria-label={`Utilisation du volume ${disk.mountPoint}`}
                               value={percentage}
                             />
-                            <p className="text-right text-muted-foreground">
-                              {formatCapacity(disk.availableBytes)} disponibles
-                            </p>
+                            <div className="flex items-center justify-between gap-3">
+                              <p className="text-muted-foreground">
+                                {formatCapacity(disk.availableBytes)} libres
+                                {disk.totalBytes > 0 &&
+                                  ` · ${formatPercent((disk.availableBytes / disk.totalBytes) * 100)} %`}
+                              </p>
+                              {disk.totalBytes > 0 &&
+                                disk.availableBytes / disk.totalBytes < 0.05 && (
+                                  <Badge variant="destructive">
+                                    Espace faible
+                                  </Badge>
+                                )}
+                            </div>
                           </div>
                         )
                       })

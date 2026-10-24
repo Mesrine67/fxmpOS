@@ -2,6 +2,23 @@
 
 Chaque version publiée possède sa propre section. Le workflow de release réutilise ces notes dans la release GitHub et dans le manifeste de l’updater Tauri.
 
+## [0.0.10] - 2026-10-24
+
+### Améliorations
+
+- La page Compte signale les volumes dont l’espace libre est inférieur à 5 %, avec leur espace disponible et un accès direct à leur détail.
+- Chaque volume affiche désormais son espace libre en Go et en pourcentage, avec un indicateur visuel d’espace faible.
+- Les jauges de mémoire vive, mémoire virtuelle et stockage utilisent le composant shadcn Progress.
+
+### Confidentialité
+
+- Ces informations utilisent la lecture locale existante de Windows; aucune permission ni transmission réseau supplémentaire n’est ajoutée.
+
+### Compatibilité
+
+- Windows x64, installateurs NSIS et MSI. WebView2 est requis.
+- macOS, Linux, Android et iOS ne sont pas distribués pour cette version.
+
 ## [0.0.9] - 2026-10-24
 
 ### Améliorations
