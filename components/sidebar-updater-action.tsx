@@ -13,6 +13,8 @@ import {
 import { useState } from "react"
 
 import { useUpdater } from "@/components/updater-provider"
+import { ReleaseNotesDialog } from "@/components/release-notes-dialog"
+import { UpdaterDownloadProgress } from "@/components/updater-download-progress"
 import { Button } from "@/components/ui/button"
 import {
   Tooltip,
@@ -20,41 +22,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { useTauriRuntime } from "@/hooks/use-tauri-runtime"
-
-function formatBytes(bytes: number) {
-  if (bytes < 1024) return `${bytes} o`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} Ko`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} Mo`
-}
-
-function ReleaseNotes({ notes }: { notes: string }) {
-  return (
-    <div className="flex flex-col gap-1 text-sm text-muted-foreground">
-      {notes.split(/\r?\n/).map((line, index) => {
-        const text = line.trim()
-        if (!text) return <div aria-hidden="true" className="h-1" key={index} />
-        if (text.startsWith("#")) {
-          return (
-            <h3 className="pt-2 font-semibold text-foreground" key={index}>
-              {text.replace(/^#+\s*/, "")}
-            </h3>
-          )
-        }
-        if (/^[-*]\s/.test(text)) {
-          return (
-            <p
-              className="pl-3 before:mr-2 before:text-primary before:content-['•']"
-              key={index}
-            >
-              {text.slice(2)}
-            </p>
-          )
-        }
-        return <p key={index}>{text}</p>
-      })}
-    </div>
-  )
-}
 
 export function SidebarUpdaterAction() {
   const runtime = useTauriRuntime()
@@ -69,25 +36,27 @@ export function SidebarUpdaterAction() {
     error,
     progress,
     checkForUpdates,
+    downloadUpdate,
     installUpdate,
   } = updater
   const [open, setOpen] = useState(false)
 
   if (runtime !== true) return null
 
-  const busy = status === "checking" || status === "installing"
+  const busy =
+    status === "checking" || status === "downloading" || status === "installing"
   const label =
     status === "available"
       ? `Version ${availableVersion} disponible`
       : status === "checking"
         ? "Recherche des mises à jour…"
-        : status === "error"
-          ? "La vérification des mises à jour a échoué"
-          : "Mises à jour FXMP OS"
-  const percent = progress?.total
-    ? Math.min(100, Math.round((progress.downloaded * 100) / progress.total))
-    : null
-
+        : status === "downloading"
+          ? `Téléchargement de la version ${availableVersion}…`
+          : status === "downloaded"
+            ? `Version ${availableVersion} prête à installer`
+            : status === "error"
+              ? "La vérification des mises à jour a échoué"
+              : "Mises à jour FXMP OS"
   return (
     <Dialog.Root
       open={open}
@@ -138,9 +107,13 @@ export function SidebarUpdaterAction() {
               >
                 {status === "available"
                   ? "Mise à jour disponible"
-                  : status === "current"
-                    ? "FXMP OS est à jour"
-                    : "Mises à jour"}
+                  : status === "downloading"
+                    ? "Téléchargement en cours"
+                    : status === "downloaded"
+                      ? "Prête à installer"
+                      : status === "current"
+                        ? "FXMP OS est à jour"
+                        : "Mises à jour"}
               </Dialog.Title>
               <span className="text-sm text-muted-foreground">
                 {currentVersion
@@ -165,7 +138,9 @@ export function SidebarUpdaterAction() {
           <div className="min-h-0 flex-1 overflow-y-auto p-5">
             <div className="rounded-lg border bg-muted/20 p-4">
               <div className="flex items-start gap-3">
-                {status === "checking" || status === "installing" ? (
+                {status === "checking" ||
+                status === "downloading" ||
+                status === "installing" ? (
                   <LoaderCircleIcon className="mt-0.5 size-4 shrink-0 animate-spin text-primary" />
                 ) : status === "error" ? (
                   <TriangleAlertIcon className="mt-0.5 size-4 shrink-0 text-destructive" />
@@ -178,59 +153,45 @@ export function SidebarUpdaterAction() {
                       ? "Recherche des mises à jour…"
                       : status === "available"
                         ? `Version ${availableVersion} disponible`
-                        : status === "current"
-                          ? "Aucune version plus récente n’est disponible sur le canal stable Windows x64."
-                          : status === "installing"
-                            ? "Téléchargement et installation…"
-                            : status === "error"
-                              ? "La vérification a échoué"
-                              : "Vérification des mises à jour signées"}
+                        : status === "downloading"
+                          ? `Téléchargement de la version ${availableVersion}…`
+                          : status === "downloaded"
+                            ? `Version ${availableVersion} prête à installer`
+                            : status === "current"
+                              ? "Aucune version plus récente n’est disponible sur le canal stable Windows x64."
+                              : status === "installing"
+                                ? "Installation en cours…"
+                                : status === "error"
+                                  ? "La vérification a échoué"
+                                  : "Vérification des mises à jour signées"}
                   </p>
-                  {notes && status === "available" && (
-                    <div className="mt-3 rounded-md border bg-background/60 p-3">
-                      <h3 className="mb-2 text-sm font-semibold">
-                        Nouveautés
-                        {releaseDate
-                          ? ` · ${new Date(releaseDate).toLocaleDateString("fr-FR")}`
-                          : ""}
-                      </h3>
-                      <ReleaseNotes notes={notes} />
-                    </div>
-                  )}
-                  {status === "available" && !notes && (
-                    <p className="mt-2 text-sm text-muted-foreground">
-                      Aucune note n’a été ajoutée à cette version.
-                    </p>
-                  )}
-                  {status === "installing" && progress && (
-                    <div className="mt-4 space-y-2">
-                      <div className="flex justify-between gap-3 text-xs text-muted-foreground">
-                        <span>
-                          {formatBytes(progress.downloaded)}
-                          {progress.total
-                            ? ` sur ${formatBytes(progress.total)}`
-                            : " téléchargés"}
-                        </span>
-                        {percent !== null && <span>{percent} %</span>}
+                  {(status === "available" || status === "downloaded") &&
+                    notes && (
+                      <div className="mt-3">
+                        <ReleaseNotesDialog
+                          nested
+                          notes={notes}
+                          releaseDate={releaseDate}
+                          triggerLabel="Voir les notes de version"
+                          version={availableVersion ?? ""}
+                        />
                       </div>
-                      {percent !== null && (
-                        <div
-                          aria-label="Progression du téléchargement"
-                          aria-valuemax={100}
-                          aria-valuemin={0}
-                          aria-valuenow={percent}
-                          className="h-2 overflow-hidden rounded-full bg-muted"
-                          role="progressbar"
-                        >
-                          <div
-                            className="h-full bg-primary transition-[width]"
-                            style={{ width: `${percent}%` }}
-                          />
-                        </div>
-                      )}
+                    )}
+                  {(status === "available" || status === "downloaded") &&
+                    !notes && (
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        Aucune note n’a été ajoutée à cette version.
+                      </p>
+                    )}
+                  {status === "downloading" || status === "downloaded" ? (
+                    <div className="mt-4">
+                      <UpdaterDownloadProgress
+                        progress={progress}
+                        status={status}
+                      />
                     </div>
-                  )}
-                  {status === "error" && error && (
+                  ) : null}
+                  {error && (
                     <p
                       className="mt-2 text-sm break-words text-destructive"
                       role="alert"
@@ -264,7 +225,7 @@ export function SidebarUpdaterAction() {
             </a>
             <div className="flex gap-2">
               <Button
-                disabled={busy}
+                disabled={busy || status === "downloaded"}
                 onClick={() => void checkForUpdates()}
                 variant="outline"
               >
@@ -276,8 +237,29 @@ export function SidebarUpdaterAction() {
                 Vérifier maintenant
               </Button>
               {status === "available" && (
+                <Button onClick={() => void downloadUpdate()}>
+                  <ArrowDownToLineIcon />
+                  {error ? "Réessayer le téléchargement" : "Télécharger"}
+                </Button>
+              )}
+              {status === "downloading" && (
+                <Button disabled>
+                  <LoaderCircleIcon className="animate-spin" />
+                  Téléchargement…
+                </Button>
+              )}
+              {status === "downloaded" && (
                 <Button onClick={() => void installUpdate()}>
-                  <ArrowDownToLineIcon /> Télécharger et installer
+                  <ArrowDownToLineIcon />
+                  {error
+                    ? "Réessayer l’installation"
+                    : "Installer et redémarrer"}
+                </Button>
+              )}
+              {status === "installing" && (
+                <Button disabled>
+                  <LoaderCircleIcon className="animate-spin" />
+                  Installation…
                 </Button>
               )}
             </div>

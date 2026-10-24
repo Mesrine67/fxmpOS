@@ -2,6 +2,24 @@
 
 Chaque version publiée possède sa propre section. Le workflow de release réutilise ces notes dans la release GitHub et dans le manifeste de l’updater Tauri.
 
+## [0.0.12] - 2026-10-24
+
+### Améliorations
+
+- Les notes de version s’ouvrent dans une fenêtre dédiée et défilable depuis Paramètres, l’historique et le raccourci latéral.
+- Le téléchargement est une étape distincte de l’installation, avec progression, quantité téléchargée et état prêt à installer.
+- Après le téléchargement signé, l’utilisateur choisit quand installer et redémarrer FXMP OS.
+
+### Sécurité et fiabilité
+
+- La validation Minisign de Tauri est conservée avant installation; aucun téléchargement ou installation automatique n’est lancé sans action de l’utilisateur.
+- Les vérifications périodiques ne remplacent pas l’objet d’update pendant le téléchargement ou lorsqu’il est prêt à installer.
+
+### Compatibilité
+
+- Windows x64, installateurs NSIS et MSI. WebView2 est requis.
+- macOS, Linux, Android et iOS ne sont pas distribués pour cette version.
+
 ## [0.0.11] - 2026-10-24
 
 ### Améliorations

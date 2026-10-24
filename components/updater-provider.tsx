@@ -1,7 +1,6 @@
 "use client"
 
 import { getVersion } from "@tauri-apps/api/app"
-import { relaunch } from "@tauri-apps/plugin-process"
 import { check } from "@tauri-apps/plugin-updater"
 import {
   createContext,
@@ -19,7 +18,14 @@ const UPDATE_CHECK_INTERVAL_MS = 60_000
 const FOREGROUND_RECHECK_AFTER_MS = 1_000
 
 export type UpdaterStatus =
-  "idle" | "checking" | "current" | "available" | "installing" | "error"
+  | "idle"
+  | "checking"
+  | "current"
+  | "available"
+  | "downloading"
+  | "downloaded"
+  | "installing"
+  | "error"
 
 export type UpdaterProgress = { downloaded: number; total: number | null }
 
@@ -35,6 +41,7 @@ type UpdaterContextValue = {
   error: string | null
   progress: UpdaterProgress | null
   checkForUpdates: () => Promise<void>
+  downloadUpdate: () => Promise<void>
   installUpdate: () => Promise<void>
 }
 
@@ -57,7 +64,8 @@ export function UpdaterProvider({ children }: { children: React.ReactNode }) {
   const [progress, setProgress] = useState<UpdaterProgress | null>(null)
   const updateRef = useRef<Update>(null)
   const checkingRef = useRef(false)
-  const installingRef = useRef(false)
+  const updateOperationRef = useRef(false)
+  const downloadedRef = useRef(false)
   const lastCheckAtRef = useRef(0)
 
   const checkForUpdates = useCallback(async () => {
@@ -65,7 +73,8 @@ export function UpdaterProvider({ children }: { children: React.ReactNode }) {
       runtime !== true ||
       windowLabel !== "main" ||
       checkingRef.current ||
-      installingRef.current
+      updateOperationRef.current ||
+      downloadedRef.current
     ) {
       return
     }
@@ -80,6 +89,7 @@ export function UpdaterProvider({ children }: { children: React.ReactNode }) {
 
       const [version, update] = await Promise.all([getVersion(), check()])
       updateRef.current = update
+      downloadedRef.current = false
       setCurrentVersion(version)
       setAvailableVersion(update?.version ?? null)
       setReleaseNotes(update?.body?.trim() || null)
@@ -100,7 +110,10 @@ export function UpdaterProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (runtime !== true || windowLabel !== "main") return
 
-    void checkForUpdates()
+    let active = true
+    queueMicrotask(() => {
+      if (active) void checkForUpdates()
+    })
     const interval = window.setInterval(() => {
       if (document.visibilityState === "visible") void checkForUpdates()
     }, UPDATE_CHECK_INTERVAL_MS)
@@ -117,6 +130,7 @@ export function UpdaterProvider({ children }: { children: React.ReactNode }) {
     document.addEventListener("visibilitychange", refreshWhenForegrounded)
     window.addEventListener("focus", refreshWhenForegrounded)
     return () => {
+      active = false
       window.clearInterval(interval)
       document.removeEventListener("visibilitychange", refreshWhenForegrounded)
       window.removeEventListener("focus", refreshWhenForegrounded)
@@ -126,31 +140,67 @@ export function UpdaterProvider({ children }: { children: React.ReactNode }) {
     }
   }, [runtime, windowLabel, checkForUpdates])
 
-  const installUpdate = useCallback(async () => {
+  const downloadUpdate = useCallback(async () => {
     const update = updateRef.current
-    if (!update || installingRef.current || checkingRef.current) return
+    if (
+      !update ||
+      updateOperationRef.current ||
+      checkingRef.current ||
+      downloadedRef.current
+    ) {
+      return
+    }
 
-    installingRef.current = true
-    setStatus("installing")
+    updateOperationRef.current = true
+    setStatus("downloading")
     setError(null)
     setProgress({ downloaded: 0, total: null })
     let downloaded = 0
     let total: number | null = null
 
     try {
-      await update.downloadAndInstall((event) => {
+      await update.download((event) => {
         if (event.event === "Started") {
           total = event.data.contentLength ?? null
         } else if (event.event === "Progress") {
           downloaded += event.data.chunkLength
+        } else if (event.event === "Finished") {
+          downloaded = total ?? downloaded
         }
         setProgress({ downloaded, total })
       })
-      await relaunch()
+      downloadedRef.current = true
+      setStatus("downloaded")
     } catch (cause) {
-      installingRef.current = false
       setError(errorMessage(cause))
-      setStatus("error")
+      setProgress(null)
+      setStatus("available")
+    } finally {
+      updateOperationRef.current = false
+    }
+  }, [])
+
+  const installUpdate = useCallback(async () => {
+    const update = updateRef.current
+    if (
+      !update ||
+      !downloadedRef.current ||
+      updateOperationRef.current ||
+      checkingRef.current
+    ) {
+      return
+    }
+
+    updateOperationRef.current = true
+    setStatus("installing")
+    setError(null)
+
+    try {
+      await update.install({ restartAfterInstall: true })
+    } catch (cause) {
+      updateOperationRef.current = false
+      setError(errorMessage(cause))
+      setStatus("downloaded")
     }
   }, [])
 
@@ -165,6 +215,7 @@ export function UpdaterProvider({ children }: { children: React.ReactNode }) {
       error,
       progress,
       checkForUpdates,
+      downloadUpdate,
       installUpdate,
     }),
     [
@@ -177,6 +228,7 @@ export function UpdaterProvider({ children }: { children: React.ReactNode }) {
       error,
       progress,
       checkForUpdates,
+      downloadUpdate,
       installUpdate,
     ]
   )
