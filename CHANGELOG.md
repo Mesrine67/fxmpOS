@@ -2,6 +2,21 @@
 
 Chaque version publiée possède sa propre section. Le workflow de release réutilise ces notes dans la release GitHub et dans le manifeste de l’updater Tauri.
 
+## [0.0.9] - 2026-10-24
+
+### Améliorations
+
+- L’historique des releases propose une sélection au clavier et à la souris, avec une ligne entière cliquable et un état de sélection visible.
+- Les colonnes Version, Publication, Fichiers et Téléchargements peuvent être triées dans les deux sens.
+- La recherche et la pagination affichent les versions par pages de 10, 25 ou 50 entrées.
+- Le changelog et les fichiers d’une release sont organisés dans des onglets; les empreintes SHA-256 restent accessibles pour chaque fichier.
+- La recherche, les états vides et les erreurs utilisent les composants shadcn correspondants; les contrôles restent accessibles avec un lecteur d’écran.
+
+### Compatibilité
+
+- Windows x64, installateurs NSIS et MSI. WebView2 est requis.
+- macOS, Linux, Android et iOS ne sont pas distribués pour cette version.
+
 ## [0.0.8] - 2026-10-24
 
 ### Améliorations
