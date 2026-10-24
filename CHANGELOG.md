@@ -9,6 +9,7 @@ Chaque version publiée possède sa propre section. Le workflow de release réut
 - Les notes de version s’ouvrent dans une fenêtre dédiée et défilable depuis Paramètres, l’historique et le raccourci latéral.
 - Le téléchargement est une étape distincte de l’installation, avec progression, quantité téléchargée et état prêt à installer.
 - Après le téléchargement signé, l’utilisateur choisit quand installer et redémarrer FXMP OS.
+- Les permissions updater Tauri autorisent explicitement les commandes séparées de téléchargement et d’installation dans la fenêtre principale.
 
 ### Sécurité et fiabilité
 
