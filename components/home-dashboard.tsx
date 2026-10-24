@@ -497,7 +497,11 @@ function HomeContent() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="flex flex-col gap-3">
-                      {snapshot.graphicsAdapters?.length ? (
+                      {snapshot.graphicsAdapters === null ? (
+                        <p className="text-sm text-muted-foreground">
+                          Informations sur la carte graphique indisponibles.
+                        </p>
+                      ) : snapshot.graphicsAdapters.length > 0 ? (
                         snapshot.graphicsAdapters.map((adapter) => (
                           <div
                             className="flex flex-col gap-1"
