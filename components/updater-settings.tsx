@@ -7,6 +7,9 @@ import {
   ArrowDownToLineIcon,
   CalendarDaysIcon,
   CheckCircle2Icon,
+  ArrowDownIcon,
+  ArrowDownUpIcon,
+  ArrowUpIcon,
   ExternalLinkIcon,
   FileArchiveIcon,
   LoaderCircleIcon,
@@ -30,16 +33,43 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty"
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/ui/input-group"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+} from "@/components/ui/pagination"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Skeleton } from "@/components/ui/skeleton"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import {
   Table,
   TableBody,
   TableCell,
+  TableCaption,
   TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 type UpdateStatus =
   | "idle"
@@ -66,6 +96,7 @@ type PublishedRelease = {
   url: string
   assets: ReleaseAsset[]
 }
+type ReleaseSortKey = "version" | "publishedAt" | "assets" | "downloads"
 
 const releaseApiUrl = "https://api.github.com/repos/Mesrine67/fxmpOS/releases"
 
@@ -204,6 +235,10 @@ export function UpdaterSettings() {
     null
   )
   const [releaseSearch, setReleaseSearch] = useState("")
+  const [sortKey, setSortKey] = useState<ReleaseSortKey>("publishedAt")
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc")
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState("10")
   const [historyStatus, setHistoryStatus] = useState<
     "loading" | "ready" | "error"
   >("loading")
@@ -331,10 +366,43 @@ export function UpdaterSettings() {
   const progressPercent = progress?.total
     ? Math.min(100, Math.round((progress.downloaded / progress.total) * 100))
     : null
-  const filteredReleases = releases.filter((release) =>
-    `${release.version} ${release.name} ${release.notes}`
-      .toLocaleLowerCase("fr-FR")
-      .includes(releaseSearch.trim().toLocaleLowerCase("fr-FR"))
+  const versionCollator = new Intl.Collator("fr-FR", { numeric: true })
+  const filteredReleases = releases
+    .filter((release) =>
+      `${release.version} ${release.name} ${release.notes}`
+        .toLocaleLowerCase("fr-FR")
+        .includes(releaseSearch.trim().toLocaleLowerCase("fr-FR"))
+    )
+    .sort((left, right) => {
+      let result = 0
+      if (sortKey === "version") {
+        result = versionCollator.compare(left.version, right.version)
+      } else if (sortKey === "publishedAt") {
+        result = Date.parse(left.publishedAt) - Date.parse(right.publishedAt)
+      } else if (sortKey === "assets") {
+        result = left.assets.length - right.assets.length
+      } else {
+        const leftDownloads = left.assets.reduce(
+          (total, asset) => total + asset.downloadCount,
+          0
+        )
+        const rightDownloads = right.assets.reduce(
+          (total, asset) => total + asset.downloadCount,
+          0
+        )
+        result = leftDownloads - rightDownloads
+      }
+      return sortDirection === "asc" ? result : -result
+    })
+  const parsedPageSize = Number(pageSize)
+  const pageCount = Math.max(
+    1,
+    Math.ceil(filteredReleases.length / parsedPageSize)
+  )
+  const visiblePage = Math.min(currentPage, pageCount)
+  const pageReleases = filteredReleases.slice(
+    (visiblePage - 1) * parsedPageSize,
+    visiblePage * parsedPageSize
   )
   const visibleSelectedRelease = filteredReleases.find(
     (release) => release.tag === selectedReleaseTag
@@ -371,6 +439,54 @@ export function UpdaterSettings() {
       }
       return <p key={index}>{trimmed}</p>
     })
+  }
+
+  function toggleReleaseSort(key: ReleaseSortKey) {
+    setCurrentPage(1)
+    if (sortKey === key) {
+      setSortDirection((direction) => (direction === "asc" ? "desc" : "asc"))
+      return
+    }
+    setSortKey(key)
+    setSortDirection(key === "version" ? "desc" : "asc")
+  }
+
+  function renderSortHeader(
+    label: string,
+    key: ReleaseSortKey,
+    className?: string
+  ) {
+    const active = sortKey === key
+    const SortIcon = active
+      ? sortDirection === "asc"
+        ? ArrowUpIcon
+        : ArrowDownIcon
+      : ArrowDownUpIcon
+
+    return (
+      <TableHead
+        aria-sort={
+          active
+            ? sortDirection === "asc"
+              ? "ascending"
+              : "descending"
+            : "none"
+        }
+        className={className}
+      >
+        <Button
+          aria-label={`Trier par ${label.toLocaleLowerCase("fr-FR")}, ${active && sortDirection === "asc" ? "décroissant" : "croissant"}`}
+          className="-ml-2 h-8 px-2"
+          onClick={() => toggleReleaseSort(key)}
+          size="sm"
+          type="button"
+          variant="ghost"
+        >
+          {label}
+          <SortIcon aria-hidden="true" />
+        </Button>
+      </TableHead>
+    )
   }
 
   return (
@@ -620,17 +736,21 @@ export function UpdaterSettings() {
         </CardHeader>
 
         <CardContent className="flex flex-col gap-4">
-          <div className="relative">
-            <SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
+          <InputGroup>
+            <InputGroupAddon aria-hidden="true">
+              <SearchIcon />
+            </InputGroupAddon>
+            <InputGroupInput
               aria-label="Rechercher une version ou une note de publication"
-              className="pl-9"
               placeholder="Rechercher une version ou un changement…"
               value={releaseSearch}
-              onChange={(event) => setReleaseSearch(event.target.value)}
+              onChange={(event) => {
+                setReleaseSearch(event.target.value)
+                setCurrentPage(1)
+              }}
               disabled={historyStatus !== "ready"}
             />
-          </div>
+          </InputGroup>
 
           {historyStatus === "loading" && (
             <div
@@ -644,93 +764,205 @@ export function UpdaterSettings() {
           )}
 
           {historyStatus === "error" && (
-            <div
-              className="flex items-start gap-3 rounded-lg border border-destructive/40 bg-destructive/5 p-4"
-              role="alert"
-            >
-              <TriangleAlertIcon className="mt-0.5 size-4 shrink-0 text-destructive" />
-              <div className="flex flex-col gap-1">
-                <p className="font-medium">Historique indisponible</p>
-                <p className="text-sm text-muted-foreground">{historyError}</p>
-                <p className="text-xs text-muted-foreground">
+            <Alert variant="destructive">
+              <TriangleAlertIcon />
+              <AlertTitle>Historique indisponible</AlertTitle>
+              <AlertDescription className="flex flex-col gap-1">
+                <span>{historyError}</span>
+                <span>
                   Les mises à jour signées restent vérifiées séparément par
                   Tauri.
-                </p>
-              </div>
-            </div>
+                </span>
+              </AlertDescription>
+            </Alert>
           )}
 
           {historyStatus === "ready" && releases.length === 0 && (
-            <p className="rounded-lg border p-4 text-sm text-muted-foreground">
-              Aucune release stable publiée n’a été trouvée.
-            </p>
+            <Empty>
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <FileArchiveIcon />
+                </EmptyMedia>
+                <EmptyTitle>Aucune version publiée</EmptyTitle>
+                <EmptyDescription>
+                  Aucune release stable n’a été trouvée sur GitHub.
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
           )}
 
           {historyStatus === "ready" && releases.length > 0 && (
             <>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Version</TableHead>
-                    <TableHead>Publication</TableHead>
-                    <TableHead>Fichiers</TableHead>
-                    <TableHead className="text-right">
-                      Téléchargements
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredReleases.map((release) => {
-                    const isSelected = release.tag === selectedReleaseTag
-                    const isCurrent = release.version === currentVersion
-                    const isAvailable = release.version === availableVersion
-                    const totalDownloads = release.assets.reduce(
-                      (total, asset) => total + asset.downloadCount,
-                      0
-                    )
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <p aria-live="polite" className="text-xs text-muted-foreground">
+                  {filteredReleases.length === 0
+                    ? "Aucune version trouvée"
+                    : `${(visiblePage - 1) * parsedPageSize + 1}–${Math.min(visiblePage * parsedPageSize, filteredReleases.length)} sur ${filteredReleases.length} versions`}
+                </p>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">
+                    Par page
+                  </span>
+                  <Select
+                    onValueChange={(value) => {
+                      if (!value) return
+                      setPageSize(value)
+                      setCurrentPage(1)
+                    }}
+                    value={pageSize}
+                  >
+                    <SelectTrigger
+                      aria-label="Versions par page"
+                      className="w-20"
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="10">10</SelectItem>
+                      <SelectItem value="25">25</SelectItem>
+                      <SelectItem value="50">50</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
 
-                    return (
-                      <TableRow
-                        aria-selected={isSelected}
-                        className={isSelected ? "bg-muted/60" : undefined}
-                        key={release.tag}
-                      >
-                        <TableCell>
-                          <Button
-                            className="px-0 font-semibold"
-                            size="sm"
-                            variant="link"
+              {filteredReleases.length > 0 ? (
+                <RadioGroup
+                  aria-label="Sélectionner une version pour afficher ses détails"
+                  className="w-full gap-0"
+                  onValueChange={(tag) => {
+                    manuallySelectedRelease.current = true
+                    setSelectedReleaseTag(tag)
+                  }}
+                  value={selectedReleaseTag ?? ""}
+                >
+                  <Table>
+                    <TableCaption className="sr-only">
+                      Historique des versions stables de FXMP OS. Sélectionnez
+                      une ligne pour afficher le changelog et les fichiers.
+                    </TableCaption>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-10">
+                          <span className="sr-only">Sélection</span>
+                        </TableHead>
+                        {renderSortHeader("Version", "version")}
+                        {renderSortHeader("Publication", "publishedAt")}
+                        {renderSortHeader("Fichiers", "assets")}
+                        {renderSortHeader(
+                          "Téléchargements",
+                          "downloads",
+                          "text-right"
+                        )}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {pageReleases.map((release) => {
+                        const isSelected = release.tag === selectedReleaseTag
+                        const isCurrent = release.version === currentVersion
+                        const isAvailable = release.version === availableVersion
+                        const totalDownloads = release.assets.reduce(
+                          (total, asset) => total + asset.downloadCount,
+                          0
+                        )
+
+                        return (
+                          <TableRow
+                            aria-selected={isSelected}
+                            className={`cursor-pointer focus-within:bg-muted/60 ${isSelected ? "bg-muted/60" : ""}`}
+                            key={release.tag}
                             onClick={() => {
                               manuallySelectedRelease.current = true
                               setSelectedReleaseTag(release.tag)
                             }}
                           >
-                            {release.version}
-                          </Button>
-                          <div className="flex flex-wrap gap-1 pt-1">
-                            {isCurrent && (
-                              <Badge variant="outline">Installée</Badge>
-                            )}
-                            {isAvailable && <Badge>Mise à jour</Badge>}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {formatReleaseDate(release.publishedAt)}
-                        </TableCell>
-                        <TableCell>{release.assets.length}</TableCell>
-                        <TableCell className="text-right tabular-nums">
-                          {totalDownloads.toLocaleString("fr-FR")}
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })}
-                </TableBody>
-              </Table>
+                            <TableCell>
+                              <RadioGroupItem
+                                aria-label={`Sélectionner la version ${release.version}`}
+                                value={release.tag}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <span className="font-semibold text-primary">
+                                {release.version}
+                              </span>
+                              <div className="flex flex-wrap gap-1 pt-1">
+                                {isCurrent && (
+                                  <Badge variant="outline">Installée</Badge>
+                                )}
+                                {isAvailable && <Badge>Mise à jour</Badge>}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {formatReleaseDate(release.publishedAt)}
+                            </TableCell>
+                            <TableCell>{release.assets.length}</TableCell>
+                            <TableCell className="text-right tabular-nums">
+                              {totalDownloads.toLocaleString("fr-FR")}
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })}
+                    </TableBody>
+                  </Table>
+                </RadioGroup>
+              ) : (
+                <Empty className="min-h-40">
+                  <EmptyHeader>
+                    <EmptyMedia variant="icon">
+                      <SearchIcon />
+                    </EmptyMedia>
+                    <EmptyTitle>Aucun résultat</EmptyTitle>
+                    <EmptyDescription>
+                      Aucune version ne correspond à « {releaseSearch} ».
+                    </EmptyDescription>
+                  </EmptyHeader>
+                </Empty>
+              )}
 
-              {filteredReleases.length === 0 && (
-                <p className="rounded-lg border p-4 text-sm text-muted-foreground">
-                  Aucune version ne correspond à « {releaseSearch} ».
-                </p>
+              {filteredReleases.length > parsedPageSize && (
+                <Pagination aria-label="Pagination de l’historique des versions">
+                  <PaginationContent>
+                    <PaginationItem>
+                      <Button
+                        aria-label="Page précédente"
+                        disabled={visiblePage <= 1}
+                        onClick={() =>
+                          setCurrentPage((page) => Math.max(1, page - 1))
+                        }
+                        size="sm"
+                        type="button"
+                        variant="outline"
+                      >
+                        Précédente
+                      </Button>
+                    </PaginationItem>
+                    <PaginationItem>
+                      <span
+                        aria-live="polite"
+                        className="px-3 text-xs text-muted-foreground"
+                      >
+                        Page {visiblePage} sur {pageCount}
+                      </span>
+                    </PaginationItem>
+                    <PaginationItem>
+                      <Button
+                        aria-label="Page suivante"
+                        disabled={visiblePage >= pageCount}
+                        onClick={() =>
+                          setCurrentPage((page) =>
+                            Math.min(pageCount, page + 1)
+                          )
+                        }
+                        size="sm"
+                        type="button"
+                        variant="outline"
+                      >
+                        Suivante
+                      </Button>
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
               )}
 
               {visibleSelectedRelease && (
@@ -768,66 +1000,90 @@ export function UpdaterSettings() {
                       <ExternalLinkIcon className="size-3.5" />
                     </a>
                   </CardHeader>
-                  <CardContent className="flex flex-col gap-5">
-                    <div>
-                      <h3 className="mb-2 font-medium">Changelog complet</h3>
-                      {visibleSelectedRelease.notes ? (
-                        <div className="flex flex-col gap-1 rounded-md border bg-background/50 p-4 text-sm text-muted-foreground">
-                          {renderReleaseNotes(visibleSelectedRelease.notes)}
-                        </div>
-                      ) : (
-                        <p className="rounded-md border p-4 text-sm text-muted-foreground">
-                          Cette release ne contient pas de notes détaillées.
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="flex flex-col gap-2">
-                      <h3 className="font-medium">
-                        Fichiers et sommes de contrôle
-                      </h3>
-                      {visibleSelectedRelease.assets.length > 0 ? (
-                        <ul className="flex flex-col divide-y rounded-md border">
-                          {visibleSelectedRelease.assets.map((asset) => (
-                            <li
-                              className="flex flex-col gap-1 p-3 sm:flex-row sm:items-start sm:justify-between"
-                              key={asset.name}
-                            >
-                              <div className="flex min-w-0 items-start gap-2">
-                                <FileArchiveIcon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-                                <div className="min-w-0">
-                                  <a
-                                    className="font-medium break-all underline-offset-4 hover:underline"
-                                    href={asset.url}
-                                    rel="noreferrer"
-                                    target="_blank"
-                                  >
-                                    {asset.name}
-                                  </a>
-                                  <p className="text-xs text-muted-foreground">
-                                    {formatBytes(asset.size)} ·{" "}
-                                    {asset.downloadCount.toLocaleString(
-                                      "fr-FR"
-                                    )}{" "}
-                                    téléchargements
-                                  </p>
-                                  {asset.digest && (
-                                    <p className="pt-1 font-mono text-[11px] break-all text-muted-foreground">
-                                      SHA-256 ·{" "}
-                                      {asset.digest.replace(/^sha256:/, "")}
+                  <CardContent>
+                    <Tabs className="gap-4" defaultValue="changelog">
+                      <TabsList>
+                        <TabsTrigger value="changelog">Changelog</TabsTrigger>
+                        <TabsTrigger value="assets">
+                          Fichiers ({visibleSelectedRelease.assets.length})
+                        </TabsTrigger>
+                      </TabsList>
+                      <TabsContent
+                        className="flex flex-col gap-2"
+                        value="changelog"
+                      >
+                        <h3 className="font-medium">Changelog complet</h3>
+                        {visibleSelectedRelease.notes ? (
+                          <div className="flex flex-col gap-1 rounded-md border bg-background/50 p-4 text-sm text-muted-foreground">
+                            {renderReleaseNotes(visibleSelectedRelease.notes)}
+                          </div>
+                        ) : (
+                          <Empty className="min-h-36">
+                            <EmptyHeader>
+                              <EmptyTitle>Aucune note de version</EmptyTitle>
+                              <EmptyDescription>
+                                Cette release ne contient pas de changelog
+                                détaillé.
+                              </EmptyDescription>
+                            </EmptyHeader>
+                          </Empty>
+                        )}
+                      </TabsContent>
+                      <TabsContent
+                        className="flex flex-col gap-2"
+                        value="assets"
+                      >
+                        <h3 className="font-medium">
+                          Fichiers et sommes de contrôle
+                        </h3>
+                        {visibleSelectedRelease.assets.length > 0 ? (
+                          <ul className="flex flex-col divide-y rounded-md border">
+                            {visibleSelectedRelease.assets.map((asset) => (
+                              <li
+                                className="flex flex-col gap-1 p-3 sm:flex-row sm:items-start sm:justify-between"
+                                key={asset.name}
+                              >
+                                <div className="flex min-w-0 items-start gap-2">
+                                  <FileArchiveIcon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                                  <div className="min-w-0">
+                                    <a
+                                      className="font-medium break-all underline-offset-4 hover:underline"
+                                      href={asset.url}
+                                      rel="noreferrer"
+                                      target="_blank"
+                                    >
+                                      {asset.name}
+                                    </a>
+                                    <p className="text-xs text-muted-foreground">
+                                      {formatBytes(asset.size)} ·{" "}
+                                      {asset.downloadCount.toLocaleString(
+                                        "fr-FR"
+                                      )}{" "}
+                                      téléchargements
                                     </p>
-                                  )}
+                                    {asset.digest && (
+                                      <p className="pt-1 font-mono text-[11px] break-all text-muted-foreground">
+                                        SHA-256 ·{" "}
+                                        {asset.digest.replace(/^sha256:/, "")}
+                                      </p>
+                                    )}
+                                  </div>
                                 </div>
-                              </div>
-                            </li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <p className="rounded-md border p-3 text-sm text-muted-foreground">
-                          Aucun fichier de release n’est référencé.
-                        </p>
-                      )}
-                    </div>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <Empty className="min-h-36">
+                            <EmptyHeader>
+                              <EmptyTitle>Aucun fichier</EmptyTitle>
+                              <EmptyDescription>
+                                Aucun fichier de release n’est référencé.
+                              </EmptyDescription>
+                            </EmptyHeader>
+                          </Empty>
+                        )}
+                      </TabsContent>
+                    </Tabs>
                   </CardContent>
                 </Card>
               )}
