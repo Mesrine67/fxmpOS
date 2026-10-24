@@ -20,6 +20,8 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react"
 
 import { useUpdater, type UpdaterStatus } from "@/components/updater-provider"
+import { ReleaseNotesDialog } from "@/components/release-notes-dialog"
+import { UpdaterDownloadProgress } from "@/components/updater-download-progress"
 import { Button } from "@/components/ui/button"
 import { useTauriRuntime } from "@/hooks/use-tauri-runtime"
 import {
@@ -223,6 +225,7 @@ export function UpdaterSettings() {
     error,
     progress,
     checkForUpdates,
+    downloadUpdate,
     installUpdate,
   } = updater
   const [releases, setReleases] = useState<PublishedRelease[]>([])
@@ -284,13 +287,12 @@ export function UpdaterSettings() {
         : status
 
   const busy =
-    displayedStatus === "checking" || displayedStatus === "installing"
+    displayedStatus === "checking" ||
+    displayedStatus === "downloading" ||
+    displayedStatus === "installing"
   const releaseUrl = availableVersion
     ? `https://github.com/Mesrine67/fxmpOS/releases/tag/v${encodeURIComponent(availableVersion)}`
     : "https://github.com/Mesrine67/fxmpOS/releases/latest"
-  const progressPercent = progress?.total
-    ? Math.min(100, Math.round((progress.downloaded / progress.total) * 100))
-    : null
   const versionCollator = new Intl.Collator("fr-FR", { numeric: true })
   const filteredReleases = releases
     .filter((release) =>
@@ -332,39 +334,6 @@ export function UpdaterSettings() {
   const visibleSelectedRelease = filteredReleases.find(
     (release) => release.tag === selectedReleaseTag
   )
-
-  function renderReleaseNotes(notes: string) {
-    return notes.split(/\r?\n/).map((line, index) => {
-      const trimmed = line.trim()
-      if (!trimmed)
-        return <div aria-hidden="true" className="h-2" key={index} />
-      if (trimmed.startsWith("### ")) {
-        return (
-          <h4 className="pt-2 font-semibold" key={index}>
-            {trimmed.slice(4)}
-          </h4>
-        )
-      }
-      if (trimmed.startsWith("## ") || trimmed.startsWith("# ")) {
-        return (
-          <h4 className="pt-2 font-semibold" key={index}>
-            {trimmed.replace(/^#+\s*/, "")}
-          </h4>
-        )
-      }
-      if (/^[-*]\s/.test(trimmed)) {
-        return (
-          <p
-            className="pl-3 before:mr-2 before:text-primary before:content-['•']"
-            key={index}
-          >
-            {trimmed.slice(2)}
-          </p>
-        )
-      }
-      return <p key={index}>{trimmed}</p>
-    })
-  }
 
   function toggleReleaseSort(key: ReleaseSortKey) {
     setCurrentPage(1)
@@ -437,7 +406,9 @@ export function UpdaterSettings() {
         <CardContent className="flex flex-col gap-4">
           <div className="rounded-lg border bg-muted/30 p-4">
             <div className="flex items-start gap-3">
-              {status === "checking" || status === "installing" ? (
+              {status === "checking" ||
+              status === "downloading" ||
+              status === "installing" ? (
                 <LoaderCircleIcon className="mt-0.5 size-4 animate-spin text-primary" />
               ) : status === "error" ? (
                 <TriangleAlertIcon className="mt-0.5 size-4 text-destructive" />
@@ -454,8 +425,11 @@ export function UpdaterSettings() {
                   {displayedStatus === "current" && "FXMP OS est à jour"}
                   {displayedStatus === "available" &&
                     `Version ${availableVersion} disponible`}
-                  {displayedStatus === "installing" &&
-                    "Téléchargement et installation…"}
+                  {displayedStatus === "downloading" &&
+                    `Téléchargement de la version ${availableVersion}…`}
+                  {displayedStatus === "downloaded" &&
+                    `Version ${availableVersion} prête à installer`}
+                  {displayedStatus === "installing" && "Installation en cours…"}
                   {displayedStatus === "error" && "La vérification a échoué"}
                 </p>
                 {displayedStatus === "browser" && (
@@ -469,54 +443,26 @@ export function UpdaterSettings() {
                     stable Windows x64.
                   </p>
                 )}
-                {displayedStatus === "installing" && progress && (
-                  <div className="flex flex-col gap-2 pt-1">
-                    <div className="flex items-center justify-between gap-3 text-sm text-muted-foreground">
-                      <span>
-                        {formatBytes(progress.downloaded)}
-                        {progress.total
-                          ? ` sur ${formatBytes(progress.total)}`
-                          : " téléchargés"}
-                      </span>
-                      {progressPercent !== null && (
-                        <span className="tabular-nums">
-                          {progressPercent} %
-                        </span>
-                      )}
+                {(displayedStatus === "available" ||
+                  displayedStatus === "downloaded") &&
+                  releaseNotes && (
+                    <div className="mt-3">
+                      <ReleaseNotesDialog
+                        notes={releaseNotes}
+                        releaseDate={releaseDate}
+                        triggerLabel="Voir les notes de version"
+                        version={availableVersion ?? ""}
+                      />
                     </div>
-                    {progressPercent !== null && (
-                      <div
-                        aria-label="Progression du téléchargement"
-                        aria-valuemax={100}
-                        aria-valuemin={0}
-                        aria-valuenow={progressPercent}
-                        className="h-2 overflow-hidden rounded-full bg-muted"
-                        role="progressbar"
-                      >
-                        <div
-                          className="h-full rounded-full bg-primary transition-[width]"
-                          style={{ width: `${progressPercent}%` }}
-                        />
-                      </div>
-                    )}
-                  </div>
-                )}
-                {displayedStatus === "available" && releaseNotes && (
-                  <div className="mt-3 rounded-md border bg-background/50 p-3 text-sm text-muted-foreground">
-                    <h3 className="mb-2 font-medium text-foreground">
-                      Notes de version
-                    </h3>
-                    <div className="flex flex-col gap-1">
-                      {renderReleaseNotes(releaseNotes)}
-                    </div>
-                  </div>
-                )}
-                {displayedStatus === "available" && !releaseNotes && (
-                  <p className="text-sm text-muted-foreground">
-                    Cette version ne contient pas encore de notes de version.
-                  </p>
-                )}
-                {displayedStatus === "error" && error && (
+                  )}
+                {(displayedStatus === "available" ||
+                  displayedStatus === "downloaded") &&
+                  !releaseNotes && (
+                    <p className="text-sm text-muted-foreground">
+                      Cette version ne contient pas encore de notes de version.
+                    </p>
+                  )}
+                {error && (
                   <p className="text-sm break-words text-destructive">
                     {error}
                   </p>
@@ -524,6 +470,13 @@ export function UpdaterSettings() {
               </div>
             </div>
           </div>
+          {(displayedStatus === "downloading" ||
+            displayedStatus === "downloaded") && (
+            <UpdaterDownloadProgress
+              progress={progress}
+              status={displayedStatus}
+            />
+          )}
           <div className="grid gap-3 text-sm sm:grid-cols-2">
             <div className="flex items-start gap-2 rounded-md border p-3">
               <MonitorIcon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
@@ -549,8 +502,8 @@ export function UpdaterSettings() {
               <div>
                 <p className="font-medium">Installation</p>
                 <p className="text-muted-foreground">
-                  Le paquet signé est téléchargé puis installé par Tauri.
-                  L’application se ferme pendant la mise à jour.
+                  Téléchargez d’abord le paquet signé; l’installation démarre
+                  ensuite à votre demande et redémarre FXMP OS.
                 </p>
               </div>
             </div>
@@ -601,7 +554,11 @@ export function UpdaterSettings() {
             type="button"
             variant="outline"
             onClick={() => void checkForUpdates()}
-            disabled={busy || displayedStatus === "browser"}
+            disabled={
+              busy ||
+              displayedStatus === "downloaded" ||
+              displayedStatus === "browser"
+            }
           >
             <RefreshCwIcon />
             Vérifier maintenant
@@ -609,11 +566,33 @@ export function UpdaterSettings() {
           {displayedStatus === "available" && (
             <Button
               type="button"
-              onClick={() => void installUpdate()}
+              onClick={() => void downloadUpdate()}
               disabled={busy}
             >
-              <ArrowDownToLineIcon />
-              Télécharger et installer
+              {busy ? (
+                <LoaderCircleIcon className="animate-spin" />
+              ) : (
+                <ArrowDownToLineIcon />
+              )}
+              {error ? "Réessayer le téléchargement" : "Télécharger"}
+            </Button>
+          )}
+          {displayedStatus === "downloading" && (
+            <Button disabled type="button">
+              <LoaderCircleIcon className="animate-spin" />
+              Téléchargement…
+            </Button>
+          )}
+          {displayedStatus === "downloaded" && (
+            <Button type="button" onClick={() => void installUpdate()}>
+              <PackageCheckIcon />
+              {error ? "Réessayer l’installation" : "Installer et redémarrer"}
+            </Button>
+          )}
+          {displayedStatus === "installing" && (
+            <Button disabled type="button">
+              <LoaderCircleIcon className="animate-spin" />
+              Installation…
             </Button>
           )}
         </CardFooter>
@@ -929,14 +908,21 @@ export function UpdaterSettings() {
                         </TabsTrigger>
                       </TabsList>
                       <TabsContent
-                        className="flex flex-col gap-2"
+                        className="flex flex-col gap-3"
                         value="changelog"
                       >
-                        <h3 className="font-medium">Changelog complet</h3>
                         {visibleSelectedRelease.notes ? (
-                          <div className="flex flex-col gap-1 rounded-md border bg-background/50 p-4 text-sm text-muted-foreground">
-                            {renderReleaseNotes(visibleSelectedRelease.notes)}
-                          </div>
+                          <>
+                            <p className="text-sm text-muted-foreground">
+                              Ouvrez le changelog complet de cette version.
+                            </p>
+                            <ReleaseNotesDialog
+                              notes={visibleSelectedRelease.notes}
+                              releaseDate={visibleSelectedRelease.publishedAt}
+                              triggerLabel="Ouvrir le changelog"
+                              version={visibleSelectedRelease.version}
+                            />
+                          </>
                         ) : (
                           <Empty className="min-h-36">
                             <EmptyHeader>
