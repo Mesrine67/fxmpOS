@@ -11,6 +11,7 @@ import {
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
+import { SidebarUpdaterAction } from "@/components/sidebar-updater-action"
 import { NavUser } from "@/components/nav-user"
 import {
   Sidebar,
@@ -34,14 +35,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     <Sidebar collapsible="offcanvas" {...props}>
       <SidebarHeader>
         <SidebarMenu>
-          <SidebarMenuItem>
+          <SidebarMenuItem className="flex items-center gap-2">
             <SidebarMenuButton
-              className="data-[slot=sidebar-menu-button]:p-1.5!"
+              className="min-w-0 flex-1 data-[slot=sidebar-menu-button]:p-1.5!"
               render={<Link href="/" />}
             >
               <Layers3Icon className="size-5! text-primary" />
               <span className="text-base font-semibold">FXMP OS</span>
             </SidebarMenuButton>
+            <SidebarUpdaterAction />
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>

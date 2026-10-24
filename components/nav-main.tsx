@@ -3,7 +3,6 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
-import { SidebarUpdaterAction } from "@/components/sidebar-updater-action"
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -25,7 +24,7 @@ export function NavMain({
 
   return (
     <SidebarGroup>
-      <SidebarGroupContent className="flex flex-col gap-2">
+      <SidebarGroupContent>
         <SidebarMenu>
           {items.map((item) => {
             const active =
@@ -45,11 +44,6 @@ export function NavMain({
               </SidebarMenuItem>
             )
           })}
-        </SidebarMenu>
-        <SidebarMenu>
-          <SidebarMenuItem className="flex items-center gap-2">
-            <SidebarUpdaterAction />
-          </SidebarMenuItem>
         </SidebarMenu>
       </SidebarGroupContent>
     </SidebarGroup>
