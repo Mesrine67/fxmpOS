@@ -282,11 +282,18 @@ function ResourceMonitorContent() {
       sampledAtMs: current.sampledAtMs,
       cpuPercent: current.cpuTotal / current.sampleCount,
       memoryPercent: current.memoryTotal / current.sampleCount,
+      sampleCount: current.sampleCount,
     })
   }, [persistHistoryPoint])
 
   const refresh = useCallback(async () => {
-    if (runtime !== true || document.hidden || inFlight.current) return
+    if (
+      runtime !== true ||
+      !historyReady.current ||
+      document.hidden ||
+      inFlight.current
+    )
+      return
     inFlight.current = true
     setIsLoading(true)
     try {
@@ -308,13 +315,21 @@ function ResourceMonitorContent() {
       const minuteStartMs = Math.floor(next.sampledAtMs / 60_000) * 60_000
       const currentMinute = minuteAccumulator.current
       if (!currentMinute) {
+        const previousMinute = savedHistoryRef.current.find(
+          (point) => point.sampledAtMs === minuteStartMs
+        )
+        const previousCount = previousMinute?.sampleCount ?? 0
         minuteAccumulator.current = {
           sampledAtMs: minuteStartMs,
-          cpuPercent: next.cpuPercent,
-          memoryPercent,
-          cpuTotal: next.cpuPercent,
-          memoryTotal: memoryPercent,
-          sampleCount: 1,
+          cpuPercent: 0,
+          memoryPercent: 0,
+          cpuTotal:
+            (previousMinute?.cpuPercent ?? 0) * previousCount +
+            next.cpuPercent,
+          memoryTotal:
+            (previousMinute?.memoryPercent ?? 0) * previousCount +
+            memoryPercent,
+          sampleCount: previousCount + 1,
         }
       } else if (currentMinute.sampledAtMs === minuteStartMs) {
         currentMinute.cpuTotal += next.cpuPercent
@@ -325,6 +340,7 @@ function ResourceMonitorContent() {
           sampledAtMs: currentMinute.sampledAtMs,
           cpuPercent: currentMinute.cpuTotal / currentMinute.sampleCount,
           memoryPercent: currentMinute.memoryTotal / currentMinute.sampleCount,
+          sampleCount: currentMinute.sampleCount,
         }
         persistHistoryPoint(archivedPoint)
         minuteAccumulator.current = {
@@ -402,12 +418,15 @@ function ResourceMonitorContent() {
     : 0
 
   const visibleHistory = useMemo(() => {
-    if (historyRange === "minute") return history
     const newestSampleMs =
       sample?.sampledAtMs ??
       history.at(-1)?.sampledAtMs ??
       savedHistory.at(-1)?.sampledAtMs ??
       0
+    if (historyRange === "minute") {
+      const cutoff = newestSampleMs - HISTORY_RANGE_MS.minute
+      return history.filter((point) => point.sampledAtMs >= cutoff)
+    }
     const cutoff = newestSampleMs - HISTORY_RANGE_MS[historyRange]
     const archived = savedHistory
       .filter((point) => point.sampledAtMs >= cutoff)

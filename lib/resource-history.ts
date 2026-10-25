@@ -4,6 +4,7 @@ export type ResourceHistoryPoint = {
   sampledAtMs: number
   cpuPercent: number
   memoryPercent: number
+  sampleCount: number
 }
 
 const HISTORY_STORE_PATH = "fxmp-resource-history.json"
@@ -32,6 +33,11 @@ function normalizeHistory(value: unknown): ResourceHistoryPoint[] {
       sampledAtMs: point.sampledAtMs,
       cpuPercent: Math.max(0, Math.min(100, point.cpuPercent)),
       memoryPercent: Math.max(0, Math.min(100, point.memoryPercent)),
+      sampleCount:
+        Number.isSafeInteger((point as ResourceHistoryPoint).sampleCount) &&
+        (point as ResourceHistoryPoint).sampleCount > 0
+          ? Math.min(120, (point as ResourceHistoryPoint).sampleCount)
+          : 1,
     }))
     .sort((left, right) => left.sampledAtMs - right.sampledAtMs)
 
