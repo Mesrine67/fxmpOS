@@ -1,7 +1,7 @@
 #[cfg(target_os = "windows")]
 use serde::Deserialize;
 use serde::Serialize;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
 use sysinfo::{
     CpuRefreshKind, Disks, MemoryRefreshKind, Motherboard, ProcessRefreshKind, ProcessesToUpdate,
@@ -44,6 +44,209 @@ pub struct ResourceSample {
     memory_used_bytes: u64,
     processes: Vec<ResourceProcess>,
     process_count: usize,
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NetworkEndpoint {
+    protocol: &'static str,
+    local_address: String,
+    local_port: u16,
+    remote_address: Option<String>,
+    remote_port: Option<u16>,
+    state: String,
+    pid: u32,
+    process_name: Option<String>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NetworkEndpointSnapshot {
+    sampled_at_ms: u64,
+    endpoints: Vec<NetworkEndpoint>,
+}
+
+/// Lists local TCP connections/listeners and UDP endpoints with owning process IDs.
+/// The Windows IP Helper tables are read-only; no packet contents or remote hostnames are collected.
+#[tauri::command]
+pub async fn get_network_endpoints(
+    monitor: tauri::State<'_, ResourceMonitor>,
+) -> Result<NetworkEndpointSnapshot, String> {
+    let system = Arc::clone(&monitor.system);
+    tauri::async_runtime::spawn_blocking(move || {
+        #[cfg(target_os = "windows")]
+        let mut endpoints = read_windows_network_endpoints()?;
+        #[cfg(not(target_os = "windows"))]
+        let mut endpoints = Vec::new();
+
+        let system = system
+            .lock()
+            .map_err(|_| "Le moniteur système est indisponible.".to_owned())?;
+        let process_names = system
+            .processes()
+            .iter()
+            .map(|(pid, process)| (pid.as_u32(), process.name().to_string_lossy().into_owned()))
+            .collect::<HashMap<_, _>>();
+        for endpoint in &mut endpoints {
+            endpoint.process_name = process_names.get(&endpoint.pid).cloned();
+        }
+        endpoints.sort_by(|left, right| {
+            left.protocol
+                .cmp(right.protocol)
+                .then_with(|| left.local_port.cmp(&right.local_port))
+                .then_with(|| left.process_name.cmp(&right.process_name))
+        });
+
+        Ok(NetworkEndpointSnapshot {
+            sampled_at_ms: std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis() as u64,
+            endpoints,
+        })
+    })
+    .await
+    .map_err(|error| format!("La lecture des ports a échoué : {error}"))?
+}
+
+#[cfg(target_os = "windows")]
+fn read_windows_network_endpoints() -> Result<Vec<NetworkEndpoint>, String> {
+    use std::{
+        mem::size_of,
+        net::{Ipv4Addr, Ipv6Addr},
+    };
+    use windows_sys::Win32::NetworkManagement::IpHelper::{
+        GetExtendedTcpTable, GetExtendedUdpTable, MIB_TCP_STATE_CLOSE_WAIT, MIB_TCP_STATE_CLOSED,
+        MIB_TCP_STATE_CLOSING, MIB_TCP_STATE_DELETE_TCB, MIB_TCP_STATE_ESTAB,
+        MIB_TCP_STATE_FIN_WAIT1, MIB_TCP_STATE_FIN_WAIT2, MIB_TCP_STATE_LAST_ACK,
+        MIB_TCP_STATE_LISTEN, MIB_TCP_STATE_SYN_RCVD, MIB_TCP_STATE_SYN_SENT,
+        MIB_TCP_STATE_TIME_WAIT, MIB_TCP6ROW_OWNER_PID, MIB_TCPROW_OWNER_PID,
+        MIB_UDP6ROW_OWNER_PID, MIB_UDPROW_OWNER_PID, TCP_TABLE_OWNER_PID_ALL, UDP_TABLE_OWNER_PID,
+    };
+    use windows_sys::Win32::Networking::WinSock::{AF_INET, AF_INET6};
+
+    const ERROR_INSUFFICIENT_BUFFER: u32 = 122;
+    fn read_table<T: Copy>(
+        mut query: impl FnMut(*mut core::ffi::c_void, &mut u32) -> u32,
+    ) -> Result<Vec<T>, String> {
+        let mut size = 0u32;
+        // IP Helper reports the required buffer size when passed a null table.
+        let result = query(std::ptr::null_mut(), &mut size);
+        if result != ERROR_INSUFFICIENT_BUFFER || size < size_of::<u32>() as u32 {
+            return Err(format!(
+                "Windows n’a pas fourni la table réseau (code {result})."
+            ));
+        }
+        // Socket churn can enlarge a table after the size query. Retry with the returned size,
+        // but keep the loop bounded in case the table keeps changing under heavy load.
+        for _ in 0..3 {
+            let mut buffer = vec![0u64; (size as usize).div_ceil(size_of::<u64>())];
+            let result = query(buffer.as_mut_ptr().cast(), &mut size);
+            if result == ERROR_INSUFFICIENT_BUFFER {
+                continue;
+            }
+            if result != 0 {
+                return Err(format!(
+                    "Lecture de la table réseau refusée par Windows (code {result})."
+                ));
+            }
+            let base = buffer.as_ptr().cast::<u8>();
+            // All IP Helper owner tables start with a DWORD row count followed by a contiguous row array.
+            let count = unsafe { std::ptr::read_unaligned(base.cast::<u32>()) } as usize;
+            let rows = unsafe { base.add(size_of::<u32>()) };
+            if count > (size as usize).saturating_sub(size_of::<u32>()) / size_of::<T>() {
+                return Err("Windows a renvoyé une table réseau incohérente.".to_owned());
+            }
+            return Ok((0..count)
+                .map(|index| unsafe {
+                    std::ptr::read_unaligned(rows.add(index * size_of::<T>()).cast::<T>())
+                })
+                .collect());
+        }
+        Err("La table réseau Windows change trop rapidement pour être lue.".to_owned())
+    }
+    fn port(value: u32) -> u16 {
+        u16::from_be((value & 0xffff) as u16)
+    }
+    fn tcp_state(value: u32) -> &'static str {
+        match value {
+            value if value == MIB_TCP_STATE_CLOSED as u32 => "Fermée",
+            value if value == MIB_TCP_STATE_LISTEN as u32 => "À l’écoute",
+            value if value == MIB_TCP_STATE_SYN_SENT as u32 => "SYN envoyé",
+            value if value == MIB_TCP_STATE_SYN_RCVD as u32 => "SYN reçu",
+            value if value == MIB_TCP_STATE_ESTAB as u32 => "Établie",
+            value if value == MIB_TCP_STATE_FIN_WAIT1 as u32 => "Fermeture en cours",
+            value if value == MIB_TCP_STATE_FIN_WAIT2 as u32 => "Attente de fermeture",
+            value if value == MIB_TCP_STATE_CLOSE_WAIT as u32 => "Fermeture distante",
+            value if value == MIB_TCP_STATE_CLOSING as u32 => "Fermeture simultanée",
+            value if value == MIB_TCP_STATE_LAST_ACK as u32 => "Dernier ACK",
+            value if value == MIB_TCP_STATE_TIME_WAIT as u32 => "Temps d’attente",
+            value if value == MIB_TCP_STATE_DELETE_TCB as u32 => "En attente de suppression",
+            _ => "Inconnue",
+        }
+    }
+
+    let mut endpoints = Vec::new();
+    let tcp: Vec<MIB_TCPROW_OWNER_PID> = read_table(|table, size| unsafe {
+        GetExtendedTcpTable(table, size, 0, AF_INET as u32, TCP_TABLE_OWNER_PID_ALL, 0)
+    })?;
+    endpoints.extend(tcp.into_iter().map(|row| {
+        let listening = row.dwState == MIB_TCP_STATE_LISTEN as u32;
+        NetworkEndpoint {
+            protocol: "TCP",
+            local_address: Ipv4Addr::from(row.dwLocalAddr.to_ne_bytes()).to_string(),
+            local_port: port(row.dwLocalPort),
+            remote_address: (!listening)
+                .then(|| Ipv4Addr::from(row.dwRemoteAddr.to_ne_bytes()).to_string()),
+            remote_port: (!listening).then(|| port(row.dwRemotePort)),
+            state: tcp_state(row.dwState).to_owned(),
+            pid: row.dwOwningPid,
+            process_name: None,
+        }
+    }));
+    let udp: Vec<MIB_UDPROW_OWNER_PID> = read_table(|table, size| unsafe {
+        GetExtendedUdpTable(table, size, 0, AF_INET as u32, UDP_TABLE_OWNER_PID, 0)
+    })?;
+    endpoints.extend(udp.into_iter().map(|row| NetworkEndpoint {
+        protocol: "UDP",
+        local_address: Ipv4Addr::from(row.dwLocalAddr.to_ne_bytes()).to_string(),
+        local_port: port(row.dwLocalPort),
+        remote_address: None,
+        remote_port: None,
+        state: "Sans connexion".to_owned(),
+        pid: row.dwOwningPid,
+        process_name: None,
+    }));
+    let tcp6: Vec<MIB_TCP6ROW_OWNER_PID> = read_table(|table, size| unsafe {
+        GetExtendedTcpTable(table, size, 0, AF_INET6 as u32, TCP_TABLE_OWNER_PID_ALL, 0)
+    })?;
+    endpoints.extend(tcp6.into_iter().map(|row| {
+        let listening = row.dwState == MIB_TCP_STATE_LISTEN as u32;
+        NetworkEndpoint {
+            protocol: "TCP",
+            local_address: Ipv6Addr::from(row.ucLocalAddr).to_string(),
+            local_port: port(row.dwLocalPort),
+            remote_address: (!listening).then(|| Ipv6Addr::from(row.ucRemoteAddr).to_string()),
+            remote_port: (!listening).then(|| port(row.dwRemotePort)),
+            state: tcp_state(row.dwState).to_owned(),
+            pid: row.dwOwningPid,
+            process_name: None,
+        }
+    }));
+    let udp6: Vec<MIB_UDP6ROW_OWNER_PID> = read_table(|table, size| unsafe {
+        GetExtendedUdpTable(table, size, 0, AF_INET6 as u32, UDP_TABLE_OWNER_PID, 0)
+    })?;
+    endpoints.extend(udp6.into_iter().map(|row| NetworkEndpoint {
+        protocol: "UDP",
+        local_address: Ipv6Addr::from(row.ucLocalAddr).to_string(),
+        local_port: port(row.dwLocalPort),
+        remote_address: None,
+        remote_port: None,
+        state: "Sans connexion".to_owned(),
+        pid: row.dwOwningPid,
+        process_name: None,
+    }));
+    Ok(endpoints)
 }
 
 /// Samples live CPU, memory, and process usage locally. No process paths or command lines are returned.

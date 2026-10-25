@@ -2,6 +2,21 @@
 
 Chaque version publiée possède sa propre section. Le workflow de release réutilise ces notes dans la release GitHub et dans le manifeste de l’updater Tauri.
 
+## [0.0.16] - 2026-10-25
+
+### Améliorations
+
+- Ajout de l’onglet Ports réseau au moniteur, avec filtres TCP, UDP et ports à l’écoute, recherche et tableaux lisibles.
+- Lecture native locale des endpoints TCP/UDP IPv4 et IPv6 et association au PID et au nom de processus lorsque Windows les rend accessibles.
+- Actualisation des ports toutes les cinq secondes, séparée des mesures CPU/mémoire et suspendue lorsque la page est masquée ou en pause.
+
+### Confidentialité et compatibilité
+
+- Lecture IP Helper Windows en observation seule; aucune commande shell, capture de paquets, résolution DNS, modification du pare-feu ou arrêt de processus.
+- Les adresses locales et distantes restent affichées uniquement dans l’application et ne sont jamais transmises.
+- Windows x64, installateurs NSIS et MSI. WebView2 est requis.
+- macOS, Linux, Android et iOS ne sont pas distribués pour cette version.
+
 ## [0.0.15] - 2026-10-25
 
 ### Améliorations

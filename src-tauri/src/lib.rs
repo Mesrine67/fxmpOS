@@ -74,6 +74,7 @@ pub fn run() {
             commands::greet::greet,
             commands::system::get_system_snapshot,
             commands::system::get_resource_sample,
+            commands::system::get_network_endpoints,
             commands::installed_apps::get_installed_apps,
             commands::system::get_overlay_snapshot,
             commands::network::measure_network_latency,

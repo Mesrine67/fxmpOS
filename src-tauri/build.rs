@@ -4,6 +4,7 @@ fn main() {
             "greet",
             "get_system_snapshot",
             "get_resource_sample",
+            "get_network_endpoints",
             "get_installed_apps",
             "get_overlay_snapshot",
             "get_display_monitors",
