@@ -6,6 +6,7 @@ import {
   CpuIcon,
   MemoryStickIcon,
   MonitorIcon,
+  NetworkIcon,
   PauseIcon,
   PlayIcon,
   SearchIcon,
@@ -31,6 +32,7 @@ import {
 } from "@/components/ui/chart"
 import { Input } from "@/components/ui/input"
 import { Progress } from "@/components/ui/progress"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Table,
   TableBody,
@@ -57,6 +59,22 @@ type ResourceSample = {
   memoryUsedBytes: number
   processes: ResourceProcess[]
   processCount: number
+}
+
+type NetworkEndpoint = {
+  protocol: "TCP" | "UDP"
+  localAddress: string
+  localPort: number
+  remoteAddress: string | null
+  remotePort: number | null
+  state: string
+  pid: number
+  processName: string | null
+}
+
+type NetworkEndpointSnapshot = {
+  sampledAtMs: number
+  endpoints: NetworkEndpoint[]
 }
 
 type HistoryPoint = {
@@ -148,12 +166,17 @@ function ResourceChart({
 function ResourceMonitorContent() {
   const runtime = useTauriRuntime()
   const [sample, setSample] = useState<ResourceSample | null>(null)
+  const [networkSnapshot, setNetworkSnapshot] =
+    useState<NetworkEndpointSnapshot | null>(null)
   const [history, setHistory] = useState<HistoryPoint[]>([])
   const [error, setError] = useState<string | null>(null)
   const [query, setQuery] = useState("")
   const [sortBy, setSortBy] = useState<"memoryBytes" | "cpuPercent" | "name">(
     "memoryBytes"
   )
+  const [endpointFilter, setEndpointFilter] = useState<
+    "all" | "listening" | "tcp" | "udp"
+  >("all")
   const [paused, setPaused] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const inFlight = useRef(false)
@@ -188,20 +211,42 @@ function ResourceMonitorContent() {
     }
   }, [runtime])
 
+  const refreshEndpoints = useCallback(async () => {
+    if (runtime !== true || document.hidden) return
+    try {
+      const result = await trackedInvoke<NetworkEndpointSnapshot>(
+        "get_network_endpoints"
+      )
+      setNetworkSnapshot(result)
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause))
+    }
+  }, [runtime])
+
   useEffect(() => {
     if (runtime !== true || paused) return
     const initialSample = window.setTimeout(() => void refresh(), 0)
+    const initialEndpoints = window.setTimeout(() => void refreshEndpoints(), 0)
     const timer = window.setInterval(() => void refresh(), 2000)
+    const endpointTimer = window.setInterval(
+      () => void refreshEndpoints(),
+      5000
+    )
     const onVisibility = () => {
-      if (!document.hidden) void refresh()
+      if (!document.hidden) {
+        void refresh()
+        void refreshEndpoints()
+      }
     }
     document.addEventListener("visibilitychange", onVisibility)
     return () => {
       window.clearTimeout(initialSample)
+      window.clearTimeout(initialEndpoints)
       window.clearInterval(timer)
+      window.clearInterval(endpointTimer)
       document.removeEventListener("visibilitychange", onVisibility)
     }
-  }, [paused, refresh, runtime])
+  }, [paused, refresh, refreshEndpoints, runtime])
 
   const processes = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase("fr-FR")
@@ -220,6 +265,29 @@ function ResourceMonitorContent() {
   const memoryPercent = sample
     ? percent(sample.memoryUsedBytes, sample.memoryTotalBytes)
     : 0
+
+  const endpoints = useMemo(() => {
+    const normalizedQuery = query.trim().toLocaleLowerCase("fr-FR")
+    return (networkSnapshot?.endpoints ?? []).filter((endpoint) => {
+      if (endpointFilter === "listening" && endpoint.state !== "À l’écoute")
+        return false
+      if (endpointFilter === "tcp" && endpoint.protocol !== "TCP") return false
+      if (endpointFilter === "udp" && endpoint.protocol !== "UDP") return false
+      if (!normalizedQuery) return true
+      return [
+        endpoint.processName,
+        endpoint.pid.toString(),
+        endpoint.protocol,
+        endpoint.localAddress,
+        endpoint.localPort.toString(),
+        endpoint.remoteAddress,
+        endpoint.remotePort?.toString(),
+        endpoint.state,
+      ].some((value) =>
+        value?.toLocaleLowerCase("fr-FR").includes(normalizedQuery)
+      )
+    })
+  }, [endpointFilter, networkSnapshot?.endpoints, query])
 
   return (
     <AppShell title="Ressources">
@@ -348,106 +416,257 @@ function ResourceMonitorContent() {
             </Card>
           </section>
 
-          <Card>
-            <CardHeader>
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="flex flex-col gap-1">
-                  <CardTitle>Processus</CardTitle>
-                  <CardDescription>
-                    {sample
-                      ? `${sample.processCount} processus détectés · jusqu’à 25 meilleurs en CPU et 25 en mémoire sont listés`
-                      : "Les mesures des processus apparaîtront après la première lecture."}
-                  </CardDescription>
-                </div>
-                <div className="relative w-full sm:w-72">
-                  <SearchIcon
-                    aria-hidden="true"
-                    className="pointer-events-none absolute top-1/2 left-2 size-4 -translate-y-1/2 text-muted-foreground"
-                  />
-                  <Input
-                    aria-label="Rechercher un processus"
-                    className="pl-8"
-                    onChange={(event) => setQuery(event.currentTarget.value)}
-                    placeholder="Rechercher un processus…"
-                    value={query}
-                  />
-                </div>
-              </div>
-              <div
-                aria-label="Trier les processus"
-                className="flex flex-wrap gap-2"
-              >
-                <Button
-                  onClick={() => setSortBy("memoryBytes")}
-                  size="sm"
-                  variant={sortBy === "memoryBytes" ? "secondary" : "outline"}
-                >
-                  Mémoire
-                </Button>
-                <Button
-                  onClick={() => setSortBy("cpuPercent")}
-                  size="sm"
-                  variant={sortBy === "cpuPercent" ? "secondary" : "outline"}
-                >
-                  CPU
-                </Button>
-                <Button
-                  onClick={() => setSortBy("name")}
-                  size="sm"
-                  variant={sortBy === "name" ? "secondary" : "outline"}
-                >
-                  Nom
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Processus</TableHead>
-                    <TableHead className="w-24">PID</TableHead>
-                    <TableHead className="text-right">Processeur</TableHead>
-                    <TableHead className="text-right">Mémoire</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {processes.map((process) => (
-                    <TableRow key={`${process.pid}-${process.name}`}>
-                      <TableCell
-                        className="max-w-80 truncate font-medium"
-                        title={process.name}
+          <Tabs defaultValue="processus" className="gap-4">
+            <TabsList>
+              <TabsTrigger value="processus">Processus</TabsTrigger>
+              <TabsTrigger value="ports">
+                <NetworkIcon data-icon="inline-start" /> Ports réseau
+                {networkSnapshot && (
+                  <Badge className="ml-1" variant="secondary">
+                    {networkSnapshot.endpoints.length}
+                  </Badge>
+                )}
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="processus" className="mt-0">
+              <Card>
+                <CardHeader>
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="flex flex-col gap-1">
+                      <CardTitle>Processus</CardTitle>
+                      <CardDescription>
+                        {sample
+                          ? `${sample.processCount} processus détectés · jusqu’à 25 meilleurs en CPU et 25 en mémoire sont listés`
+                          : "Les mesures des processus apparaîtront après la première lecture."}
+                      </CardDescription>
+                    </div>
+                    <div className="relative w-full sm:w-72">
+                      <SearchIcon
+                        aria-hidden="true"
+                        className="pointer-events-none absolute top-1/2 left-2 size-4 -translate-y-1/2 text-muted-foreground"
+                      />
+                      <Input
+                        aria-label="Rechercher un processus"
+                        className="pl-8"
+                        onChange={(event) =>
+                          setQuery(event.currentTarget.value)
+                        }
+                        placeholder="Rechercher un processus…"
+                        value={query}
+                      />
+                    </div>
+                  </div>
+                  <div
+                    aria-label="Trier les processus"
+                    className="flex flex-wrap gap-2"
+                  >
+                    <Button
+                      onClick={() => setSortBy("memoryBytes")}
+                      size="sm"
+                      variant={
+                        sortBy === "memoryBytes" ? "secondary" : "outline"
+                      }
+                    >
+                      Mémoire
+                    </Button>
+                    <Button
+                      onClick={() => setSortBy("cpuPercent")}
+                      size="sm"
+                      variant={
+                        sortBy === "cpuPercent" ? "secondary" : "outline"
+                      }
+                    >
+                      CPU
+                    </Button>
+                    <Button
+                      onClick={() => setSortBy("name")}
+                      size="sm"
+                      variant={sortBy === "name" ? "secondary" : "outline"}
+                    >
+                      Nom
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Processus</TableHead>
+                        <TableHead className="w-24">PID</TableHead>
+                        <TableHead className="text-right">Processeur</TableHead>
+                        <TableHead className="text-right">Mémoire</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {processes.map((process) => (
+                        <TableRow key={`${process.pid}-${process.name}`}>
+                          <TableCell
+                            className="max-w-80 truncate font-medium"
+                            title={process.name}
+                          >
+                            {process.name || "Processus Windows"}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {process.pid}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {numberFormat.format(process.cpuPercent)} %
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {formatBytes(process.memoryBytes)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {processes.length === 0 && (
+                        <TableRow>
+                          <TableCell
+                            className="h-20 text-center text-muted-foreground"
+                            colSpan={4}
+                          >
+                            {isLoading
+                              ? "Lecture des processus…"
+                              : query
+                                ? "Aucun processus ne correspond à cette recherche."
+                                : "Aucun processus disponible."}
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </TabsContent>
+            <TabsContent value="ports" className="mt-0">
+              <Card>
+                <CardHeader>
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="flex flex-col gap-1">
+                      <CardTitle>Ports et connexions</CardTitle>
+                      <CardDescription>
+                        {networkSnapshot
+                          ? `${networkSnapshot.endpoints.length} endpoints locaux · actualisation toutes les 5 s`
+                          : "Lecture des tables TCP et UDP de Windows…"}
+                      </CardDescription>
+                    </div>
+                    <div className="relative w-full sm:w-72">
+                      <SearchIcon
+                        aria-hidden="true"
+                        className="pointer-events-none absolute top-1/2 left-2 size-4 -translate-y-1/2 text-muted-foreground"
+                      />
+                      <Input
+                        aria-label="Rechercher un port ou processus"
+                        className="pl-8"
+                        onChange={(event) =>
+                          setQuery(event.currentTarget.value)
+                        }
+                        placeholder="Port, processus, PID…"
+                        value={query}
+                      />
+                    </div>
+                  </div>
+                  <div
+                    className="flex flex-wrap gap-2"
+                    aria-label="Filtrer les endpoints"
+                  >
+                    {(
+                      [
+                        ["all", "Tout"],
+                        ["listening", "À l’écoute"],
+                        ["tcp", "TCP"],
+                        ["udp", "UDP"],
+                      ] as const
+                    ).map(([value, label]) => (
+                      <Button
+                        key={value}
+                        onClick={() => setEndpointFilter(value)}
+                        size="sm"
+                        variant={
+                          endpointFilter === value ? "secondary" : "outline"
+                        }
                       >
-                        {process.name || "Processus Windows"}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {process.pid}
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        {numberFormat.format(process.cpuPercent)} %
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        {formatBytes(process.memoryBytes)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {processes.length === 0 && (
-                    <TableRow>
-                      <TableCell
-                        className="h-20 text-center text-muted-foreground"
-                        colSpan={4}
-                      >
-                        {isLoading
-                          ? "Lecture des processus…"
-                          : query
-                            ? "Aucun processus ne correspond à cette recherche."
-                            : "Aucun processus disponible."}
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+                        {label}
+                      </Button>
+                    ))}
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="max-h-[34rem] overflow-auto rounded-md border">
+                    <Table>
+                      <TableHeader className="sticky top-0 bg-background">
+                        <TableRow>
+                          <TableHead>Protocole</TableHead>
+                          <TableHead>Adresse locale</TableHead>
+                          <TableHead>Destination distante</TableHead>
+                          <TableHead>État</TableHead>
+                          <TableHead>Processus</TableHead>
+                          <TableHead className="text-right">PID</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {endpoints.map((endpoint, index) => (
+                          <TableRow
+                            key={`${endpoint.protocol}-${endpoint.localAddress}-${endpoint.localPort}-${endpoint.pid}-${index}`}
+                          >
+                            <TableCell>
+                              <Badge
+                                variant={
+                                  endpoint.protocol === "TCP"
+                                    ? "secondary"
+                                    : "outline"
+                                }
+                              >
+                                {endpoint.protocol}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="font-mono text-xs">
+                              {endpoint.localAddress}:{endpoint.localPort}
+                            </TableCell>
+                            <TableCell className="font-mono text-xs">
+                              {endpoint.remoteAddress
+                                ? `${endpoint.remoteAddress}:${endpoint.remotePort}`
+                                : "—"}
+                            </TableCell>
+                            <TableCell>{endpoint.state}</TableCell>
+                            <TableCell
+                              className="max-w-56 truncate font-medium"
+                              title={endpoint.processName ?? undefined}
+                            >
+                              {endpoint.processName ??
+                                "Processus protégé ou terminé"}
+                            </TableCell>
+                            <TableCell className="text-right text-muted-foreground tabular-nums">
+                              {endpoint.pid}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                        {endpoints.length === 0 && (
+                          <TableRow>
+                            <TableCell
+                              className="h-20 text-center text-muted-foreground"
+                              colSpan={6}
+                            >
+                              {networkSnapshot
+                                ? "Aucun port ne correspond aux filtres."
+                                : "Lecture des ports Windows…"}
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    Lecture locale en mode observation seule des tables IP
+                    Helper Windows (IPv4/IPv6). L’état « À l’écoute » ne
+                    garantit pas que le port est joignable depuis Internet: le
+                    pare-feu et le routeur peuvent bloquer l’accès. Les
+                    destinations sont des adresses IP; aucun nom d’hôte, contenu
+                    réseau ou donnée n’est transmis. Les PID système protégés
+                    peuvent ne pas révéler le nom de leur processus.
+                  </p>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
 
           <p className="text-xs text-muted-foreground">
             Les mesures sont lues localement toutes les deux secondes,
