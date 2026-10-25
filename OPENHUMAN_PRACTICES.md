@@ -1,5 +1,7 @@
 # Pratiques OpenHuman évaluées pour FXMP OS
 
+Le moniteur de ressources ajoute `get_resource_sample` uniquement à la capacité `main`. Cette commande native est en lecture seule, échantillonne localement CPU, mémoire et processus, et retourne au plus 50 entrées issues de l'union des 25 processus les plus actifs en CPU et des 25 plus consommateurs de mémoire. Les seuls champs de processus autorisés sont le nom, le PID, le CPU normalisé à l'échelle machine (0–100 %) et la mémoire utilisée. Elle n'expose pas de chemin, ligne de commande, nom d'utilisateur, environnement ni contrôle des processus.
+
 Revue ciblée effectuée le 18 octobre 2026 à partir du README, de `AGENTS.md`, de `SECURITY.md`, de `CONTRIBUTING.md` et de la documentation sécurité d'OpenHuman. Ce n'est pas un audit ligne par ligne du dépôt. OpenHuman est un assistant et un harnais d'agents extensible avec un cœur Rust; FXMP OS est une application Tauri locale de monitoring et de contrôle du PC. Les mécaniques propres aux agents ne sont donc pas reprises.
 
 ## Pratiques pertinentes

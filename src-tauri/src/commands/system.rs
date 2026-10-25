@@ -75,6 +75,12 @@ pub async fn get_resource_sample(
                 memory_bytes: process.memory(),
             })
             .collect::<Vec<_>>();
+        let logical_cpu_count = system.cpus().len().max(1) as f32;
+        for process in &mut processes {
+            // sysinfo reports process CPU on a per-logical-CPU scale; align it
+            // with the machine-wide 0-100% CPU metric shown above the table.
+            process.cpu_percent = (process.cpu_percent / logical_cpu_count).clamp(0.0, 100.0);
+        }
         processes.sort_by(|left, right| right.cpu_percent.total_cmp(&left.cpu_percent));
         let mut selected_pids = processes
             .iter()

@@ -355,7 +355,7 @@ function ResourceMonitorContent() {
                   <CardTitle>Processus</CardTitle>
                   <CardDescription>
                     {sample
-                      ? `${sample.processCount} processus détectés · les 50 plus gourmands en mémoire sont listés`
+                      ? `${sample.processCount} processus détectés · jusqu’à 25 meilleurs en CPU et 25 en mémoire sont listés`
                       : "Les mesures des processus apparaîtront après la première lecture."}
                   </CardDescription>
                 </div>

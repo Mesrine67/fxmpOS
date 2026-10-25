@@ -9,6 +9,8 @@ Chaque version publiée possède sa propre section. Le workflow de release réut
 - Ajout d’une page Moniteur de ressources avec courbes CPU et mémoire actualisées toutes les deux secondes et historique de la dernière minute.
 - Ajout d’une liste des 50 processus les plus consommateurs, avec recherche et tri par nom, utilisation CPU ou mémoire.
 - Ajout d’une commande native locale en lecture seule; aucune ligne de commande ou chemin d’exécutable n’est exposé.
+- La liste des processus couvre les 25 principaux consommateurs CPU et mémoire, et le CPU des processus utilise la même échelle globale 0–100 % que le graphique système.
+- Documentation des champs de processus et de la permission limitée à la fenêtre principale dans les pratiques de sécurité du dépôt.
 - Ajout d’un accès au moniteur depuis le menu latéral et le centre de contrôle PC.
 
 ### Confidentialité et compatibilité
