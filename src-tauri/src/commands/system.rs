@@ -116,7 +116,11 @@ fn read_windows_network_endpoints() -> Result<Vec<NetworkEndpoint>, String> {
         net::{Ipv4Addr, Ipv6Addr},
     };
     use windows_sys::Win32::NetworkManagement::IpHelper::{
-        GetExtendedTcpTable, GetExtendedUdpTable, MIB_TCP6ROW_OWNER_PID, MIB_TCPROW_OWNER_PID,
+        GetExtendedTcpTable, GetExtendedUdpTable, MIB_TCP_STATE_CLOSE_WAIT, MIB_TCP_STATE_CLOSED,
+        MIB_TCP_STATE_CLOSING, MIB_TCP_STATE_DELETE_TCB, MIB_TCP_STATE_ESTAB,
+        MIB_TCP_STATE_FIN_WAIT1, MIB_TCP_STATE_FIN_WAIT2, MIB_TCP_STATE_LAST_ACK,
+        MIB_TCP_STATE_LISTEN, MIB_TCP_STATE_SYN_RCVD, MIB_TCP_STATE_SYN_SENT,
+        MIB_TCP_STATE_TIME_WAIT, MIB_TCP6ROW_OWNER_PID, MIB_TCPROW_OWNER_PID,
         MIB_UDP6ROW_OWNER_PID, MIB_UDPROW_OWNER_PID, TCP_TABLE_OWNER_PID_ALL, UDP_TABLE_OWNER_PID,
     };
     use windows_sys::Win32::Networking::WinSock::{AF_INET, AF_INET6};
@@ -133,43 +137,51 @@ fn read_windows_network_endpoints() -> Result<Vec<NetworkEndpoint>, String> {
                 "Windows n’a pas fourni la table réseau (code {result})."
             ));
         }
-        let mut buffer = vec![0u64; (size as usize).div_ceil(size_of::<u64>())];
-        let result = query(buffer.as_mut_ptr().cast(), &mut size);
-        if result != 0 {
-            return Err(format!(
-                "Lecture de la table réseau refusée par Windows (code {result})."
-            ));
+        // Socket churn can enlarge a table after the size query. Retry with the returned size,
+        // but keep the loop bounded in case the table keeps changing under heavy load.
+        for _ in 0..3 {
+            let mut buffer = vec![0u64; (size as usize).div_ceil(size_of::<u64>())];
+            let result = query(buffer.as_mut_ptr().cast(), &mut size);
+            if result == ERROR_INSUFFICIENT_BUFFER {
+                continue;
+            }
+            if result != 0 {
+                return Err(format!(
+                    "Lecture de la table réseau refusée par Windows (code {result})."
+                ));
+            }
+            let base = buffer.as_ptr().cast::<u8>();
+            // All IP Helper owner tables start with a DWORD row count followed by a contiguous row array.
+            let count = unsafe { std::ptr::read_unaligned(base.cast::<u32>()) } as usize;
+            let rows = unsafe { base.add(size_of::<u32>()) };
+            if count > (size as usize).saturating_sub(size_of::<u32>()) / size_of::<T>() {
+                return Err("Windows a renvoyé une table réseau incohérente.".to_owned());
+            }
+            return Ok((0..count)
+                .map(|index| unsafe {
+                    std::ptr::read_unaligned(rows.add(index * size_of::<T>()).cast::<T>())
+                })
+                .collect());
         }
-        let base = buffer.as_ptr().cast::<u8>();
-        // All IP Helper owner tables start with a DWORD row count followed by a contiguous row array.
-        let count = unsafe { std::ptr::read_unaligned(base.cast::<u32>()) } as usize;
-        let rows = unsafe { base.add(size_of::<u32>()) };
-        if count > (size as usize).saturating_sub(size_of::<u32>()) / size_of::<T>() {
-            return Err("Windows a renvoyé une table réseau incohérente.".to_owned());
-        }
-        Ok((0..count)
-            .map(|index| unsafe {
-                std::ptr::read_unaligned(rows.add(index * size_of::<T>()).cast::<T>())
-            })
-            .collect())
+        Err("La table réseau Windows change trop rapidement pour être lue.".to_owned())
     }
     fn port(value: u32) -> u16 {
         u16::from_be((value & 0xffff) as u16)
     }
     fn tcp_state(value: u32) -> &'static str {
         match value {
-            1 => "Établie",
-            2 => "En attente",
-            3 => "SYN envoyé",
-            4 => "SYN reçu",
-            5 => "En cours de fermeture",
-            6 => "En attente de fermeture",
-            7 => "Fermée",
-            8 => "Fermeture locale",
-            9 => "Dernier ACK",
-            10 => "À l’écoute",
-            11 => "Fermeture",
-            12 => "En attente de suppression",
+            value if value == MIB_TCP_STATE_CLOSED as u32 => "Fermée",
+            value if value == MIB_TCP_STATE_LISTEN as u32 => "À l’écoute",
+            value if value == MIB_TCP_STATE_SYN_SENT as u32 => "SYN envoyé",
+            value if value == MIB_TCP_STATE_SYN_RCVD as u32 => "SYN reçu",
+            value if value == MIB_TCP_STATE_ESTAB as u32 => "Établie",
+            value if value == MIB_TCP_STATE_FIN_WAIT1 as u32 => "Fermeture en cours",
+            value if value == MIB_TCP_STATE_FIN_WAIT2 as u32 => "Attente de fermeture",
+            value if value == MIB_TCP_STATE_CLOSE_WAIT as u32 => "Fermeture distante",
+            value if value == MIB_TCP_STATE_CLOSING as u32 => "Fermeture simultanée",
+            value if value == MIB_TCP_STATE_LAST_ACK as u32 => "Dernier ACK",
+            value if value == MIB_TCP_STATE_TIME_WAIT as u32 => "Temps d’attente",
+            value if value == MIB_TCP_STATE_DELETE_TCB as u32 => "En attente de suppression",
             _ => "Inconnue",
         }
     }
@@ -179,7 +191,7 @@ fn read_windows_network_endpoints() -> Result<Vec<NetworkEndpoint>, String> {
         GetExtendedTcpTable(table, size, 0, AF_INET as u32, TCP_TABLE_OWNER_PID_ALL, 0)
     })?;
     endpoints.extend(tcp.into_iter().map(|row| {
-        let listening = row.dwState == 10;
+        let listening = row.dwState == MIB_TCP_STATE_LISTEN as u32;
         NetworkEndpoint {
             protocol: "TCP",
             local_address: Ipv4Addr::from(row.dwLocalAddr.to_ne_bytes()).to_string(),
@@ -209,7 +221,7 @@ fn read_windows_network_endpoints() -> Result<Vec<NetworkEndpoint>, String> {
         GetExtendedTcpTable(table, size, 0, AF_INET6 as u32, TCP_TABLE_OWNER_PID_ALL, 0)
     })?;
     endpoints.extend(tcp6.into_iter().map(|row| {
-        let listening = row.dwState == 10;
+        let listening = row.dwState == MIB_TCP_STATE_LISTEN as u32;
         NetworkEndpoint {
             protocol: "TCP",
             local_address: Ipv6Addr::from(row.ucLocalAddr).to_string(),

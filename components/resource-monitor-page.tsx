@@ -170,6 +170,7 @@ function ResourceMonitorContent() {
     useState<NetworkEndpointSnapshot | null>(null)
   const [history, setHistory] = useState<HistoryPoint[]>([])
   const [error, setError] = useState<string | null>(null)
+  const [endpointError, setEndpointError] = useState<string | null>(null)
   const [query, setQuery] = useState("")
   const [sortBy, setSortBy] = useState<"memoryBytes" | "cpuPercent" | "name">(
     "memoryBytes"
@@ -218,8 +219,9 @@ function ResourceMonitorContent() {
         "get_network_endpoints"
       )
       setNetworkSnapshot(result)
+      setEndpointError(null)
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : String(cause))
+      setEndpointError(cause instanceof Error ? cause.message : String(cause))
     }
   }, [runtime])
 
@@ -547,6 +549,13 @@ function ResourceMonitorContent() {
                           ? `${networkSnapshot.endpoints.length} endpoints locaux · actualisation toutes les 5 s`
                           : "Lecture des tables TCP et UDP de Windows…"}
                       </CardDescription>
+                      {endpointError && (
+                        <p className="text-sm text-destructive" role="status">
+                          {networkSnapshot
+                            ? `Actualisation impossible; données précédentes conservées. ${endpointError}`
+                            : `Lecture des ports impossible. ${endpointError}`}
+                        </p>
+                      )}
                     </div>
                     <div className="relative w-full sm:w-72">
                       <SearchIcon
