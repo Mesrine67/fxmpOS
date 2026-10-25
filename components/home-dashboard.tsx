@@ -533,6 +533,12 @@ function HomeContent() {
                 aria-label="Accès rapides"
               >
                 <QuickLink
+                  href="/monitor/"
+                  icon={ActivityIcon}
+                  label="Moniteur de ressources"
+                  detail="Suivre le CPU, la mémoire et les processus en direct."
+                />
+                <QuickLink
                   href="/apps/"
                   icon={AppWindowIcon}
                   label="Applications installées"

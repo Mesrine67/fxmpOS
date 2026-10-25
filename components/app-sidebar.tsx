@@ -4,6 +4,7 @@ import * as React from "react"
 import Link from "next/link"
 import {
   AppWindowIcon,
+  ActivityIcon,
   CommandIcon,
   Layers3Icon,
   MonitorIcon,
@@ -25,6 +26,7 @@ import {
 
 const navigation = [
   { title: "Vue d’ensemble", url: "/", icon: <CommandIcon /> },
+  { title: "Ressources", url: "/monitor/", icon: <ActivityIcon /> },
   { title: "Applications", url: "/apps/", icon: <AppWindowIcon /> },
   { title: "Appareil", url: "/account/", icon: <MonitorIcon /> },
   { title: "Paramètres", url: "/settings/", icon: <Settings2Icon /> },
