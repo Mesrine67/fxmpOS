@@ -2,6 +2,20 @@
 
 Chaque version publiée possède sa propre section. Le workflow de release réutilise ces notes dans la release GitHub et dans le manifeste de l’updater Tauri.
 
+## [0.0.17] - 2026-10-25
+
+### Améliorations
+
+- Le moniteur affiche la charge GPU mesurée par les compteurs de performances intégrés à Windows, ventilée par adaptateur lorsqu’elle est disponible.
+- Les graphiques CPU et mémoire proposent les périodes 1 minute, 1 heure et 24 heures; les moyennes par minute sont conservées localement dans le dossier de données FXMP OS.
+- L’historique persistant est limité à 24 heures et ne contient que des métriques CPU et mémoire; les processus, PID, ports et adresses réseau ne sont pas historisés.
+
+### Compatibilité et limites
+
+- La mesure GPU dépend de la disponibilité des compteurs de moteurs GPU Windows et n’affiche pas de température.
+- Windows x64, installateurs NSIS et MSI. WebView2 est requis.
+- macOS, Linux, Android et iOS ne sont pas distribués pour cette version.
+
 ## [0.0.16] - 2026-10-25
 
 ### Améliorations

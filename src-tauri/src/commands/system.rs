@@ -42,8 +42,85 @@ pub struct ResourceSample {
     cpu_percent: f32,
     memory_total_bytes: u64,
     memory_used_bytes: u64,
+    gpu_adapters: Option<Vec<GpuResourceSample>>,
     processes: Vec<ResourceProcess>,
     process_count: usize,
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GpuResourceSample {
+    physical_index: usize,
+    utilization_percent: f32,
+}
+
+#[cfg(target_os = "windows")]
+#[derive(Deserialize)]
+#[serde(rename = "Win32_PerfFormattedData_GPUPerformanceCounters_GPUEngine")]
+#[serde(rename_all = "PascalCase")]
+struct Win32GpuEngineCounter {
+    name: Option<String>,
+    utilization_percentage: Option<u32>,
+}
+
+/// Reads Windows' built-in per-engine GPU counters without elevation or vendor SDKs.
+/// The busiest engine per physical adapter is reported, matching Task Manager's
+/// useful bounded 0-100% view while avoiding sums across independent engines.
+#[cfg(target_os = "windows")]
+fn read_gpu_resource_sample() -> Option<Vec<GpuResourceSample>> {
+    let connection = wmi::WMIConnection::new().ok()?;
+    let counters: Vec<Win32GpuEngineCounter> = connection.query().ok()?;
+    let mut engine_usage = HashMap::<(usize, String), u64>::new();
+
+    for counter in counters {
+        let Some(name) = counter.name else { continue };
+        let Some(physical_index) = name
+            .split("_phys_")
+            .nth(1)
+            .and_then(|part| part.split('_').next())
+            .and_then(|part| part.parse::<usize>().ok())
+        else {
+            continue;
+        };
+        let Some(engine_type) = name.split("_engtype_").nth(1) else {
+            continue;
+        };
+        let Some(utilization_percentage) = counter.utilization_percentage else {
+            continue;
+        };
+        let usage = u64::from(utilization_percentage);
+        *engine_usage
+            .entry((physical_index, engine_type.to_ascii_lowercase()))
+            .or_default() += usage;
+    }
+
+    if engine_usage.is_empty() {
+        return None;
+    }
+
+    let mut adapters = HashMap::<usize, f32>::new();
+    for ((physical_index, _engine_type), usage) in engine_usage {
+        let bounded_usage = usage.min(100) as f32;
+        adapters
+            .entry(physical_index)
+            .and_modify(|current| *current = current.max(bounded_usage))
+            .or_insert(bounded_usage);
+    }
+
+    let mut samples = adapters
+        .into_iter()
+        .map(|(physical_index, utilization_percent)| GpuResourceSample {
+            physical_index,
+            utilization_percent,
+        })
+        .collect::<Vec<_>>();
+    samples.sort_by_key(|sample| sample.physical_index);
+    Some(samples)
+}
+
+#[cfg(not(target_os = "windows"))]
+fn read_gpu_resource_sample() -> Option<Vec<GpuResourceSample>> {
+    None
 }
 
 #[derive(Clone, Serialize)]
@@ -310,6 +387,7 @@ pub async fn get_resource_sample(
             cpu_percent: system.global_cpu_usage().clamp(0.0, 100.0),
             memory_total_bytes: system.total_memory(),
             memory_used_bytes: system.used_memory(),
+            gpu_adapters: read_gpu_resource_sample(),
             processes: top_processes,
             process_count,
         })

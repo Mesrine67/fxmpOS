@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   ActivityIcon,
   CpuIcon,
+  GaugeIcon,
   MemoryStickIcon,
   MonitorIcon,
   NetworkIcon,
@@ -42,6 +43,11 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { useTauriRuntime } from "@/hooks/use-tauri-runtime"
+import {
+  loadResourceHistory,
+  saveResourceHistory,
+  type ResourceHistoryPoint,
+} from "@/lib/resource-history"
 import { trackedInvoke } from "@/lib/tauri"
 
 type ResourceProcess = {
@@ -57,6 +63,7 @@ type ResourceSample = {
   cpuPercent: number
   memoryTotalBytes: number
   memoryUsedBytes: number
+  gpuAdapters: { physicalIndex: number; utilizationPercent: number }[] | null
   processes: ResourceProcess[]
   processCount: number
 }
@@ -78,9 +85,27 @@ type NetworkEndpointSnapshot = {
 }
 
 type HistoryPoint = {
-  time: string
+  sampledAtMs: number
   cpu: number
   memory: number
+}
+
+type HistoryRange = "minute" | "hour" | "day"
+type MinuteAccumulator = ResourceHistoryPoint & {
+  cpuTotal: number
+  memoryTotal: number
+  sampleCount: number
+}
+
+const HISTORY_RANGE_MS: Record<HistoryRange, number> = {
+  minute: 60_000,
+  hour: 60 * 60_000,
+  day: 24 * 60 * 60_000,
+}
+const HISTORY_RANGE_LABEL: Record<HistoryRange, string> = {
+  minute: "1 min",
+  hour: "1 h",
+  day: "24 h",
 }
 
 const numberFormat = new Intl.NumberFormat("fr-FR", {
@@ -101,11 +126,13 @@ function ResourceChart({
   dataKey,
   color,
   label,
+  range,
 }: {
   data: HistoryPoint[]
   dataKey: "cpu" | "memory"
   color: string
   label: string
+  range: HistoryRange
 }) {
   const chartConfig = {
     [dataKey]: { label, color },
@@ -127,10 +154,20 @@ function ResourceChart({
             className="stroke-border/50"
           />
           <XAxis
-            dataKey="time"
+            dataKey="sampledAtMs"
+            type="number"
+            scale="time"
+            domain={["dataMin", "dataMax"]}
             tickLine={false}
             axisLine={false}
             minTickGap={28}
+            tickFormatter={(value: number) =>
+              new Intl.DateTimeFormat("fr-FR", {
+                hour: "2-digit",
+                minute: "2-digit",
+                ...(range === "minute" ? { second: "2-digit" as const } : {}),
+              }).format(value)
+            }
             className="fill-muted-foreground text-[10px]"
           />
           <YAxis
@@ -143,7 +180,13 @@ function ResourceChart({
           <ChartTooltip
             content={
               <ChartTooltipContent
-                labelFormatter={(value) => `À ${value}`}
+                labelFormatter={(value) =>
+                  `À ${new Intl.DateTimeFormat("fr-FR", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    second: "2-digit",
+                  }).format(Number(value))}`
+                }
                 formatter={(value) => `${numberFormat.format(Number(value))} %`}
               />
             }
@@ -169,6 +212,10 @@ function ResourceMonitorContent() {
   const [networkSnapshot, setNetworkSnapshot] =
     useState<NetworkEndpointSnapshot | null>(null)
   const [history, setHistory] = useState<HistoryPoint[]>([])
+  const [savedHistory, setSavedHistory] = useState<ResourceHistoryPoint[]>([])
+  const savedHistoryRef = useRef<ResourceHistoryPoint[]>([])
+  const [historyRange, setHistoryRange] = useState<HistoryRange>("minute")
+  const [historyError, setHistoryError] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [endpointError, setEndpointError] = useState<string | null>(null)
   const [query, setQuery] = useState("")
@@ -181,6 +228,32 @@ function ResourceMonitorContent() {
   const [paused, setPaused] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const inFlight = useRef(false)
+  const historyReady = useRef(false)
+  const minuteAccumulator = useRef<MinuteAccumulator | null>(null)
+
+  useEffect(() => {
+    if (runtime !== true) return
+    let cancelled = false
+    void loadResourceHistory()
+      .then((points) => {
+        if (!cancelled) {
+          historyReady.current = true
+          savedHistoryRef.current = points
+          setSavedHistory(points)
+        }
+      })
+      .catch((cause) => {
+        if (!cancelled) {
+          historyReady.current = true
+          setHistoryError(
+            cause instanceof Error ? cause.message : String(cause)
+          )
+        }
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [runtime])
 
   const refresh = useCallback(async () => {
     if (runtime !== true || document.hidden || inFlight.current) return
@@ -190,20 +263,67 @@ function ResourceMonitorContent() {
       const next = await trackedInvoke<ResourceSample>("get_resource_sample")
       setSample(next)
       setError(null)
+      const memoryPercent = percent(next.memoryUsedBytes, next.memoryTotalBytes)
       setHistory((current) =>
         [
           ...current,
           {
-            time: new Intl.DateTimeFormat("fr-FR", {
-              hour: "2-digit",
-              minute: "2-digit",
-              second: "2-digit",
-            }).format(next.sampledAtMs),
+            sampledAtMs: next.sampledAtMs,
             cpu: next.cpuPercent,
-            memory: percent(next.memoryUsedBytes, next.memoryTotalBytes),
+            memory: memoryPercent,
           },
         ].slice(-30)
       )
+
+      const minuteStartMs = Math.floor(next.sampledAtMs / 60_000) * 60_000
+      const currentMinute = minuteAccumulator.current
+      if (!currentMinute) {
+        minuteAccumulator.current = {
+          sampledAtMs: minuteStartMs,
+          cpuPercent: next.cpuPercent,
+          memoryPercent,
+          cpuTotal: next.cpuPercent,
+          memoryTotal: memoryPercent,
+          sampleCount: 1,
+        }
+      } else if (currentMinute.sampledAtMs === minuteStartMs) {
+        currentMinute.cpuTotal += next.cpuPercent
+        currentMinute.memoryTotal += memoryPercent
+        currentMinute.sampleCount += 1
+      } else {
+        const archivedPoint: ResourceHistoryPoint = {
+          sampledAtMs: currentMinute.sampledAtMs,
+          cpuPercent: currentMinute.cpuTotal / currentMinute.sampleCount,
+          memoryPercent: currentMinute.memoryTotal / currentMinute.sampleCount,
+        }
+        if (historyReady.current) {
+          const updated = [
+            ...savedHistoryRef.current.filter(
+              (point) => point.sampledAtMs !== archivedPoint.sampledAtMs
+            ),
+            archivedPoint,
+          ]
+            .sort((left, right) => left.sampledAtMs - right.sampledAtMs)
+            .slice(-1_440)
+          savedHistoryRef.current = updated
+          setSavedHistory(updated)
+          void saveResourceHistory(updated).then(
+            () => setHistoryError(null),
+            (cause: unknown) =>
+              setHistoryError(
+                cause instanceof Error ? cause.message : String(cause)
+              )
+          )
+        }
+        minuteAccumulator.current = {
+          sampledAtMs: minuteStartMs,
+          cpuPercent: next.cpuPercent,
+          memoryPercent,
+          cpuTotal: next.cpuPercent,
+          memoryTotal: memoryPercent,
+          sampleCount: 1,
+        }
+      }
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause))
     } finally {
@@ -267,6 +387,31 @@ function ResourceMonitorContent() {
   const memoryPercent = sample
     ? percent(sample.memoryUsedBytes, sample.memoryTotalBytes)
     : 0
+
+  const visibleHistory = useMemo(() => {
+    if (historyRange === "minute") return history
+    const newestSampleMs =
+      sample?.sampledAtMs ??
+      history.at(-1)?.sampledAtMs ??
+      savedHistory.at(-1)?.sampledAtMs ??
+      0
+    const cutoff = newestSampleMs - HISTORY_RANGE_MS[historyRange]
+    const archived = savedHistory
+      .filter((point) => point.sampledAtMs >= cutoff)
+      .map((point) => ({
+        sampledAtMs: point.sampledAtMs,
+        cpu: point.cpuPercent,
+        memory: point.memoryPercent,
+      }))
+    if (sample) {
+      archived.push({
+        sampledAtMs: sample.sampledAtMs,
+        cpu: sample.cpuPercent,
+        memory: memoryPercent,
+      })
+    }
+    return archived.sort((left, right) => left.sampledAtMs - right.sampledAtMs)
+  }, [history, historyRange, memoryPercent, sample, savedHistory])
 
   const endpoints = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase("fr-FR")
@@ -360,7 +505,7 @@ function ResourceMonitorContent() {
 
           <section
             aria-label="Mesures actuelles"
-            className="grid gap-4 lg:grid-cols-2"
+            className="grid gap-4 lg:grid-cols-3"
           >
             <Card>
               <CardHeader className="grid-cols-[1fr_auto]">
@@ -379,9 +524,10 @@ function ResourceMonitorContent() {
               <CardContent>
                 <ResourceChart
                   color="var(--chart-1)"
-                  data={history}
+                  data={visibleHistory}
                   dataKey="cpu"
                   label="CPU"
+                  range={historyRange}
                 />
               </CardContent>
             </Card>
@@ -401,9 +547,10 @@ function ResourceMonitorContent() {
               <CardContent className="flex flex-col gap-3">
                 <ResourceChart
                   color="var(--chart-2)"
-                  data={history}
+                  data={visibleHistory}
                   dataKey="memory"
                   label="Mémoire"
+                  range={historyRange}
                 />
                 <Progress
                   aria-label="Utilisation de la mémoire vive"
@@ -416,7 +563,96 @@ function ResourceMonitorContent() {
                 </p>
               </CardContent>
             </Card>
+            <Card>
+              <CardHeader className="grid-cols-[1fr_auto]">
+                <CardDescription className="flex items-center gap-2">
+                  <GaugeIcon aria-hidden="true" className="size-4" /> GPU
+                </CardDescription>
+                <Badge className="row-span-2" variant="secondary">
+                  {sample?.gpuAdapters?.length
+                    ? `${numberFormat.format(Math.max(...sample.gpuAdapters.map((adapter) => adapter.utilizationPercent)))} %`
+                    : "Indisponible"}
+                </Badge>
+                <CardTitle className="text-2xl tabular-nums">
+                  {sample?.gpuAdapters?.length
+                    ? `${numberFormat.format(Math.max(...sample.gpuAdapters.map((adapter) => adapter.utilizationPercent)))} %`
+                    : "Non mesuré"}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-3">
+                {sample?.gpuAdapters?.length ? (
+                  sample.gpuAdapters.map((adapter) => (
+                    <div
+                      className="flex flex-col gap-2"
+                      key={adapter.physicalIndex}
+                    >
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>GPU {adapter.physicalIndex}</span>
+                        <span>
+                          {numberFormat.format(adapter.utilizationPercent)} %
+                        </span>
+                      </div>
+                      <Progress
+                        aria-label={`Utilisation du GPU ${adapter.physicalIndex}`}
+                        value={adapter.utilizationPercent}
+                      />
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Les compteurs GPU Windows ne sont pas disponibles sur cet
+                    appareil.
+                  </p>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Mesure des moteurs GPU Windows · actualisée toutes les 2 s.
+                </p>
+              </CardContent>
+            </Card>
           </section>
+
+          <section
+            aria-label="Période de l’historique"
+            className="flex flex-wrap items-center justify-between gap-3"
+          >
+            <div>
+              <h3 className="text-sm font-medium">Historique CPU et mémoire</h3>
+              <p className="text-xs text-muted-foreground">
+                {historyRange === "minute"
+                  ? "Échantillons en direct, actualisés toutes les 2 secondes."
+                  : "Moyennes par minute enregistrées localement pendant 24 heures."}
+              </p>
+            </div>
+            <div
+              className="flex gap-2"
+              role="group"
+              aria-label="Période affichée"
+            >
+              {(Object.keys(HISTORY_RANGE_LABEL) as HistoryRange[]).map(
+                (range) => (
+                  <Button
+                    key={range}
+                    size="sm"
+                    variant={historyRange === range ? "secondary" : "outline"}
+                    aria-pressed={historyRange === range}
+                    onClick={() => setHistoryRange(range)}
+                  >
+                    {HISTORY_RANGE_LABEL[range]}
+                  </Button>
+                )
+              )}
+            </div>
+          </section>
+          {historyError && (
+            <p className="text-sm text-muted-foreground" role="status">
+              L’historique local ne peut pas être enregistré : {historyError}
+            </p>
+          )}
+          <p className="text-xs text-muted-foreground">
+            Seules les moyennes CPU et mémoire sont conservées localement. Les
+            noms et PID des processus et les ports réseau ne sont pas
+            historisés.
+          </p>
 
           <Tabs defaultValue="processus" className="gap-4">
             <TabsList>
