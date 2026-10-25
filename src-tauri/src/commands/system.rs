@@ -1,9 +1,119 @@
 #[cfg(target_os = "windows")]
 use serde::Deserialize;
 use serde::Serialize;
+use std::collections::HashSet;
+use std::sync::{Arc, Mutex};
 use sysinfo::{
-    CpuRefreshKind, Disks, MemoryRefreshKind, Motherboard, Product, RefreshKind, System,
+    CpuRefreshKind, Disks, MemoryRefreshKind, Motherboard, ProcessRefreshKind, ProcessesToUpdate,
+    Product, RefreshKind, System,
 };
+
+#[derive(Clone)]
+pub struct ResourceMonitor {
+    system: Arc<Mutex<System>>,
+}
+
+impl ResourceMonitor {
+    pub fn new() -> Self {
+        Self {
+            system: Arc::new(Mutex::new(System::new_with_specifics(
+                RefreshKind::nothing()
+                    .with_cpu(CpuRefreshKind::everything())
+                    .with_memory(MemoryRefreshKind::everything()),
+            ))),
+        }
+    }
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ResourceProcess {
+    name: String,
+    pid: String,
+    cpu_percent: f32,
+    memory_bytes: u64,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ResourceSample {
+    hostname: String,
+    sampled_at_ms: u64,
+    cpu_percent: f32,
+    memory_total_bytes: u64,
+    memory_used_bytes: u64,
+    processes: Vec<ResourceProcess>,
+    process_count: usize,
+}
+
+/// Samples live CPU, memory, and process usage locally. No process paths or command lines are returned.
+#[tauri::command]
+pub async fn get_resource_sample(
+    monitor: tauri::State<'_, ResourceMonitor>,
+) -> Result<ResourceSample, String> {
+    let system = Arc::clone(&monitor.system);
+    tauri::async_runtime::spawn_blocking(move || {
+        let mut system = system
+            .lock()
+            .map_err(|_| "Le moniteur système est indisponible.".to_owned())?;
+        system.refresh_cpu_all();
+        system.refresh_memory();
+        system.refresh_processes_specifics(
+            ProcessesToUpdate::All,
+            true,
+            ProcessRefreshKind::nothing().with_cpu().with_memory(),
+        );
+
+        let process_count = system.processes().len();
+        let mut processes = system
+            .processes()
+            .iter()
+            .map(|(pid, process)| ResourceProcess {
+                name: process.name().to_string_lossy().into_owned(),
+                pid: pid.to_string(),
+                cpu_percent: process.cpu_usage(),
+                memory_bytes: process.memory(),
+            })
+            .collect::<Vec<_>>();
+        let logical_cpu_count = system.cpus().len().max(1) as f32;
+        for process in &mut processes {
+            // sysinfo reports process CPU on a per-logical-CPU scale; align it
+            // with the machine-wide 0-100% CPU metric shown above the table.
+            process.cpu_percent = (process.cpu_percent / logical_cpu_count).clamp(0.0, 100.0);
+        }
+        processes.sort_by(|left, right| right.cpu_percent.total_cmp(&left.cpu_percent));
+        let mut selected_pids = processes
+            .iter()
+            .take(25)
+            .map(|process| process.pid.clone())
+            .collect::<HashSet<_>>();
+        let mut top_processes = processes.iter().take(25).cloned().collect::<Vec<_>>();
+        processes.sort_by(|left, right| right.memory_bytes.cmp(&left.memory_bytes));
+        for process in processes {
+            if top_processes.len() >= 50 {
+                break;
+            }
+            if selected_pids.insert(process.pid.clone()) {
+                top_processes.push(process);
+            }
+        }
+
+        Ok(ResourceSample {
+            hostname: tauri_plugin_os::hostname(),
+            sampled_at_ms: std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis() as u64,
+            cpu_percent: system.global_cpu_usage().clamp(0.0, 100.0),
+            memory_total_bytes: system.total_memory(),
+            memory_used_bytes: system.used_memory(),
+            processes: top_processes,
+            process_count,
+        })
+    })
+    .await
+    .map_err(|error| format!("La lecture des ressources a échoué : {error}"))?
+}
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]

@@ -3,6 +3,7 @@ fn main() {
         tauri_build::AppManifest::new().commands(&[
             "greet",
             "get_system_snapshot",
+            "get_resource_sample",
             "get_installed_apps",
             "get_overlay_snapshot",
             "get_display_monitors",

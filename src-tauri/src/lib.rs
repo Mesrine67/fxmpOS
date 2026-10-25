@@ -2,7 +2,7 @@ mod commands;
 mod navigation;
 mod tray;
 
-use tauri::webview::PageLoadEvent;
+use tauri::{Manager, webview::PageLoadEvent};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -42,6 +42,7 @@ pub fn run() {
         .plugin(tauri_plugin_process::init())
         .plugin(navigation::init())
         .setup(move |app| {
+            app.manage(commands::system::ResourceMonitor::new());
             let window_config = app
                 .config()
                 .app
@@ -72,6 +73,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::greet::greet,
             commands::system::get_system_snapshot,
+            commands::system::get_resource_sample,
             commands::installed_apps::get_installed_apps,
             commands::system::get_overlay_snapshot,
             commands::network::measure_network_latency,

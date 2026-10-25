@@ -1,5 +1,7 @@
 # Pratiques OpenClaw retenues pour FXMP OS
 
+Le moniteur de ressources utilise la commande native en lecture seule `get_resource_sample`, limitée à la capacité `main`. Elle collecte CPU, mémoire et métadonnées limitées des processus localement, avec une liste bornée à l'union des 25 premiers en CPU et des 25 premiers en mémoire. Les champs de processus restent limités au nom, PID, CPU normalisé sur 0–100 % machine et mémoire; aucun chemin, argument de lancement, utilisateur ou action de contrôle n'est permis.
+
 Revue ciblée effectuée le 18 octobre 2026 sur les surfaces OpenClaw liées à l'app Linux Tauri, au Windows Hub, aux mises à jour et à la sécurité; ce n'est pas un audit ligne par ligne de tout le dépôt. FXMP OS est une application locale de monitoring; il ne partage pas le rôle de passerelle, de messagerie ou d'exécution d'agents d'OpenClaw.
 
 ## Ce que nous reprenons

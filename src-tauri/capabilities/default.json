@@ -15,6 +15,7 @@
     "autostart:default",
     "allow-greet",
     "allow-get-system-snapshot",
+    "allow-get-resource-sample",
     "allow-get-installed-apps",
     "allow-get-display-monitors",
     "allow-measure-network-latency",
