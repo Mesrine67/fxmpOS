@@ -63,7 +63,7 @@ type ResourceSample = {
   cpuPercent: number
   memoryTotalBytes: number
   memoryUsedBytes: number
-  gpuAdapters: { physicalIndex: number; utilizationPercent: number }[] | null
+  gpuAdapters: { adapterIndex: number; utilizationPercent: number }[] | null
   processes: ResourceProcess[]
   processCount: number
 }
@@ -255,6 +255,36 @@ function ResourceMonitorContent() {
     }
   }, [runtime])
 
+  const persistHistoryPoint = useCallback((point: ResourceHistoryPoint) => {
+    if (!historyReady.current) return
+    const updated = [
+      ...savedHistoryRef.current.filter(
+        (entry) => entry.sampledAtMs !== point.sampledAtMs
+      ),
+      point,
+    ]
+      .sort((left, right) => left.sampledAtMs - right.sampledAtMs)
+      .slice(-1_440)
+    savedHistoryRef.current = updated
+    setSavedHistory(updated)
+    void saveResourceHistory(updated).then(
+      () => setHistoryError(null),
+      (cause: unknown) =>
+        setHistoryError(cause instanceof Error ? cause.message : String(cause))
+    )
+  }, [])
+
+  const flushMinuteAccumulator = useCallback(() => {
+    const current = minuteAccumulator.current
+    if (!current || !historyReady.current) return
+    minuteAccumulator.current = null
+    persistHistoryPoint({
+      sampledAtMs: current.sampledAtMs,
+      cpuPercent: current.cpuTotal / current.sampleCount,
+      memoryPercent: current.memoryTotal / current.sampleCount,
+    })
+  }, [persistHistoryPoint])
+
   const refresh = useCallback(async () => {
     if (runtime !== true || document.hidden || inFlight.current) return
     inFlight.current = true
@@ -296,25 +326,7 @@ function ResourceMonitorContent() {
           cpuPercent: currentMinute.cpuTotal / currentMinute.sampleCount,
           memoryPercent: currentMinute.memoryTotal / currentMinute.sampleCount,
         }
-        if (historyReady.current) {
-          const updated = [
-            ...savedHistoryRef.current.filter(
-              (point) => point.sampledAtMs !== archivedPoint.sampledAtMs
-            ),
-            archivedPoint,
-          ]
-            .sort((left, right) => left.sampledAtMs - right.sampledAtMs)
-            .slice(-1_440)
-          savedHistoryRef.current = updated
-          setSavedHistory(updated)
-          void saveResourceHistory(updated).then(
-            () => setHistoryError(null),
-            (cause: unknown) =>
-              setHistoryError(
-                cause instanceof Error ? cause.message : String(cause)
-              )
-          )
-        }
+        persistHistoryPoint(archivedPoint)
         minuteAccumulator.current = {
           sampledAtMs: minuteStartMs,
           cpuPercent: next.cpuPercent,
@@ -330,7 +342,7 @@ function ResourceMonitorContent() {
       inFlight.current = false
       setIsLoading(false)
     }
-  }, [runtime])
+  }, [persistHistoryPoint, runtime])
 
   const refreshEndpoints = useCallback(async () => {
     if (runtime !== true || document.hidden) return
@@ -367,8 +379,9 @@ function ResourceMonitorContent() {
       window.clearInterval(timer)
       window.clearInterval(endpointTimer)
       document.removeEventListener("visibilitychange", onVisibility)
+      flushMinuteAccumulator()
     }
-  }, [paused, refresh, refreshEndpoints, runtime])
+  }, [flushMinuteAccumulator, paused, refresh, refreshEndpoints, runtime])
 
   const processes = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase("fr-FR")
@@ -584,16 +597,16 @@ function ResourceMonitorContent() {
                   sample.gpuAdapters.map((adapter) => (
                     <div
                       className="flex flex-col gap-2"
-                      key={adapter.physicalIndex}
+                      key={adapter.adapterIndex}
                     >
                       <div className="flex justify-between text-xs text-muted-foreground">
-                        <span>GPU {adapter.physicalIndex}</span>
+                        <span>GPU {adapter.adapterIndex}</span>
                         <span>
                           {numberFormat.format(adapter.utilizationPercent)} %
                         </span>
                       </div>
                       <Progress
-                        aria-label={`Utilisation du GPU ${adapter.physicalIndex}`}
+                        aria-label={`Utilisation du GPU ${adapter.adapterIndex}`}
                         value={adapter.utilizationPercent}
                       />
                     </div>

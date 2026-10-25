@@ -57,10 +57,13 @@ export function saveResourceHistory(
   const normalized = normalizeHistory(points).filter(
     (point) => point.sampledAtMs >= Date.now() - HISTORY_RETENTION_MS
   )
-  writeQueue = writeQueue.then(async () => {
-    await historyStore.init()
-    await historyStore.set(HISTORY_STORE_KEY, normalized)
-    await historyStore.save()
-  })
-  return writeQueue
+  const operation = writeQueue
+    .catch(() => undefined)
+    .then(async () => {
+      await historyStore.init()
+      await historyStore.set(HISTORY_STORE_KEY, normalized)
+      await historyStore.save()
+    })
+  writeQueue = operation.catch(() => undefined)
+  return operation
 }

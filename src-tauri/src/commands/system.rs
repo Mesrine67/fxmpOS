@@ -50,7 +50,7 @@ pub struct ResourceSample {
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GpuResourceSample {
-    physical_index: usize,
+    adapter_index: usize,
     utilization_percent: f32,
 }
 
@@ -70,10 +70,15 @@ struct Win32GpuEngineCounter {
 fn read_gpu_resource_sample() -> Option<Vec<GpuResourceSample>> {
     let connection = wmi::WMIConnection::new().ok()?;
     let counters: Vec<Win32GpuEngineCounter> = connection.query().ok()?;
-    let mut engine_usage = HashMap::<(usize, String), u64>::new();
+    let mut engine_usage = HashMap::<((Option<String>, usize), usize, String), u64>::new();
 
     for counter in counters {
         let Some(name) = counter.name else { continue };
+        let luid = name
+            .split("_luid_")
+            .nth(1)
+            .and_then(|part| part.split('_').next())
+            .map(str::to_ascii_lowercase);
         let Some(physical_index) = name
             .split("_phys_")
             .nth(1)
@@ -85,12 +90,24 @@ fn read_gpu_resource_sample() -> Option<Vec<GpuResourceSample>> {
         let Some(engine_type) = name.split("_engtype_").nth(1) else {
             continue;
         };
+        let Some(engine_index) = name
+            .split("_eng_")
+            .nth(1)
+            .and_then(|part| part.split('_').next())
+            .and_then(|part| part.parse::<usize>().ok())
+        else {
+            continue;
+        };
         let Some(utilization_percentage) = counter.utilization_percentage else {
             continue;
         };
         let usage = u64::from(utilization_percentage);
         *engine_usage
-            .entry((physical_index, engine_type.to_ascii_lowercase()))
+            .entry((
+                (luid, physical_index),
+                engine_index,
+                engine_type.to_ascii_lowercase(),
+            ))
             .or_default() += usage;
     }
 
@@ -98,24 +115,29 @@ fn read_gpu_resource_sample() -> Option<Vec<GpuResourceSample>> {
         return None;
     }
 
-    let mut adapters = HashMap::<usize, f32>::new();
-    for ((physical_index, _engine_type), usage) in engine_usage {
+    let mut adapters = HashMap::<(Option<String>, usize), f32>::new();
+    for ((adapter_identity, _engine_index, _engine_type), usage) in engine_usage {
         let bounded_usage = usage.min(100) as f32;
         adapters
-            .entry(physical_index)
+            .entry(adapter_identity)
             .and_modify(|current| *current = current.max(bounded_usage))
             .or_insert(bounded_usage);
     }
 
-    let mut samples = adapters
-        .into_iter()
-        .map(|(physical_index, utilization_percent)| GpuResourceSample {
-            physical_index,
-            utilization_percent,
-        })
-        .collect::<Vec<_>>();
-    samples.sort_by_key(|sample| sample.physical_index);
-    Some(samples)
+    let mut adapters = adapters.into_iter().collect::<Vec<_>>();
+    adapters.sort_by(|left, right| left.0.cmp(&right.0));
+    Some(
+        adapters
+            .into_iter()
+            .enumerate()
+            .map(
+                |(adapter_index, (_identity, utilization_percent))| GpuResourceSample {
+                    adapter_index,
+                    utilization_percent,
+                },
+            )
+            .collect(),
+    )
 }
 
 #[cfg(not(target_os = "windows"))]
