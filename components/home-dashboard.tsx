@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import {
   ActivityIcon,
@@ -14,6 +14,7 @@ import {
   LoaderCircleIcon,
   MemoryStickIcon,
   MonitorIcon,
+  NetworkIcon,
   RefreshCwIcon,
   ShieldCheckIcon,
   TriangleAlertIcon,
@@ -73,6 +74,15 @@ type DisplaySnapshot = {
   primary: boolean
 }
 
+type LiveResourceSample = {
+  sampledAtMs: number
+  cpuPercent: number
+  memoryTotalBytes: number
+  memoryUsedBytes: number
+  networkReceivedBytesPerSec: number | null
+  networkTransmittedBytesPerSec: number | null
+}
+
 const numberFormat = new Intl.NumberFormat("fr-FR", {
   maximumFractionDigits: 1,
 })
@@ -80,6 +90,18 @@ const numberFormat = new Intl.NumberFormat("fr-FR", {
 function formatBytes(bytes: number) {
   if (bytes >= 1024 ** 4) return `${numberFormat.format(bytes / 1024 ** 4)} To`
   return `${numberFormat.format(bytes / 1024 ** 3)} Go`
+}
+
+function formatRate(bytesPerSecond: number | null | undefined) {
+  if (bytesPerSecond == null || !Number.isFinite(bytesPerSecond)) return "—"
+  const units = ["o/s", "Ko/s", "Mo/s", "Go/s"]
+  let value = Math.max(0, bytesPerSecond)
+  let unitIndex = 0
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024
+    unitIndex += 1
+  }
+  return `${numberFormat.format(value)} ${units[unitIndex]}`
 }
 
 function percent(used: number, total: number) {
@@ -147,6 +169,9 @@ function HomeContent() {
   const [error, setError] = useState<string | null>(null)
   const [displayError, setDisplayError] = useState<string | null>(null)
   const [updatedAt, setUpdatedAt] = useState<Date | null>(null)
+  const [liveSample, setLiveSample] = useState<LiveResourceSample | null>(null)
+  const [liveSampleError, setLiveSampleError] = useState<string | null>(null)
+  const liveSampleInFlight = useRef(false)
 
   const refresh = useCallback(async () => {
     setIsLoading(true)
@@ -190,6 +215,43 @@ function HomeContent() {
     }, 0)
     return () => window.clearTimeout(timer)
   }, [refresh, runtime])
+
+  useEffect(() => {
+    if (runtime !== true) return
+    let active = true
+    const updateLiveSample = async () => {
+      if (document.hidden || liveSampleInFlight.current) return
+      liveSampleInFlight.current = true
+      try {
+        const result = await trackedInvoke<LiveResourceSample>(
+          "get_resource_sample"
+        )
+        if (active) {
+          setLiveSample(result)
+          setLiveSampleError(null)
+        }
+      } catch (cause) {
+        if (active) {
+          setLiveSampleError(
+            cause instanceof Error ? cause.message : String(cause)
+          )
+        }
+      } finally {
+        liveSampleInFlight.current = false
+      }
+    }
+    const onVisibilityChange = () => {
+      if (!document.hidden) void updateLiveSample()
+    }
+    void updateLiveSample()
+    const interval = window.setInterval(() => void updateLiveSample(), 10_000)
+    document.addEventListener("visibilitychange", onVisibilityChange)
+    return () => {
+      active = false
+      window.clearInterval(interval)
+      document.removeEventListener("visibilitychange", onVisibilityChange)
+    }
+  }, [runtime])
 
   const storage = useMemo(() => {
     const disks = snapshot?.disks ?? []
@@ -348,6 +410,107 @@ function HomeContent() {
                     {needsAttention ? "À surveiller" : "Ressources normales"}
                   </Badge>
                 </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="grid-cols-[1fr_auto]">
+                  <CardTitle className="flex items-center gap-2">
+                    <ActivityIcon
+                      aria-hidden="true"
+                      className="size-4 text-primary"
+                    />
+                    Activité en direct
+                  </CardTitle>
+                  <Badge variant={liveSampleError ? "destructive" : "outline"}>
+                    <span
+                      className={`size-1.5 rounded-full ${liveSampleError ? "bg-destructive" : liveSample ? "animate-pulse bg-emerald-500" : "bg-muted-foreground"}`}
+                    />
+                    {liveSampleError
+                      ? "Lecture interrompue"
+                      : liveSample
+                        ? "En direct · 10 s"
+                        : "Connexion…"}
+                  </Badge>
+                  <CardDescription className="col-span-2">
+                    Mesure locale actualisée lorsque l’accueil est visible.
+                    {liveSample &&
+                      ` Dernière lecture à ${new Date(liveSample.sampledAtMs).toLocaleTimeString("fr-FR")}.`}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="grid gap-4 sm:grid-cols-3">
+                  <div className="rounded-lg border p-4">
+                    <div className="mb-2 flex items-center gap-2 text-sm text-muted-foreground">
+                      <CpuIcon aria-hidden="true" className="size-4" />{" "}
+                      Processeur
+                    </div>
+                    <p className="text-2xl font-semibold tabular-nums">
+                      {liveSample
+                        ? `${numberFormat.format(liveSample.cpuPercent)} %`
+                        : "—"}
+                    </p>
+                    <Progress
+                      className="mt-3"
+                      aria-label="Charge actuelle du processeur"
+                      value={liveSample?.cpuPercent ?? 0}
+                    />
+                  </div>
+                  <div className="rounded-lg border p-4">
+                    <div className="mb-2 flex items-center gap-2 text-sm text-muted-foreground">
+                      <MemoryStickIcon aria-hidden="true" className="size-4" />{" "}
+                      Mémoire vive
+                    </div>
+                    <p className="text-2xl font-semibold tabular-nums">
+                      {liveSample
+                        ? `${percent(liveSample.memoryUsedBytes, liveSample.memoryTotalBytes)} %`
+                        : "—"}
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {liveSample
+                        ? `${formatBytes(liveSample.memoryUsedBytes)} sur ${formatBytes(liveSample.memoryTotalBytes)}`
+                        : "En attente de la première mesure"}
+                    </p>
+                    <Progress
+                      className="mt-3"
+                      aria-label="Utilisation actuelle de la mémoire vive"
+                      value={
+                        liveSample
+                          ? percent(
+                              liveSample.memoryUsedBytes,
+                              liveSample.memoryTotalBytes
+                            )
+                          : 0
+                      }
+                    />
+                  </div>
+                  <div className="rounded-lg border p-4">
+                    <div className="mb-2 flex items-center gap-2 text-sm text-muted-foreground">
+                      <NetworkIcon aria-hidden="true" className="size-4" />{" "}
+                      Réseau
+                    </div>
+                    <p className="text-sm font-medium tabular-nums">
+                      ↓ {formatRate(liveSample?.networkReceivedBytesPerSec)}
+                    </p>
+                    <p className="mt-1 text-sm font-medium tabular-nums">
+                      ↑ {formatRate(liveSample?.networkTransmittedBytesPerSec)}
+                    </p>
+                    <Link
+                      className="mt-3 inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                      href="/monitor/"
+                    >
+                      Ouvrir le moniteur{" "}
+                      <ArrowRightIcon aria-hidden="true" className="size-3" />
+                    </Link>
+                  </div>
+                </CardContent>
+                {liveSampleError && (
+                  <p
+                    className="px-6 pb-4 text-xs text-muted-foreground"
+                    role="status"
+                  >
+                    L’actualisation en direct a échoué; les valeurs précédentes
+                    sont conservées. {liveSampleError}
+                  </p>
+                )}
               </Card>
 
               <section
