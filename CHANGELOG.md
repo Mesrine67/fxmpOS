@@ -1,5 +1,24 @@
 # Journal des modifications
 
+## [0.0.32] - 2026-10-27
+
+### Améliorations
+
+- Le bouton utilisateur représente maintenant clairement l’appareil Windows et la session locale, avec le nom de l’utilisateur et de l’ordinateur.
+- Le menu de profil s’ouvre au-dessus du bouton, reste dans la largeur du sidebar et utilise un fond opaque cohérent avec le thème.
+- Les informations locales du PC sont chargées dès le démarrage de l’application; le menu affiche le système, l’architecture, le processeur et la mémoire vive lorsqu’ils sont disponibles.
+- Le menu reste utilisable pendant le chargement ou si la lecture locale échoue, et propose des accès directs à Compte et appareil et aux Paramètres.
+
+### Sécurité et confidentialité
+
+- Le menu n’affiche aucun e-mail d’exemple, chemin de profil, secret ni identifiant de compte en ligne.
+- Les informations présentées proviennent de la commande locale `get_system_snapshot` et ne sont pas envoyées à un service distant.
+
+### Compatibilité
+
+- Windows x64, installateurs NSIS et MSI. WebView2 est requis.
+- macOS, Linux, Android et iOS ne sont pas distribués pour cette version.
+
 ## [0.0.31] - 2026-10-27
 
 ### Améliorations
