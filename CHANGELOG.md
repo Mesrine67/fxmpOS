@@ -2,6 +2,14 @@
 
 Chaque version publiée possède sa propre section. Le workflow de release réutilise ces notes dans la release GitHub et dans le manifeste de l’updater Tauri.
 
+## [0.0.21] - 2026-10-27
+
+### Améliorations
+
+- Le moniteur Ressources affiche la charge de chaque processeur logique, le temps de fonctionnement Windows et les débits agrégés de réception et d’envoi mesurés localement.
+- Le tableau des processus propose une pagination et un choix de 15, 25 ou 50 lignes, tout en conservant la limite des 50 processus les plus actifs et les seules colonnes autorisées.
+- Les débits réseau ne sont ni enregistrés dans l’historique ni transmis; la première lecture reste vide jusqu’à l’échantillon suivant.
+
 ## [0.0.20] - 2026-10-27
 
 ### Maintenance
