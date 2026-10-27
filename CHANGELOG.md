@@ -2,6 +2,17 @@
 
 Chaque version publiée possède sa propre section. Le workflow de release réutilise ces notes dans la release GitHub et dans le manifeste de l’updater Tauri.
 
+## [0.0.28] - 2026-10-27
+
+### Corrections
+
+- Le bouton Games indique maintenant uniquement que le groupe est déplié. Seule la sous-page courante reçoit l’état visuel sélectionné, pour éviter l’apparence de deux éléments actifs dans la barre latérale.
+
+### Compatibilité
+
+- Windows x64, installateurs NSIS et MSI. WebView2 est requis.
+- macOS, Linux, Android et iOS ne sont pas distribués pour cette version.
+
 ## [0.0.27] - 2026-10-27
 
 ### Améliorations
