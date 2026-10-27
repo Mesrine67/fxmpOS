@@ -5,16 +5,19 @@ import { createInterface } from "node:readline"
 const [
   ,
   ,
-  inputFile,
-  outputDir,
+  inputArgument,
+  outputArgument,
   version = new Date().toISOString().slice(0, 10),
 ] = process.argv
-if (!inputFile || !outputDir) {
+if (!inputArgument || !outputArgument) {
   console.error(
     "Usage: node scripts/build-jooat-resolver-pack.mjs <wordlist.txt> <output-dir> [version]"
   )
   process.exit(1)
 }
+const workspaceRoot = path.resolve(process.cwd())
+const inputFile = resolveWorkspacePath(inputArgument, "input file")
+const outputDir = resolveWorkspacePath(outputArgument, "output directory")
 const shardDir = path.join(outputDir, "shards")
 await mkdir(shardDir, { recursive: true })
 const shardStreams = new Map()
@@ -108,4 +111,17 @@ function jooat(input) {
   hash ^= hash >>> 11
   hash += hash << 15
   return hash >>> 0
+}
+
+function resolveWorkspacePath(value, label) {
+  const resolved = path.resolve(workspaceRoot, value)
+  const relative = path.relative(workspaceRoot, resolved)
+  if (
+    relative === ".." ||
+    relative.startsWith(`..${path.sep}`) ||
+    path.isAbsolute(relative)
+  ) {
+    throw new Error(`${label} must stay inside the current workspace`)
+  }
+  return resolved
 }
