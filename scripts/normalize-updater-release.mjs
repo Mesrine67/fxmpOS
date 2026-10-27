@@ -20,7 +20,6 @@ if (
     "Usage: node scripts/normalize-updater-release.mjs <expected-semver>"
   )
 }
-
 if (process.env.GITHUB_REPOSITORY !== repository) {
   throw new Error(`This normalizer only accepts releases from ${repository}`)
 }
@@ -28,14 +27,12 @@ if (process.env.GITHUB_REPOSITORY !== repository) {
 const githubToken = process.env.GH_TOKEN
 if (!githubToken)
   throw new Error("GH_TOKEN must be set to normalize release URLs")
-
 const manifest = JSON.parse(readFileSync(manifestPath, "utf8"))
 if (manifest.version !== expectedVersion) {
   throw new Error(
     `latest.json version ${manifest.version ?? "<missing>"} does not match ${expectedVersion}`
   )
 }
-
 const apiHeaders = {
   Accept: "application/vnd.github+json",
   Authorization: `Bearer ${githubToken}`,
@@ -55,7 +52,6 @@ if (release.tag_name !== `v${expectedVersion}` || release.draft !== true) {
 if (!Array.isArray(release.assets)) {
   throw new Error("GitHub did not return a release asset list")
 }
-
 const releaseAssets = new Map()
 const releaseAssetsById = new Map()
 for (const asset of release.assets) {
@@ -73,7 +69,6 @@ for (const asset of release.assets) {
   releaseAssets.set(asset.name, asset)
   releaseAssetsById.set(String(asset.id), asset)
 }
-
 const normalizedCount = normalizeUpdaterAssetUrls(manifest, {
   expectedVersion,
   repository,

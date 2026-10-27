@@ -27,7 +27,6 @@ const notes = changelog
   .slice(sectionStart, nextMatch?.index ?? changelog.length)
   .trim()
 if (!notes) throw new Error(`CHANGELOG.md has no notes for version ${version}`)
-
 const body = [
   notes,
   "",
@@ -38,5 +37,4 @@ const body = [
   "- La signature Authenticode de l’installateur dépend du certificat configuré dans les secrets CI.",
   "- [Journal complet des modifications](https://github.com/Mesrine67/fxmpOS/blob/main/CHANGELOG.md)",
 ].join("\n")
-
 process.stdout.write(body)

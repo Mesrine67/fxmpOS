@@ -7,6 +7,7 @@ import { ExternalLinkGuard } from "@/components/external-link-guard"
 import { DebugPanelGate } from "@/components/debug-panel-gate"
 import { OverlayBootstrap } from "@/components/overlay-bootstrap"
 import { UpdaterProvider } from "@/components/updater-provider"
+import { Toaster } from "@/components/ui/sonner"
 import { cn } from "@/lib/utils"
 
 const fontSans = Geist({
@@ -43,6 +44,7 @@ export default function RootLayout({
                 ) : null}
                 <OverlayBootstrap />
                 {children}
+                <Toaster />
               </div>
             </TooltipProvider>
           </UpdaterProvider>

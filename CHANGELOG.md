@@ -2,6 +2,22 @@
 
 Chaque version publiée possède sa propre section. Le workflow de release réutilise ces notes dans la release GitHub et dans le manifeste de l’updater Tauri.
 
+## [0.0.29] - 2026-10-27
+
+### Améliorations
+
+- La barre latérale propose trois espaces de travail dédiés : OS, Overlays et Games.
+- Le menu de l’espace reprend le sélecteur shadcn avec sélection clavier et persiste le choix localement dans le store Tauri.
+- Les formulaires GitHub de documentation et de support sont adaptés à FXMP OS et renvoient vers les releases et le signalement privé des vulnérabilités.
+- `pnpm version:bump -- patch` synchronise les versions package/Tauri/Cargo et ajoute une section à compléter au journal des modifications.
+- `scripts/build-jooat-resolver-pack.mjs` transforme une liste locale de noms en un pack JOAAT découpé en shards.
+- Chaque espace affiche uniquement sa navigation; l’espace Overlays donne un accès direct aux réglages du widget.
+
+### Compatibilité
+
+- Windows x64, installateurs NSIS et MSI. WebView2 est requis.
+- macOS, Linux, Android et iOS ne sont pas distribués pour cette version.
+
 ## [0.0.28] - 2026-10-27
 
 ### Corrections

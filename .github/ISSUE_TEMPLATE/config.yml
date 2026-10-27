@@ -6,3 +6,6 @@ contact_links:
   - name: Questions et discussions
     url: https://github.com/Mesrine67/fxmpOS/discussions
     about: Posez une question ou échangez sur FXMP OS.
+  - name: Consulter les versions
+    url: https://github.com/Mesrine67/fxmpOS/releases
+    about: Vérifiez si une version plus récente de FXMP OS est disponible.

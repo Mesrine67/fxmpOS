@@ -14,7 +14,6 @@ import process from "node:process"
 import { spawnSync } from "node:child_process"
 import { fetchReleaseByTag } from "./github-release.mjs"
 import { resolveUpdaterAsset } from "./updater-release-url.mjs"
-
 const [expectedVersion] = process.argv.slice(2)
 const repository = "Mesrine67/fxmpOS"
 const assetDirectory = "release-assets"
@@ -42,19 +41,16 @@ if (process.env.GITHUB_REPOSITORY !== repository) {
 const githubToken = process.env.GH_TOKEN
 if (!githubToken)
   throw new Error("GH_TOKEN must be set to verify release assets")
-
 const manifest = JSON.parse(readFileSync(manifestPath, "utf8"))
 if (manifest.version !== expectedVersion) {
   throw new Error(
     `latest.json version ${manifest.version ?? "<missing>"} does not match ${expectedVersion}`
   )
 }
-
 const platforms = Object.entries(manifest.platforms ?? {})
 if (platforms.length === 0) {
   throw new Error("latest.json contains no updater platforms")
 }
-
 const requiredPlatformTargets = [
   "windows-x86_64",
   "windows-x86_64-nsis",
@@ -69,13 +65,11 @@ for (const platform of platformNames) {
     )
   }
 }
-
 for (const target of requiredPlatformTargets) {
   if (!platformNames.includes(target)) {
     throw new Error(`latest.json is missing an updater entry for ${target}`)
   }
 }
-
 const config = JSON.parse(readFileSync("src-tauri/tauri.conf.json", "utf8"))
 const publicKeyDocument = Buffer.from(config.plugins.updater.pubkey, "base64")
   .toString("utf8")
@@ -86,7 +80,6 @@ if (!publicKey?.startsWith("RW")) {
     "Could not extract the Minisign public key from tauri.conf.json"
   )
 }
-
 const apiHeaders = {
   Accept: "application/vnd.github+json",
   Authorization: `Bearer ${githubToken}`,
@@ -106,7 +99,6 @@ if (release.tag_name !== `v${expectedVersion}` || release.draft !== true) {
 if (!Array.isArray(release.assets)) {
   throw new Error("GitHub did not return a release asset list")
 }
-
 const releaseAssets = new Map()
 for (const asset of release.assets) {
   if (
@@ -124,7 +116,6 @@ for (const asset of release.assets) {
   }
   releaseAssets.set(asset.name, asset)
 }
-
 const escapedVersion = expectedVersion.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
 const windowsInstallerAssets = [
   new RegExp(`^FXMP\\.OS-${escapedVersion}-windows-x64-setup\\.exe$`, "i"),
@@ -164,31 +155,22 @@ if (!hasNsisInstaller || !hasMsiInstaller) {
     "The draft release must contain both the Windows NSIS setup (.exe) and MSI installer."
   )
 }
-
 if (!releaseAssets.has("latest.json")) {
   throw new Error("The draft release does not contain latest.json")
 }
-
 const verificationDirectory = mkdtempSync(
   path.join(tmpdir(), "fxmp-updater-signature-")
 )
-
 async function downloadAsset(asset, destination) {
   const response = await fetch(
     `https://api.github.com/repos/${repository}/releases/assets/${asset.id}`,
-    {
-      headers: {
-        ...apiHeaders,
-        Accept: "application/octet-stream",
-      },
-    }
+    { headers: { ...apiHeaders, Accept: "application/octet-stream" } }
   )
   if (!response.ok || !response.body) {
     throw new Error(
       `Could not download release asset ${asset.name} (HTTP ${response.status})`
     )
   }
-
   const finalUrl = new URL(response.url)
   if (
     finalUrl.protocol !== "https:" ||
@@ -200,7 +182,6 @@ async function downloadAsset(asset, destination) {
   ) {
     throw new Error(`GitHub redirected ${asset.name} to an unexpected host`)
   }
-
   let byteCount = 0
   const hash = createHash("sha256")
   const hasher = new Transform({
@@ -216,7 +197,6 @@ async function downloadAsset(asset, destination) {
       callback(null, chunk)
     },
   })
-
   await pipeline(
     Readable.fromWeb(response.body),
     hasher,
@@ -227,7 +207,6 @@ async function downloadAsset(asset, destination) {
   }
   return hash.digest("hex")
 }
-
 function assertSignedVersion(signatureText, assetName) {
   const trustedLine = signatureText
     .split(/\r?\n/)
@@ -237,21 +216,18 @@ function assertSignedVersion(signatureText, assetName) {
     ?.split("\t")
     .find((field) => field.startsWith("version:"))
     ?.slice("version:".length)
-
   if (signedVersion !== expectedVersion) {
     throw new Error(
       `Updater signature for ${assetName} is bound to ${signedVersion ?? "no version"}, expected ${expectedVersion}`
     )
   }
 }
-
 const verifiedDigests = new Map()
 try {
   for (const [platform, update] of platforms) {
     if (typeof update.signature !== "string" || !update.signature.trim()) {
       throw new Error(`Updater entry ${platform} has no signature`)
     }
-
     const asset = resolveUpdaterAsset(update.url, platform, {
       expectedVersion,
       repository,
@@ -262,14 +238,12 @@ try {
     if (!asset || !sidecar) {
       throw new Error(`The release is missing ${assetName} or its .sig asset`)
     }
-
     const bundlePath = path.join(verificationDirectory, "bundle.bin")
     const sidecarPath = path.join(verificationDirectory, "sidecar.txt")
     const signaturePath = path.join(verificationDirectory, "bundle.minisig")
     const digest = await downloadAsset(asset, bundlePath)
     verifiedDigests.set(assetName, digest)
     await downloadAsset(sidecar, sidecarPath)
-
     const sidecarSignature = readFileSync(sidecarPath, "utf8").trim()
     const manifestSignature = update.signature.trim()
     if (sidecarSignature !== manifestSignature) {
@@ -277,7 +251,6 @@ try {
         `The manifest signature for ${assetName} differs from its .sig asset`
       )
     }
-
     const decodedSignature = Buffer.from(manifestSignature, "base64")
     const decodedSignatureText = decodedSignature.toString("utf8")
     if (
@@ -290,9 +263,7 @@ try {
         `Updater signature for ${assetName} is not valid Tauri Base64`
       )
     }
-
     writeFileSync(signaturePath, decodedSignature)
-
     const verification = spawnSync(
       "minisign",
       ["-V", "-m", bundlePath, "-x", signaturePath, "-P", publicKey],
@@ -304,11 +275,9 @@ try {
         `Minisign verification failed for ${platform} (${assetName}): ${verification.stderr || verification.stdout}`
       )
     }
-
     assertSignedVersion(decodedSignatureText, assetName)
     console.log(`Verified ${platform}: ${assetName}`)
   }
-
   const checksums = []
   for (const asset of releaseAssets.values()) {
     if (
@@ -318,7 +287,6 @@ try {
     ) {
       continue
     }
-
     const digest =
       verifiedDigests.get(asset.name) ??
       (await downloadAsset(
@@ -327,11 +295,9 @@ try {
       ))
     checksums.push(`${digest}  ${asset.name}`)
   }
-
   if (checksums.length === 0) {
     throw new Error("No installer or bundle assets were found")
   }
-
   checksums.sort((left, right) => left.localeCompare(right))
   writeFileSync(checksumPath, `${checksums.join("\n")}\n`)
   console.log(`Wrote SHA256SUMS.txt for ${checksums.length} release assets`)

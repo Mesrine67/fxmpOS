@@ -1,6 +1,7 @@
 {
   "name": "mon-app",
-  "version": "0.0.28",
+  "version": "0.0.29",
+  "license": "LGPL-3.0-only",
   "type": "module",
   "private": true,
   "packageManager": "pnpm@12.3.4",
@@ -11,6 +12,7 @@
     "lint": "eslint app components hooks lib scripts next.config.ts postcss.config.mjs eslint.config.mjs",
     "format": "prettier --write \"**/*.{ts,tsx}\"",
     "typecheck": "tsc --noEmit",
+    "version:bump": "node scripts/bump-version.mjs",
     "tauri": "tauri"
   },
   "dependencies": {
