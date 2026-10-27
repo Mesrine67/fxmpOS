@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { DEFAULT_THEME_PREFERENCES, writeThemePreferences, type ThemeAccent, type ThemeBase, type ThemeFont, type ThemeMode, type ThemePreferences, type ThemeStyle, useThemePreferences } from "@/lib/theme-preferences"
+import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 
 function PreferenceSelect<T extends string>({ id, label, value, items, onChange }: {
@@ -104,7 +105,7 @@ export function ThemeSettings() {
             </div>
             <div className="mt-5 flex items-end gap-1.5" aria-label={`Aperçu des couleurs ${preferences.chart}`}>
               {accents.find((item) => item.value === preferences.chart) && [0.45, 0.7, 0.55, 0.9, 0.65, 1].map((height, index) => (
-                <span key={index} className="flex-1 rounded-t-sm bg-primary/80" style={{ height: `${Math.round(height * 52)}px`, opacity: 1 - index * 0.06 }} />
+                <span key={index} className={cn("flex-1 rounded-t-sm", ["bg-chart-1", "bg-chart-2", "bg-chart-3", "bg-chart-4"][index % 4])} style={{ height: `${Math.round(height * 52)}px`, opacity: 1 - index * 0.06 }} />
               ))}
             </div>
             <p className="mt-3 text-xs text-muted-foreground">Mémoire utilisée · aperçu des graphiques</p>
