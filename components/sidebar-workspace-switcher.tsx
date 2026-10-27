@@ -9,7 +9,7 @@ import {
   Layers3Icon,
   MonitorIcon,
 } from "lucide-react"
-import { toast } from "sonner"
+import { notifyFxmp } from "@/lib/notifications"
 
 import {
   DropdownMenu,
@@ -103,7 +103,10 @@ export function SidebarWorkspaceSwitcher() {
         )
       })
       .catch(() => {
-        toast.error("Impossible de charger l’espace de navigation enregistré.")
+        void notifyFxmp(
+          "error",
+          "Impossible de charger l’espace de navigation enregistré."
+        )
       })
   }, [pathname, router])
 
@@ -115,7 +118,10 @@ export function SidebarWorkspaceSwitcher() {
       await setSidebarWorkspace(next)
       router.push(workspaces.find((item) => item.id === next)!.href)
     } catch {
-      toast.error("Impossible d’enregistrer cet espace de navigation.")
+      void notifyFxmp(
+        "error",
+        "Impossible d’enregistrer cet espace de navigation."
+      )
     }
   }
 
