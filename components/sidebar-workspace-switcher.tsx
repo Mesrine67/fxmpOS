@@ -71,6 +71,7 @@ export function SidebarWorkspaceSwitcher() {
   const pathname = usePathname()
   const pathnameRef = useRef(pathname)
   const didRestoreOnMount = useRef(false)
+  const userSelectedWorkspace = useRef(false)
   const { isMobile } = useSidebar()
   const selected = useSyncExternalStore(
     subscribeToSidebarWorkspace,
@@ -88,13 +89,10 @@ export function SidebarWorkspaceSwitcher() {
   useEffect(() => {
     if (didRestoreOnMount.current) return
     didRestoreOnMount.current = true
-    if (pathname !== "/") return
-
-    let cancelled = false
     void initializeSidebarWorkspace()
       .then((storedWorkspace) => {
         if (
-          cancelled ||
+          userSelectedWorkspace.current ||
           pathnameRef.current !== "/" ||
           storedWorkspace === "os"
         ) {
@@ -105,19 +103,13 @@ export function SidebarWorkspaceSwitcher() {
         )
       })
       .catch(() => {
-        if (!cancelled) {
-          toast.error(
-            "Impossible de charger l’espace de navigation enregistré."
-          )
-        }
+        toast.error("Impossible de charger l’espace de navigation enregistré.")
       })
-    return () => {
-      cancelled = true
-    }
   }, [pathname, router])
 
   async function selectWorkspace(value: string) {
     if (!workspaces.some((item) => item.id === value)) return
+    userSelectedWorkspace.current = true
     const next = value as SidebarWorkspace
     try {
       await setSidebarWorkspace(next)
