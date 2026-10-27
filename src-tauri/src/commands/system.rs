@@ -30,44 +30,54 @@ impl ResourceMonitor {
 
 struct NetworkRateSampler {
     networks: Networks,
-    previous: Option<(u64, u64, Instant)>,
+    previous: HashMap<String, (u64, u64)>,
+    previous_at: Option<Instant>,
 }
 
 impl NetworkRateSampler {
     fn new() -> Self {
         Self {
             networks: Networks::new(),
-            previous: None,
+            previous: HashMap::new(),
+            previous_at: None,
         }
     }
 
     fn refresh(&mut self) -> (Option<f64>, Option<f64>) {
         self.networks.refresh(true);
-        let (received, transmitted) =
-            self.networks
-                .values()
-                .fold((0u64, 0u64), |(received, transmitted), network| {
-                    (
-                        received.saturating_add(network.total_received()),
-                        transmitted.saturating_add(network.total_transmitted()),
-                    )
-                });
         let now = Instant::now();
-        let rates = self
-            .previous
-            .and_then(|(old_received, old_transmitted, old_at)| {
-                let elapsed = now.duration_since(old_at).as_secs_f64();
-                (elapsed > 0.0).then(|| {
-                    (
-                        received.saturating_sub(old_received) as f64 / elapsed,
-                        transmitted.saturating_sub(old_transmitted) as f64 / elapsed,
-                    )
-                })
-            });
-        self.previous = Some((received, transmitted, now));
-        rates.map_or((None, None), |(received, transmitted)| {
-            (Some(received), Some(transmitted))
-        })
+        let elapsed = self
+            .previous_at
+            .map(|previous_at| now.duration_since(previous_at).as_secs_f64())
+            .filter(|elapsed| *elapsed > 0.0);
+        let mut received_delta = 0u64;
+        let mut transmitted_delta = 0u64;
+        let mut valid_interfaces = 0usize;
+        let mut current = HashMap::with_capacity(self.networks.len());
+
+        for (name, network) in &self.networks {
+            let totals = (network.total_received(), network.total_transmitted());
+            if let Some((old_received, old_transmitted)) = self.previous.get(name)
+                && totals.0 >= *old_received
+                && totals.1 >= *old_transmitted
+            {
+                received_delta = received_delta.saturating_add(totals.0 - old_received);
+                transmitted_delta = transmitted_delta.saturating_add(totals.1 - old_transmitted);
+                valid_interfaces += 1;
+            }
+            current.insert(name.clone(), totals);
+        }
+
+        self.previous = current;
+        self.previous_at = Some(now);
+
+        match (elapsed, valid_interfaces > 0) {
+            (Some(elapsed), true) => (
+                Some(received_delta as f64 / elapsed),
+                Some(transmitted_delta as f64 / elapsed),
+            ),
+            _ => (None, None),
+        }
     }
 }
 

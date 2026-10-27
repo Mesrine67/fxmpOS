@@ -2,7 +2,7 @@
 
 Chaque version publiée possède sa propre section. Le workflow de release réutilise ces notes dans la release GitHub et dans le manifeste de l’updater Tauri.
 
-## En préparation
+## [0.0.21] - 2026-10-27
 
 ### Améliorations
 
