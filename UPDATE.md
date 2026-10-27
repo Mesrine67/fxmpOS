@@ -33,13 +33,13 @@ Les versions de `package.json`, `src-tauri/tauri.conf.json` et `src-tauri/Cargo.
 
 1. Incrémenter ces versions avec SemVer et mettre à jour `Cargo.lock` avec `cargo check` si nécessaire.
 2. Committer les changements, pousser une branche, ouvrir une PR et la fusionner dans `main` après les vérifications CI et CodeQL.
-3. Vérifier que le tag et la release GitHub correspondants n'existent pas. Depuis le commit fusionné sur `main`, créer puis pousser une seule fois le tag exact, par exemple `v0.0.2`:
+3. Vérifier que le tag et la release GitHub correspondants n'existent pas. Depuis le commit fusionné sur `main`, créer puis pousser une seule fois le tag exact correspondant à la version, par exemple `vX.Y.Z` (remplacer cet exemple par la valeur réelle validée):
 
    ```powershell
    git switch main
    git pull --ff-only origin main
-   git tag v0.0.2
-   git push origin v0.0.2
+   git tag vX.Y.Z
+   git push origin vX.Y.Z
    ```
 
 4. Le push du tag lance le build Windows NSIS/MSI. Le workflow crée une release brouillon, signe les bundles avec Minisign, convertit les URLs du manifeste en URLs `/releases/download/`, vérifie le manifeste et les signatures, puis ajoute `SHA256SUMS.txt`.

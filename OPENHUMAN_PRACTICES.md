@@ -6,7 +6,7 @@ Le moniteur de ressources ajoute `get_resource_sample` uniquement à la capacit�
 
 Les notifications de l'application utilisent Sonner au premier plan et `tauri-plugin-notification` pour les alertes Windows en arrière-plan. Seule la capacité `main` a les trois permissions minimales du plugin; l'overlay n'en reçoit aucune. La demande d'autorisation Windows suit un clic explicite dans Paramètres et les préférences sont partagées via `fxmp-settings.json`. Ne pas placer d'informations PC, de processus, de ports ou d'identifiants dans les notifications.
 
-Revue ciblée effectuée le 18 octobre 2026 à partir du README, de `AGENTS.md`, de `SECURITY.md`, de `CONTRIBUTING.md` et de la documentation sécurité d'OpenHuman. Ce n'est pas un audit ligne par ligne du dépôt. OpenHuman est un assistant et un harnais d'agents extensible avec un cœur Rust; FXMP OS est une application Tauri locale de monitoring et de contrôle du PC. Les mécaniques propres aux agents ne sont donc pas reprises.
+Revue ciblée d'OpenHuman effectuée le 18 octobre 2026 à partir du README, de `AGENTS.md`, de `SECURITY.md`, de `CONTRIBUTING.md` et de sa documentation sécurité; ce n'est pas un audit ligne par ligne du dépôt. L'état FXMP OS de ce document a été réaligné le 27 octobre 2026 sur la version 0.0.31. OpenHuman est un assistant et un harnais d'agents extensible avec un cœur Rust; FXMP OS est une application Tauri locale de monitoring et de contrôle du PC. Les mécaniques propres aux agents ne sont donc pas reprises.
 
 ## Pratiques pertinentes
 
