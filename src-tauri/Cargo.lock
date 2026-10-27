@@ -1239,7 +1239,7 @@ dependencies = [
 
 [[package]]
 name = "fxmp-os"
-version = "0.0.18"
+version = "0.0.19"
 dependencies = [
  "gdk",
  "log",
