@@ -36,6 +36,7 @@ const DEFAULT_SNAPSHOT = JSON.stringify(DEFAULT_NOTIFICATION_PREFERENCES)
 let snapshot = DEFAULT_SNAPSHOT
 let ready = false
 let initialization: Promise<NotificationPreferences> | undefined
+let writeQueue: Promise<void> = Promise.resolve()
 
 const positions: NotificationPosition[] = [
   "top-left",
@@ -129,26 +130,32 @@ export async function readNotificationPreferences() {
 export async function writeNotificationPreferences(
   update: Partial<NotificationPreferences>
 ) {
-  const current = await readNotificationPreferences()
-  const next = normalizeNotificationPreferences({ ...current, ...update })
-  if (!isTauri()) {
-    publish(next)
-    return
-  }
+  const operation = writeQueue.then(async () => {
+    // Read/merge/save as one queued operation so quick changes to separate
+    // controls cannot overwrite each other with stale preference snapshots.
+    const current = await readNotificationPreferences()
+    const next = normalizeNotificationPreferences({ ...current, ...update })
+    if (!isTauri()) {
+      publish(next)
+      return
+    }
 
-  const previous = await preferencesStore.get<unknown>(STORE_KEY)
-  await preferencesStore.set(STORE_KEY, next)
-  try {
-    await preferencesStore.save()
-  } catch (error) {
-    await preferencesStore.set(
-      STORE_KEY,
-      previous ?? DEFAULT_NOTIFICATION_PREFERENCES
-    )
-    await preferencesStore.save().catch(() => undefined)
-    throw error
-  }
-  publish(next)
+    const previous = await preferencesStore.get<unknown>(STORE_KEY)
+    await preferencesStore.set(STORE_KEY, next)
+    try {
+      await preferencesStore.save()
+    } catch (error) {
+      await preferencesStore.set(
+        STORE_KEY,
+        previous ?? DEFAULT_NOTIFICATION_PREFERENCES
+      )
+      await preferencesStore.save().catch(() => undefined)
+      throw error
+    }
+    publish(next)
+  })
+  writeQueue = operation.catch(() => undefined)
+  return operation
 }
 
 function subscribe(callback: () => void) {
