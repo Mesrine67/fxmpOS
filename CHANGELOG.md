@@ -2,6 +2,19 @@
 
 Chaque version publiée possède sa propre section. Le workflow de release réutilise ces notes dans la release GitHub et dans le manifeste de l’updater Tauri.
 
+## [0.0.20] - 2026-10-27
+
+### Maintenance
+
+- Regroupe les mises à jour de maintenance destinées à la version précédente, dont Next.js 16.4.3, Lucide 1.61.0, shadcn 4.22.1, Tauri 2.12.5 et tauri-build 2.7.4.
+- Corrige l'autorisation GitHub Actions du SHA de `Swatinem/rust-cache` pour que la publication Windows puisse démarrer sous la politique d'actions autorisées du dépôt.
+- Les builds frontend, Windows, MSRV Rust et CodeQL ont passé leurs contrôles sur les PR correspondantes.
+
+### Compatibilité
+
+- Windows x64, installateurs NSIS et MSI. WebView2 est requis.
+- macOS, Linux, Android et iOS ne sont pas distribués pour cette version.
+
 ## [0.0.19] - 2026-10-27
 
 ### Maintenance
