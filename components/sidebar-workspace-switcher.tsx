@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useSyncExternalStore } from "react"
+import { useEffect, useRef, useSyncExternalStore } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import {
   ChevronDownIcon,
@@ -69,6 +69,8 @@ const workspaces: {
 export function SidebarWorkspaceSwitcher() {
   const router = useRouter()
   const pathname = usePathname()
+  const pathnameRef = useRef(pathname)
+  const didRestoreOnMount = useRef(false)
   const { isMobile } = useSidebar()
   const selected = useSyncExternalStore(
     subscribeToSidebarWorkspace,
@@ -80,16 +82,38 @@ export function SidebarWorkspaceSwitcher() {
   const CurrentIcon = current.icon
 
   useEffect(() => {
+    pathnameRef.current = pathname
+  }, [pathname])
+
+  useEffect(() => {
+    if (didRestoreOnMount.current) return
+    didRestoreOnMount.current = true
+    if (pathname !== "/") return
+
+    let cancelled = false
     void initializeSidebarWorkspace()
       .then((storedWorkspace) => {
-        if (pathname !== "/" || storedWorkspace === "os") return
+        if (
+          cancelled ||
+          pathnameRef.current !== "/" ||
+          storedWorkspace === "os"
+        ) {
+          return
+        }
         router.replace(
           workspaces.find((item) => item.id === storedWorkspace)!.href
         )
       })
       .catch(() => {
-        toast.error("Impossible de charger l’espace de navigation enregistré.")
+        if (!cancelled) {
+          toast.error(
+            "Impossible de charger l’espace de navigation enregistré."
+          )
+        }
       })
+    return () => {
+      cancelled = true
+    }
   }, [pathname, router])
 
   async function selectWorkspace(value: string) {
