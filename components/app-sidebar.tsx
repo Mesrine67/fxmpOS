@@ -6,6 +6,7 @@ import {
   AppWindowIcon,
   ActivityIcon,
   CommandIcon,
+  Gamepad2Icon,
   Layers3Icon,
   MonitorIcon,
   Settings2Icon,
@@ -28,6 +29,16 @@ const navigation = [
   { title: "Vue d’ensemble", url: "/", icon: <CommandIcon /> },
   { title: "Ressources", url: "/monitor/", icon: <ActivityIcon /> },
   { title: "Applications", url: "/apps/", icon: <AppWindowIcon /> },
+  {
+    title: "Games",
+    url: "/games/",
+    icon: <Gamepad2Icon />,
+    items: [
+      { title: "localhost", url: "/games/localhost/" },
+      { title: "app games list", url: "/games/apps/" },
+      { title: "settings", url: "/games/settings/" },
+    ],
+  },
   { title: "Appareil", url: "/account/", icon: <MonitorIcon /> },
   { title: "Paramètres", url: "/settings/", icon: <Settings2Icon /> },
 ]
