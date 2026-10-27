@@ -9,6 +9,7 @@ import {
   writeThemePreferences,
   type ThemeMode,
 } from "@/lib/theme-preferences"
+import { getThemeCssVariables } from "@/lib/theme-palettes"
 
 type ThemeContextValue = {
   theme: ThemeMode
@@ -35,6 +36,9 @@ function applyTheme(mode: ThemeMode, preferences: ReturnType<typeof useThemePref
   root.dataset.fxmpFont = preferences.font
   root.dataset.fxmpHeading = preferences.heading
   root.style.setProperty("--radius", `${preferences.radius}rem`)
+  for (const [name, value] of Object.entries(getThemeCssVariables(preferences))) {
+    root.style.setProperty(name, value)
+  }
   return resolved
 }
 

@@ -5,9 +5,9 @@ import { LazyStore } from "@tauri-apps/plugin-store"
 import { useEffect, useMemo, useSyncExternalStore } from "react"
 
 export type ThemeMode = "system" | "light" | "dark"
-export type ThemeStyle = "mira" | "nova"
-export type ThemeBase = "neutral" | "zinc" | "slate" | "stone"
-export type ThemeAccent = "red" | "blue" | "green" | "violet" | "amber"
+export type ThemeStyle = "vega" | "nova" | "maia" | "lyra" | "mira" | "luma" | "sera" | "rhea"
+export type ThemeBase = "neutral" | "stone" | "zinc" | "mauve" | "olive" | "mist" | "taupe" | "slate"
+export type ThemeAccent = "neutral" | "amber" | "blue" | "cyan" | "emerald" | "fuchsia" | "green" | "indigo" | "lime" | "orange" | "pink" | "purple" | "red" | "rose" | "sky" | "teal" | "violet" | "yellow"
 export type ThemeFont = "geist-mono" | "geist" | "system" | "inter"
 export type ThemePreferences = {
   mode: ThemeMode
@@ -42,9 +42,9 @@ let initialization: Promise<ThemePreferences> | undefined
 let queue: Promise<void> = Promise.resolve()
 
 const modes: ThemeMode[] = ["system", "light", "dark"]
-const styles: ThemeStyle[] = ["mira", "nova"]
-const bases: ThemeBase[] = ["neutral", "zinc", "slate", "stone"]
-const accents: ThemeAccent[] = ["red", "blue", "green", "violet", "amber"]
+const styles: ThemeStyle[] = ["vega", "nova", "maia", "lyra", "mira", "luma", "sera", "rhea"]
+const bases: ThemeBase[] = ["neutral", "stone", "zinc", "mauve", "olive", "mist", "taupe", "slate"]
+const accents: ThemeAccent[] = ["neutral", "amber", "blue", "cyan", "emerald", "fuchsia", "green", "indigo", "lime", "orange", "pink", "purple", "red", "rose", "sky", "teal", "violet", "yellow"]
 const fonts: ThemeFont[] = ["geist-mono", "geist", "system", "inter"]
 
 export function normalizeThemePreferences(value: unknown): ThemePreferences {

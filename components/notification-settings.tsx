@@ -34,6 +34,39 @@ import {
 import { Switch } from "@/components/ui/switch"
 
 type PermissionState = "loading" | "granted" | "prompt" | "denied" | "unavailable"
+type NotificationTestKind = "success" | "info" | "warning" | "error"
+
+const notificationTests: {
+  kind: NotificationTestKind
+  label: string
+  title: string
+  body: string
+}[] = [
+  {
+    kind: "success",
+    label: "Succès",
+    title: "FXMP OS · Opération réussie",
+    body: "Exemple de notification de confirmation.",
+  },
+  {
+    kind: "info",
+    label: "Information",
+    title: "FXMP OS · Information",
+    body: "Exemple de notification informative.",
+  },
+  {
+    kind: "warning",
+    label: "Attention",
+    title: "FXMP OS · Attention",
+    body: "Exemple de notification de vigilance.",
+  },
+  {
+    kind: "error",
+    label: "Erreur",
+    title: "FXMP OS · Erreur",
+    body: "Exemple de notification signalant une erreur.",
+  },
+]
 
 function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : String(error)
@@ -94,7 +127,7 @@ export function NotificationSettings() {
     }
   }
 
-  async function testNativeNotification() {
+  async function testNativeNotification(test: (typeof notificationTests)[number]) {
     if (pending || desktopRuntime !== true || !preferences.nativeEnabled) return
     setPending(true)
     setError(null)
@@ -110,8 +143,11 @@ export function NotificationSettings() {
         return
       }
       await sendNotification({
-        title: "FXMP OS · Notification de test",
-        body: "Les notifications Windows sont activées et fonctionnent.",
+        title: test.title,
+        body: test.body,
+      })
+      toast.success("Notification Windows envoyée", {
+        description: `Exemple « ${test.label} » transmis au plugin Tauri.`,
       })
     } catch (reason) {
       setError(errorMessage(reason))
@@ -278,9 +314,9 @@ export function NotificationSettings() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Aperçu et tests</CardTitle>
+          <CardTitle>Aperçu des notifications dans FXMP OS</CardTitle>
           <CardDescription>
-            Vérifie les quatre niveaux de toast et envoie une notification Windows de test.
+            Ces aperçus Sonner s’affichent dans l’interface quand FXMP OS est ouvert.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
@@ -298,19 +334,6 @@ export function NotificationSettings() {
               <XIcon data-icon="inline-start" /> Erreur
             </Button>
           </div>
-          <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4">
-            <p className="text-xs text-muted-foreground">
-              Le test système utilise uniquement le titre et le texte de démonstration ci-dessus.
-            </p>
-            <Button
-              disabled={desktopRuntime !== true || !preferences.nativeEnabled || pending}
-              onClick={() => void testNativeNotification()}
-              size="sm"
-            >
-              <BellIcon data-icon="inline-start" />
-              {pending ? "Envoi…" : "Tester la notification Windows"}
-            </Button>
-          </div>
           {error ? (
             <p aria-live="polite" className="text-sm text-destructive" role="alert">
               {error}
@@ -321,6 +344,49 @@ export function NotificationSettings() {
               Les aperçus visuels restent disponibles même si les notifications de l’application sont désactivées.
             </p>
           ) : null}
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <BellIcon aria-hidden="true" className="size-4 text-primary" />
+            Tests du plugin de notifications Tauri
+          </CardTitle>
+          <CardDescription>
+            Envoie un exemple natif au centre de notifications Windows. Les boutons changent le contenu;
+            Windows choisit lui-même l’apparence et le niveau d’interruption.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <div className="flex flex-wrap gap-2">
+            {notificationTests.map((test) => {
+              const Icon =
+                test.kind === "success"
+                  ? CheckIcon
+                  : test.kind === "info"
+                    ? InfoIcon
+                    : test.kind === "warning"
+                      ? TriangleAlertIcon
+                      : XIcon
+              return (
+                <Button
+                  key={test.kind}
+                  disabled={desktopRuntime !== true || !preferences.nativeEnabled || pending}
+                  onClick={() => void testNativeNotification(test)}
+                  size="sm"
+                  variant="outline"
+                >
+                  <Icon data-icon="inline-start" />
+                  {pending ? "Envoi…" : test.label}
+                </Button>
+              )
+            })}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Sous Windows, les notifications du plugin Tauri sont prises en charge pour l’application installée.
+            En mode développement, Windows peut leur attribuer l’identité PowerShell. Si un envoi échoue,
+            le message d’erreur s’affiche ici.
+          </p>
         </CardContent>
       </Card>
       <p className="text-xs text-muted-foreground">

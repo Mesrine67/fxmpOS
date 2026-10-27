@@ -1,5 +1,41 @@
 # Journal des modifications
 
+## [0.0.34] - 2026-10-27
+
+### Améliorations
+
+- Le panneau Thème utilise des classes Tailwind complètes pour les cinq couleurs de l’aperçu graphique; la palette choisie reste visible après compilation.
+- Les réglages Notifications séparent maintenant les aperçus Sonner dans FXMP OS des essais de notifications natives envoyées par le plugin Tauri.
+- Les essais natifs proposent des exemples Succès, Information, Attention et Erreur avec des titres et textes distincts; chaque échec affiche son message dans les réglages.
+- Les réglages précisent que Windows contrôle l’apparence native et que le plugin Tauri nécessite une application installée pour utiliser son identité FXMP OS.
+
+### Sécurité et confidentialité
+
+- Aucun nouveau droit Tauri ni donnée système n’est ajouté; les notifications de test utilisent uniquement des textes fixes de démonstration.
+
+### Compatibilité
+
+- Windows x64, installateurs NSIS et MSI. WebView2 est requis.
+- macOS, Linux, Android et iOS ne sont pas distribués pour cette version.
+
+## [0.0.33] - 2026-10-27
+
+### Améliorations
+
+- Les réglages Thème proposent les huit styles Vega, Nova, Maia, Lyra, Mira, Luma, Sera et Rhea ainsi que les bases Neutral, Stone, Zinc, Mauve, Olive, Mist et Taupe.
+- Les palettes de thème et de graphiques reprennent les choix de shadcn Create, dont Neutral, Amber, Blue, Cyan, Emerald, Fuchsia, Green, Indigo, Lime, Orange, Pink, Purple, Red, Rose, Sky, Teal, Violet et Yellow.
+- Les styles, surfaces de base, accents, graphiques et polices agissent sur les composants shadcn et l’aperçu en direct; les préférences restent synchronisées dans le store Tauri.
+- Inter est intégré au bundle de l’application au lieu de dépendre de sa présence sur le PC.
+
+### Sécurité et confidentialité
+
+- Les préférences visuelles restent locales dans `themePreferences`; aucun nouveau droit Tauri ni stockage WebView n’est ajouté.
+
+### Compatibilité
+
+- Windows x64, installateurs NSIS et MSI. WebView2 est requis.
+- macOS, Linux, Android et iOS ne sont pas distribués pour cette version.
+
 ## [0.0.32] - 2026-10-27
 
 ### Améliorations

@@ -1,4 +1,4 @@
-import { Geist, Geist_Mono } from "next/font/google"
+import { Geist, Geist_Mono, Inter } from "next/font/google"
 
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
@@ -16,6 +16,7 @@ const fontSans = Geist({
 })
 
 const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-mono" })
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
 
 export default function RootLayout({
   children,
@@ -31,7 +32,8 @@ export default function RootLayout({
         "antialiased",
         "dark",
         fontSans.variable,
-        geistMono.variable
+        geistMono.variable,
+        inter.variable
       )}
     >
       <body>
