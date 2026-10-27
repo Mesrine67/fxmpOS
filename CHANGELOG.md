@@ -2,6 +2,13 @@
 
 Chaque version publiée possède sa propre section. Le workflow de release réutilise ces notes dans la release GitHub et dans le manifeste de l’updater Tauri.
 
+## [0.0.23] - 2026-10-27
+
+### Corrections
+
+- La page Ressources n’essaie plus de construire les graphiques temporels avant le premier échantillon local.
+- Les axes et infobulles ignorent les dates absentes ou invalides, afin qu’une mesure transitoire ne fasse plus échouer tout l’affichage.
+
 ## [0.0.22] - 2026-10-27
 
 ### Améliorations
