@@ -47,8 +47,8 @@ export default function RootLayout({
                 ) : null}
                 <OverlayBootstrap />
                 {children}
-                <Toaster />
               </div>
+              <Toaster />
             </TooltipProvider>
           </UpdaterProvider>
         </ThemeProvider>

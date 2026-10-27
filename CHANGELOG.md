@@ -1,5 +1,11 @@
 # Journal des modifications
 
+## [0.0.35] - 2026-10-27
+
+### Améliorations
+
+- Les notifications Sonner de FXMP OS restent visibles au-dessus du contenu de la fenêtre; leur conteneur n’est plus rogné par la zone principale de l’application.
+
 ## [0.0.34] - 2026-10-27
 
 ### Améliorations
