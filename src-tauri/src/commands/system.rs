@@ -3,14 +3,16 @@ use serde::Deserialize;
 use serde::Serialize;
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
+use std::time::Instant;
 use sysinfo::{
-    CpuRefreshKind, Disks, MemoryRefreshKind, Motherboard, ProcessRefreshKind, ProcessesToUpdate,
-    Product, RefreshKind, System,
+    CpuRefreshKind, Disks, MemoryRefreshKind, Motherboard, Networks, ProcessRefreshKind,
+    ProcessesToUpdate, Product, RefreshKind, System,
 };
 
 #[derive(Clone)]
 pub struct ResourceMonitor {
     system: Arc<Mutex<System>>,
+    network: Arc<Mutex<NetworkRateSampler>>,
 }
 
 impl ResourceMonitor {
@@ -21,7 +23,51 @@ impl ResourceMonitor {
                     .with_cpu(CpuRefreshKind::everything())
                     .with_memory(MemoryRefreshKind::everything()),
             ))),
+            network: Arc::new(Mutex::new(NetworkRateSampler::new())),
         }
+    }
+}
+
+struct NetworkRateSampler {
+    networks: Networks,
+    previous: Option<(u64, u64, Instant)>,
+}
+
+impl NetworkRateSampler {
+    fn new() -> Self {
+        Self {
+            networks: Networks::new(),
+            previous: None,
+        }
+    }
+
+    fn refresh(&mut self) -> (Option<f64>, Option<f64>) {
+        self.networks.refresh(true);
+        let (received, transmitted) =
+            self.networks
+                .values()
+                .fold((0u64, 0u64), |(received, transmitted), network| {
+                    (
+                        received.saturating_add(network.total_received()),
+                        transmitted.saturating_add(network.total_transmitted()),
+                    )
+                });
+        let now = Instant::now();
+        let rates = self
+            .previous
+            .and_then(|(old_received, old_transmitted, old_at)| {
+                let elapsed = now.duration_since(old_at).as_secs_f64();
+                (elapsed > 0.0).then(|| {
+                    (
+                        received.saturating_sub(old_received) as f64 / elapsed,
+                        transmitted.saturating_sub(old_transmitted) as f64 / elapsed,
+                    )
+                })
+            });
+        self.previous = Some((received, transmitted, now));
+        rates.map_or((None, None), |(received, transmitted)| {
+            (Some(received), Some(transmitted))
+        })
     }
 }
 
@@ -40,8 +86,12 @@ pub struct ResourceSample {
     hostname: String,
     sampled_at_ms: u64,
     cpu_percent: f32,
+    cpu_cores: Vec<f32>,
     memory_total_bytes: u64,
     memory_used_bytes: u64,
+    uptime_seconds: u64,
+    network_received_bytes_per_sec: Option<f64>,
+    network_transmitted_bytes_per_sec: Option<f64>,
     gpu_adapters: Option<Vec<GpuResourceSample>>,
     processes: Vec<ResourceProcess>,
     process_count: usize,
@@ -354,6 +404,7 @@ pub async fn get_resource_sample(
     monitor: tauri::State<'_, ResourceMonitor>,
 ) -> Result<ResourceSample, String> {
     let system = Arc::clone(&monitor.system);
+    let network = Arc::clone(&monitor.network);
     tauri::async_runtime::spawn_blocking(move || {
         let mut system = system
             .lock()
@@ -365,6 +416,15 @@ pub async fn get_resource_sample(
             true,
             ProcessRefreshKind::nothing().with_cpu().with_memory(),
         );
+        let cpu_cores = system
+            .cpus()
+            .iter()
+            .map(|cpu| cpu.cpu_usage().clamp(0.0, 100.0))
+            .collect();
+        let (network_received_bytes_per_sec, network_transmitted_bytes_per_sec) = network
+            .lock()
+            .map(|mut sampler| sampler.refresh())
+            .unwrap_or((None, None));
 
         let process_count = system.processes().len();
         let mut processes = system
@@ -407,8 +467,12 @@ pub async fn get_resource_sample(
                 .unwrap_or_default()
                 .as_millis() as u64,
             cpu_percent: system.global_cpu_usage().clamp(0.0, 100.0),
+            cpu_cores,
             memory_total_bytes: system.total_memory(),
             memory_used_bytes: system.used_memory(),
+            uptime_seconds: System::uptime(),
+            network_received_bytes_per_sec,
+            network_transmitted_bytes_per_sec,
             gpu_adapters: read_gpu_resource_sample(),
             processes: top_processes,
             process_count,

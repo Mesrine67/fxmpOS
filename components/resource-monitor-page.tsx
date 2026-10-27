@@ -3,6 +3,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   ActivityIcon,
+  ArrowDownToLineIcon,
+  ArrowUpFromLineIcon,
+  Clock3Icon,
   CpuIcon,
   GaugeIcon,
   MemoryStickIcon,
@@ -61,8 +64,12 @@ type ResourceSample = {
   hostname: string
   sampledAtMs: number
   cpuPercent: number
+  cpuCores: number[]
   memoryTotalBytes: number
   memoryUsedBytes: number
+  uptimeSeconds: number
+  networkReceivedBytesPerSec: number | null
+  networkTransmittedBytesPerSec: number | null
   gpuAdapters: { adapterIndex: number; utilizationPercent: number }[] | null
   processes: ResourceProcess[]
   processCount: number
@@ -115,6 +122,27 @@ const numberFormat = new Intl.NumberFormat("fr-FR", {
 function formatBytes(bytes: number) {
   if (bytes >= 1024 ** 3) return `${numberFormat.format(bytes / 1024 ** 3)} Go`
   return `${numberFormat.format(bytes / 1024 ** 2)} Mo`
+}
+
+function formatRate(bytesPerSecond: number | null | undefined) {
+  if (bytesPerSecond == null || !Number.isFinite(bytesPerSecond)) return "—"
+  const units = ["o/s", "Ko/s", "Mo/s", "Go/s"]
+  let value = Math.max(0, bytesPerSecond)
+  let unitIndex = 0
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024
+    unitIndex += 1
+  }
+  return `${numberFormat.format(value)} ${units[unitIndex]}`
+}
+
+function formatUptime(totalSeconds: number) {
+  const days = Math.floor(totalSeconds / 86_400)
+  const hours = Math.floor((totalSeconds % 86_400) / 3_600)
+  const minutes = Math.floor((totalSeconds % 3_600) / 60)
+  if (days > 0) return `${days} j ${hours} h ${minutes} min`
+  if (hours > 0) return `${hours} h ${minutes} min`
+  return `${minutes} min`
 }
 
 function percent(used: number, total: number) {
@@ -222,6 +250,8 @@ function ResourceMonitorContent() {
   const [sortBy, setSortBy] = useState<"memoryBytes" | "cpuPercent" | "name">(
     "memoryBytes"
   )
+  const [processPage, setProcessPage] = useState(0)
+  const [processPageSize, setProcessPageSize] = useState(15)
   const [endpointFilter, setEndpointFilter] = useState<
     "all" | "listening" | "tcp" | "udp"
   >("all")
@@ -421,6 +451,22 @@ function ResourceMonitorContent() {
         return right[sortBy] - left[sortBy]
       })
   }, [query, sample?.processes, sortBy])
+  const processPageCount = Math.max(
+    1,
+    Math.ceil(processes.length / processPageSize)
+  )
+  const visibleProcessPage = Math.min(processPage, processPageCount - 1)
+  const visibleProcesses = processes.slice(
+    visibleProcessPage * processPageSize,
+    (visibleProcessPage + 1) * processPageSize
+  )
+  const firstVisibleProcess = processes.length
+    ? visibleProcessPage * processPageSize + 1
+    : 0
+  const lastVisibleProcess = Math.min(
+    processes.length,
+    (visibleProcessPage + 1) * processPageSize
+  )
 
   const memoryPercent = sample
     ? percent(sample.memoryUsedBytes, sample.memoryTotalBytes)
@@ -546,7 +592,7 @@ function ResourceMonitorContent() {
 
           <section
             aria-label="Mesures actuelles"
-            className="grid gap-4 lg:grid-cols-3"
+            className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-4"
           >
             <Card>
               <CardHeader className="grid-cols-[1fr_auto]">
@@ -650,7 +696,86 @@ function ResourceMonitorContent() {
                 </p>
               </CardContent>
             </Card>
+            <Card>
+              <CardHeader>
+                <CardDescription className="flex items-center gap-2">
+                  <Clock3Icon aria-hidden="true" className="size-4" /> Système
+                </CardDescription>
+                <CardTitle className="text-2xl tabular-nums">
+                  {sample ? formatUptime(sample.uptimeSeconds) : "—"}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="grid grid-cols-2 gap-4">
+                <div className="min-w-0">
+                  <p className="mb-1 flex items-center gap-1 text-xs text-muted-foreground">
+                    <ArrowDownToLineIcon
+                      aria-hidden="true"
+                      className="size-3.5"
+                    />
+                    Réception
+                  </p>
+                  <p className="truncate font-medium tabular-nums">
+                    {formatRate(sample?.networkReceivedBytesPerSec)}
+                  </p>
+                </div>
+                <div className="min-w-0">
+                  <p className="mb-1 flex items-center gap-1 text-xs text-muted-foreground">
+                    <ArrowUpFromLineIcon
+                      aria-hidden="true"
+                      className="size-3.5"
+                    />
+                    Envoi
+                  </p>
+                  <p className="truncate font-medium tabular-nums">
+                    {formatRate(sample?.networkTransmittedBytesPerSec)}
+                  </p>
+                </div>
+                <p className="col-span-2 text-xs text-muted-foreground">
+                  Débits agrégés des interfaces réseau Windows · lecture locale.
+                </p>
+              </CardContent>
+            </Card>
           </section>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CpuIcon aria-hidden="true" className="size-4" /> Charge par
+                cœur
+              </CardTitle>
+              <CardDescription>
+                Utilisation instantanée de chaque processeur logique · mise à
+                jour toutes les 2 s.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {sample?.cpuCores.length ? (
+                <div className="grid gap-x-6 gap-y-3 sm:grid-cols-2 xl:grid-cols-4">
+                  {sample.cpuCores.map((usage, index) => (
+                    <div
+                      className="grid grid-cols-[5rem_1fr_3.5rem] items-center gap-3"
+                      key={index}
+                    >
+                      <span className="text-sm text-muted-foreground">
+                        Logique {index + 1}
+                      </span>
+                      <Progress
+                        aria-label={`Utilisation du processeur logique ${index + 1}`}
+                        value={usage}
+                      />
+                      <span className="text-right text-sm tabular-nums">
+                        {numberFormat.format(usage)} %
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Les mesures par cœur apparaîtront après la première lecture.
+                </p>
+              )}
+            </CardContent>
+          </Card>
 
           <section
             aria-label="Période de l’historique"
@@ -727,9 +852,10 @@ function ResourceMonitorContent() {
                       <Input
                         aria-label="Rechercher un processus"
                         className="pl-8"
-                        onChange={(event) =>
+                        onChange={(event) => {
                           setQuery(event.currentTarget.value)
-                        }
+                          setProcessPage(0)
+                        }}
                         placeholder="Rechercher un processus…"
                         value={query}
                       />
@@ -740,7 +866,10 @@ function ResourceMonitorContent() {
                     className="flex flex-wrap gap-2"
                   >
                     <Button
-                      onClick={() => setSortBy("memoryBytes")}
+                      onClick={() => {
+                        setSortBy("memoryBytes")
+                        setProcessPage(0)
+                      }}
                       size="sm"
                       variant={
                         sortBy === "memoryBytes" ? "secondary" : "outline"
@@ -749,7 +878,10 @@ function ResourceMonitorContent() {
                       Mémoire
                     </Button>
                     <Button
-                      onClick={() => setSortBy("cpuPercent")}
+                      onClick={() => {
+                        setSortBy("cpuPercent")
+                        setProcessPage(0)
+                      }}
                       size="sm"
                       variant={
                         sortBy === "cpuPercent" ? "secondary" : "outline"
@@ -758,7 +890,10 @@ function ResourceMonitorContent() {
                       CPU
                     </Button>
                     <Button
-                      onClick={() => setSortBy("name")}
+                      onClick={() => {
+                        setSortBy("name")
+                        setProcessPage(0)
+                      }}
                       size="sm"
                       variant={sortBy === "name" ? "secondary" : "outline"}
                     >
@@ -777,7 +912,7 @@ function ResourceMonitorContent() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {processes.map((process) => (
+                      {visibleProcesses.map((process) => (
                         <TableRow key={`${process.pid}-${process.name}`}>
                           <TableCell
                             className="max-w-80 truncate font-medium"
@@ -812,6 +947,62 @@ function ResourceMonitorContent() {
                       )}
                     </TableBody>
                   </Table>
+                  <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t pt-4">
+                    <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                      <span>
+                        {firstVisibleProcess}–{lastVisibleProcess} sur{" "}
+                        {processes.length}
+                      </span>
+                      <span aria-hidden="true">·</span>
+                      <span>Afficher</span>
+                      {[15, 25, 50].map((pageSize) => (
+                        <Button
+                          aria-pressed={processPageSize === pageSize}
+                          key={pageSize}
+                          onClick={() => {
+                            setProcessPageSize(pageSize)
+                            setProcessPage(0)
+                          }}
+                          size="xs"
+                          variant={
+                            processPageSize === pageSize ? "secondary" : "ghost"
+                          }
+                        >
+                          {pageSize}
+                        </Button>
+                      ))}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        disabled={visibleProcessPage === 0}
+                        onClick={() =>
+                          setProcessPage((page) => Math.max(0, page - 1))
+                        }
+                        size="sm"
+                        variant="outline"
+                      >
+                        Précédent
+                      </Button>
+                      <span
+                        aria-live="polite"
+                        className="min-w-20 text-center text-sm text-muted-foreground"
+                      >
+                        Page {visibleProcessPage + 1} / {processPageCount}
+                      </span>
+                      <Button
+                        disabled={visibleProcessPage >= processPageCount - 1}
+                        onClick={() =>
+                          setProcessPage((page) =>
+                            Math.min(processPageCount - 1, page + 1)
+                          )
+                        }
+                        size="sm"
+                        variant="outline"
+                      >
+                        Suivant
+                      </Button>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>
