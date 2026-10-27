@@ -3,7 +3,8 @@ import { readFile, writeFile } from "node:fs/promises"
 const versionPattern =
   /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?$/
 const bumpTypes = new Set(["major", "minor", "patch", "prerelease"])
-const target = process.argv[2]?.trim()
+const args = process.argv.slice(2)
+const target = (args[0] === "--" ? args[1] : args[0])?.trim()
 
 if (!target) {
   console.error(
