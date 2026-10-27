@@ -1,6 +1,6 @@
 # Revue des plugins Tauri pour FXMP OS
 
-Revue effectuée le 18 octobre 2026 à partir du [catalogue officiel Tauri](https://v2.tauri.app/plugin/), de sa table de compatibilité et de `src-tauri/Cargo.toml`. Le catalogue distingue les fonctionnalités officielles des ressources communautaires, qui n'ont pas toutes le même niveau de maintenance ni les mêmes plateformes cibles.
+Revue mise à jour le 27 octobre 2026 à partir du [catalogue officiel Tauri](https://v2.tauri.app/plugin/), de sa table de compatibilité, de `src-tauri/Cargo.toml`, `src-tauri/src/lib.rs` et des capacités Tauri. Elle distingue les plugins effectivement installés et initialisés des API intégrées et des candidats communautaires. La distribution de FXMP OS vise Windows x64; la présence d'une dépendance multiplateforme ne signifie pas que ces plateformes sont publiées.
 
 ## Plugins déjà utilisés
 
@@ -8,13 +8,15 @@ Revue effectuée le 18 octobre 2026 à partir du [catalogue officiel Tauri](http
 | --- | --- |
 | `autostart` | Démarrage Windows facultatif, désactivé par défaut. |
 | `log` | Journaux Rust/WebView. |
+| `notification` | Notifications natives Windows en arrière-plan, après activation et autorisation explicites. |
 | `opener` | Ouverture contrôlée de liens externes. |
 | `os` | Quelques informations OS dans la commande native système. |
 | `process` | Relance après l'installation d'une mise à jour. |
 | `single-instance` | Empêche plusieurs instances de l'application. |
 | `updater` | Vérification et installation des mises à jour signées. |
+| `store` | Préférences locales partagées (overlay, thème, notifications) et historique limité des moyennes de ressources. |
 
-Le tray est fourni par l'API Tauri (`tray-icon`), ce n'est pas un plugin ajouté par ce changement.
+`autostart`, `single-instance`, `notification`, `store` et les autres plugins listés sont déclarés dans Cargo et initialisés dans `src-tauri/src/lib.rs`. `autostart` et `single-instance` sont limités aux cibles desktop dans Cargo. Le tray est fourni par l'API Tauri (`tray-icon`), pas par un plugin séparé.
 
 ## Catalogue officiel examiné
 
@@ -37,7 +39,7 @@ Ces plugins officiels sont listés sur la page Tauri; les versions mobiles, perm
 | Localhost | Aucun serveur local en production. |
 | Logging | Déjà utilisé. |
 | NFC | Aucun usage NFC. |
-| Notifications | Pas de notification système requise actuellement. |
+| Notifications | Déjà utilisé : Sonner pour les toasts au premier plan, `tauri-plugin-notification` pour les alertes natives en arrière-plan. Permission accordée seulement à `main`; demande utilisateur explicite; désactivé par défaut. |
 | Opener | Déjà utilisé. |
 | OS Information | Déjà utilisé pour les quelques détails fournis par le plugin; le relevé PC reste dans une commande Rust dédiée. |
 | Persisted Scope | Aucun périmètre d'accès fichier accordé dynamiquement à persister. |
@@ -46,7 +48,7 @@ Ces plugins officiels sont listés sur la page Tauri; les versions mobiles, perm
 | Shell | Non retenu : FXMP OS n'a pas besoin d'exposer un shell à l'interface. |
 | Single Instance | Déjà utilisé. |
 | SQL | Aucune base de données applicative nécessaire pour les préférences actuelles. |
-| Store | Non nécessaire pour les quelques préférences locales de l'overlay; à réévaluer si elles deviennent partagées entre profils ou plus structurées. |
+| Store | Déjà utilisé pour les préférences locales partagées entre fenêtres et l'historique borné des moyennes de ressources. Les permissions restent limitées à charger, lire, écrire et sauvegarder; ce n'est pas un coffre à secrets. |
 | Stronghold | Aucun secret applicatif à stocker. |
 | Updater | Déjà utilisé. |
 | Upload | Aucun envoi de fichier requis. |
