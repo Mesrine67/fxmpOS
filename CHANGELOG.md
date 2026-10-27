@@ -2,6 +2,24 @@
 
 Chaque version publiée possède sa propre section. Le workflow de release réutilise ces notes dans la release GitHub et dans le manifeste de l’updater Tauri.
 
+## [0.0.18] - 2026-10-27
+
+### Améliorations
+
+- La page Applications propose une vue liste ou grille, un filtre par portée d’installation et un tri par nom, taille déclarée ou date.
+- La recherche couvre le nom, l’éditeur et la version; les résultats et filtres sont présentés dans une table shadcn accessible.
+- Les métadonnées manquantes et les limites des tailles déclarées sont mieux explicitées; la page reste strictement en lecture seule.
+
+### Corrections
+
+- La page Ressources dispose d’un écran de reprise avec une référence d’erreur locale si son segment plante.
+- Les lectures des endpoints réseau ne se chevauchent plus et sont suspendues pendant la pause.
+
+### Compatibilité
+
+- Windows x64, installateurs NSIS et MSI. WebView2 est requis.
+- macOS, Linux, Android et iOS ne sont pas distribués pour cette version.
+
 ## [0.0.17] - 2026-10-25
 
 ### Améliorations
