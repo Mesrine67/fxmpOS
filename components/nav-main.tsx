@@ -58,7 +58,6 @@ export function NavMain({
                   <CollapsibleTrigger
                     render={
                       <SidebarMenuButton
-                        isActive={active}
                         tooltip={item.title}
                       />
                     }
