@@ -1,5 +1,23 @@
 # Journal des modifications
 
+## [0.0.33] - 2026-10-27
+
+### Améliorations
+
+- Les réglages Thème proposent les huit styles Vega, Nova, Maia, Lyra, Mira, Luma, Sera et Rhea ainsi que les bases Neutral, Stone, Zinc, Mauve, Olive, Mist et Taupe.
+- Les palettes de thème et de graphiques reprennent les choix de shadcn Create, dont Neutral, Amber, Blue, Cyan, Emerald, Fuchsia, Green, Indigo, Lime, Orange, Pink, Purple, Red, Rose, Sky, Teal, Violet et Yellow.
+- Les styles, surfaces de base, accents, graphiques et polices agissent sur les composants shadcn et l’aperçu en direct; les préférences restent synchronisées dans le store Tauri.
+- Inter est intégré au bundle de l’application au lieu de dépendre de sa présence sur le PC.
+
+### Sécurité et confidentialité
+
+- Les préférences visuelles restent locales dans `themePreferences`; aucun nouveau droit Tauri ni stockage WebView n’est ajouté.
+
+### Compatibilité
+
+- Windows x64, installateurs NSIS et MSI. WebView2 est requis.
+- macOS, Linux, Android et iOS ne sont pas distribués pour cette version.
+
 ## [0.0.32] - 2026-10-27
 
 ### Améliorations
