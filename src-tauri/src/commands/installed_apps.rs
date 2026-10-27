@@ -155,10 +155,12 @@ fn extract_icon_data_url(path: &std::path::Path, icon_index: i32) -> Option<Stri
     use std::os::windows::ffi::OsStrExt;
     use windows_sys::Win32::Graphics::Gdi::{
         BI_RGB, BITMAPINFO, BITMAPINFOHEADER, CreateCompatibleDC, CreateDIBSection, DIB_RGB_COLORS,
-        DeleteDC, DeleteObject, HBITMAP, HGDIOBJ, SelectObject,
+        DeleteDC, DeleteObject, GetDIBits, HBITMAP, HGDIOBJ, SelectObject,
     };
     use windows_sys::Win32::UI::Shell::ExtractIconExW;
-    use windows_sys::Win32::UI::WindowsAndMessaging::{DI_NORMAL, DestroyIcon, DrawIconEx, HICON};
+    use windows_sys::Win32::UI::WindowsAndMessaging::{
+        DI_NORMAL, DestroyIcon, DrawIconEx, GetIconInfo, HICON, ICONINFO,
+    };
 
     const ICON_SIZE: i32 = 64;
     let path_string = path.to_str()?;
@@ -244,9 +246,55 @@ fn extract_icon_data_url(path: &std::path::Path, icon_index: i32) -> Option<Stri
 
     let result = if drawn != 0 {
         let bgra = unsafe { std::slice::from_raw_parts(pixels.cast::<u8>(), pixel_count) };
+        let mut icon_info = ICONINFO::default();
+        let has_icon_info = unsafe { GetIconInfo(icon, &mut icon_info) } != 0;
+        let mut mask = vec![0u8; pixel_count];
+        let has_alpha_mask = if has_icon_info && !icon_info.hbmMask.is_null() {
+            let mut mask_info = BITMAPINFO::default();
+            mask_info.bmiHeader = BITMAPINFOHEADER {
+                biSize: std::mem::size_of::<BITMAPINFOHEADER>() as u32,
+                biWidth: ICON_SIZE,
+                biHeight: -ICON_SIZE,
+                biPlanes: 1,
+                biBitCount: 32,
+                biCompression: BI_RGB,
+                ..Default::default()
+            };
+            let read_lines = unsafe {
+                GetDIBits(
+                    dc,
+                    icon_info.hbmMask,
+                    0,
+                    ICON_SIZE as u32,
+                    mask.as_mut_ptr().cast(),
+                    &mut mask_info,
+                    DIB_RGB_COLORS,
+                )
+            };
+            if !icon_info.hbmColor.is_null() {
+                unsafe { DeleteObject(icon_info.hbmColor as HGDIOBJ) };
+            }
+            unsafe { DeleteObject(icon_info.hbmMask as HGDIOBJ) };
+            read_lines == ICON_SIZE && bgra.chunks_exact(4).all(|pixel| pixel[3] == 0)
+        } else {
+            if has_icon_info {
+                if !icon_info.hbmColor.is_null() {
+                    unsafe { DeleteObject(icon_info.hbmColor as HGDIOBJ) };
+                }
+                if !icon_info.hbmMask.is_null() {
+                    unsafe { DeleteObject(icon_info.hbmMask as HGDIOBJ) };
+                }
+            }
+            false
+        };
         let mut rgba = Vec::with_capacity(pixel_count);
-        for pixel in bgra.chunks_exact(4) {
-            rgba.extend_from_slice(&[pixel[2], pixel[1], pixel[0], pixel[3]]);
+        for (index, pixel) in bgra.chunks_exact(4).enumerate() {
+            let alpha = if has_alpha_mask {
+                if mask[index * 4] == 0 { 0 } else { 255 }
+            } else {
+                pixel[3]
+            };
+            rgba.extend_from_slice(&[pixel[2], pixel[1], pixel[0], alpha]);
         }
         let mut png_bytes = Cursor::new(Vec::new());
         let encoded = (|| {
