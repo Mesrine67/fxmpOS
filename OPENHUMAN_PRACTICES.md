@@ -22,6 +22,8 @@ Revue ciblée effectuée le 18 octobre 2026 à partir du README, de `AGENTS.md`,
 
 La sonde de latence suit aussi cette frontière d'architecture : le frontend ne choisit pas la destination, la commande Rust utilise une cible TCP fixe et des tentatives bornées, et seule la fenêtre `main` peut la déclencher.
 
+Les préférences de thème sont des réglages locaux non sensibles dans `fxmp-settings.json` (clé `themePreferences`) via les permissions Store déjà limitées à charger/lire/écrire/sauvegarder. Les composants shadcn consomment les tokens CSS configurés; aucun nouvel accès Windows n'est requis. Le packaging reste celui de Tauri NSIS/WiX avec visuels aux dimensions officielles; NSIS est `currentUser` et ne demande pas d'élévation.
+
 L'historique des versions est la seule autre lecture distante de la fenêtre principale : il interroge sans authentification l'API publique GitHub pour les métadonnées et changelogs des releases. Aucune information système ou d'identité locale n'est incluse dans cette requête; l'installation reste exclusivement contrôlée par le vérificateur Tauri signé.
 
 ## Ce qui n'est pas repris

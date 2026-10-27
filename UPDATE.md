@@ -62,7 +62,13 @@ Le job de vérification confirme que les URLs de `latest.json` pointent vers les
 
 ## Installation Windows
 
-Le setup NSIS installe FXMP OS pour l'utilisateur courant dans `%LOCALAPPDATA%`, sans élévation administrateur. Il suit la langue de Windows (français ou anglais), utilise l'icône FXMP OS et crée le raccourci du Menu Démarrer. Le runtime WebView2 est vérifié; le bootstrapper est téléchargé et lancé silencieusement uniquement s'il manque. Le MSI est aussi distribué.
+Le setup NSIS installe FXMP OS pour l'utilisateur courant dans `%LOCALAPPDATA%`, sans élévation administrateur. Il suit la langue de Windows (français ou anglais), utilise l'icône FXMP OS et crée le raccourci du Menu Démarrer. Le runtime WebView2 est vérifié; le bootstrapper est téléchargé et lancé silencieusement uniquement s'il manque.
+
+Le MSI WiX généré par Tauri est actuellement en portée `perMachine` : Windows Installer peut donc demander une élévation UAC pendant l'installation, la mise à jour ou la désinstallation. Le build local a été contrôlé dans le fichier WiX généré et confirme `InstallScope="perMachine"`. La configuration Tauri v2 `WixConfig` ne fournit pas de réglage documenté pour passer en `perUser` (voir [la demande Tauri #13792](https://github.com/tauri-apps/tauri/issues/13792)). Cette élévation concerne le moteur Windows Installer et la portée du package MSI; l'application lancée ensuite fonctionne dans la session de l'utilisateur et ses capacités Tauri restent minimales. Le format NSIS est recommandé si l'installation sans droits administrateur est nécessaire.
+
+Les pages natives du setup et de la désinstallation NSIS utilisent l'en-tête `src-tauri/icons/installer-header.bmp` (150×57), l'image latérale `installer-sidebar.bmp` (164×314) et l'en-tête de désinstallation `uninstaller-header.bmp` (150×57). WiX utilise `wix-banner.bmp` (493×58) et `wix-dialog.bmp` (493×312). Ces visuels personnalisent le branding sans remplacer le flux natif Tauri. Vérifier le fichier WiX généré à chaque changement de configuration ou de version de Tauri, car la portée MSI peut évoluer.
+
+Le thème de l'application propose apparence Windows/clair/sombre, style Mira/Nova, base neutre, couleur principale, palette de graphiques, polices et arrondis. Les choix sont appliqués immédiatement aux tokens shadcn puis partagés entre fenêtres dans `fxmp-settings.json`, clé `themePreferences`. Ce réglage n'ajoute aucune permission Tauri; `main` et `overlay` utilisent les permissions Store minimales déjà listées dans les capacités.
 
 Configurez `WINDOWS_CERTIFICATE` et `WINDOWS_CERTIFICATE_PASSWORD` pour signer les installateurs Authenticode. Ne passez pas l'installation en mode `perMachine` ou `both` sans besoin d'installation système.
 

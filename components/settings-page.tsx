@@ -3,6 +3,7 @@ import {
   BellIcon,
   Layers3Icon,
   MonitorCogIcon,
+  PaletteIcon,
   ShieldCheckIcon,
   SparklesIcon,
 } from "lucide-react"
@@ -12,6 +13,7 @@ import { NetworkLatency } from "@/components/network-latency"
 import { NotificationSettings } from "@/components/notification-settings"
 import { OverlaySettings } from "@/components/overlay-settings"
 import { UpdaterSettings } from "@/components/updater-settings"
+import { ThemeSettings } from "@/components/theme-settings"
 import { Badge } from "@/components/ui/badge"
 import {
   Card,
@@ -38,7 +40,7 @@ export function SettingsPage() {
               </h1>
               <p className="max-w-2xl text-sm text-muted-foreground">
                 Configure le comportement de l’application, son overlay, ses
-                notifications et ses mises à jour.
+                notifications, son apparence et ses mises à jour.
               </p>
             </div>
           </div>
@@ -58,6 +60,10 @@ export function SettingsPage() {
             <TabsTrigger value="notifications">
               <BellIcon data-icon="inline-start" />
               Notifications
+            </TabsTrigger>
+            <TabsTrigger value="theme">
+              <PaletteIcon data-icon="inline-start" />
+              Thème
             </TabsTrigger>
             <TabsTrigger value="updates">
               <ArrowDownToLineIcon data-icon="inline-start" />
@@ -108,6 +114,10 @@ export function SettingsPage() {
 
           <TabsContent className="flex flex-col gap-4" value="notifications">
             <NotificationSettings />
+          </TabsContent>
+
+          <TabsContent className="flex flex-col gap-4" value="theme">
+            <ThemeSettings />
           </TabsContent>
 
           <TabsContent

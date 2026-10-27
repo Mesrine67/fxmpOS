@@ -26,10 +26,11 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
+      data-fxmp-mode="dark"
       className={cn(
         "antialiased",
+        "dark",
         fontSans.variable,
-        "font-mono",
         geistMono.variable
       )}
     >

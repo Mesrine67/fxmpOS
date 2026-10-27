@@ -1,12 +1,12 @@
 "use client"
 
-import { useTheme } from "next-themes"
 import { Toaster as Sonner, type ToasterProps } from "sonner"
 import { CircleCheckIcon, InfoIcon, TriangleAlertIcon, OctagonXIcon, Loader2Icon } from "lucide-react"
 import { useNotificationPreferences } from "@/lib/notification-preferences"
+import { useFxmpTheme } from "@/components/theme-provider"
 
 const Toaster = ({ ...props }: ToasterProps) => {
-  const { theme = "system" } = useTheme()
+  const { theme = "system" } = useFxmpTheme()
   const preferences = useNotificationPreferences()
 
   return (
