@@ -2,6 +2,19 @@
 
 Chaque version publiée possède sa propre section. Le workflow de release réutilise ces notes dans la release GitHub et dans le manifeste de l’updater Tauri.
 
+## [0.0.27] - 2026-10-27
+
+### Améliorations
+
+- La barre latérale accueille un menu Games dépliable avec trois sous-entrées : localhost, app games list et settings.
+- Chaque entrée dispose d’une page interne dédiée et le lien actif est mis en évidence. Le menu est ouvert par défaut et utilisable au clavier.
+- Les pages Games préparent l’espace pour les futures fonctions de serveurs locaux, bibliothèque et réglages; elles proposent pour le moment des raccourcis vers les fonctions existantes de FXMP OS.
+
+### Compatibilité
+
+- Windows x64, installateurs NSIS et MSI. WebView2 est requis.
+- macOS, Linux, Android et iOS ne sont pas distribués pour cette version.
+
 ## [0.0.26] - 2026-10-27
 
 ### Améliorations
