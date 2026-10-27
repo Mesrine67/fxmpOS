@@ -156,6 +156,17 @@ function percent(used: number, total: number) {
   return total > 0 ? Math.max(0, Math.min(100, (used / total) * 100)) : 0
 }
 
+function formatChartTime(value: unknown, options: Intl.DateTimeFormatOptions) {
+  const timestamp = typeof value === "number" ? value : Number(value)
+  if (!Number.isFinite(timestamp) || Math.abs(timestamp) > 8.64e15) return ""
+
+  try {
+    return new Intl.DateTimeFormat("fr-FR", options).format(timestamp)
+  } catch {
+    return ""
+  }
+}
+
 function ResourceChart({
   data,
   dataKey,
@@ -172,6 +183,18 @@ function ResourceChart({
   const chartConfig = {
     [dataKey]: { label, color },
   } satisfies ChartConfig
+
+  if (data.length === 0) {
+    return (
+      <div
+        className="flex h-36 items-center justify-center text-xs text-muted-foreground"
+        role="img"
+        aria-label={`Historique ${label}`}
+      >
+        L’historique apparaîtra après la première mesure.
+      </div>
+    )
+  }
 
   return (
     <div className="h-36 w-full" role="img" aria-label={`Historique ${label}`}>
@@ -197,8 +220,8 @@ function ResourceChart({
             axisLine={false}
             minTickGap={28}
             tickFormatter={(value: number) =>
-              new Intl.DateTimeFormat(
-                "fr-FR",
+              formatChartTime(
+                value,
                 range === "week"
                   ? { day: "2-digit", month: "2-digit" }
                   : {
@@ -208,7 +231,7 @@ function ResourceChart({
                         ? { second: "2-digit" as const }
                         : {}),
                     }
-              ).format(value)
+              )
             }
             className="fill-muted-foreground text-[10px]"
           />
@@ -222,9 +245,9 @@ function ResourceChart({
           <ChartTooltip
             content={
               <ChartTooltipContent
-                labelFormatter={(value) =>
-                  `À ${new Intl.DateTimeFormat(
-                    "fr-FR",
+                labelFormatter={(value) => {
+                  const time = formatChartTime(
+                    value,
                     range === "week"
                       ? {
                           day: "2-digit",
@@ -237,8 +260,9 @@ function ResourceChart({
                           minute: "2-digit",
                           second: "2-digit",
                         }
-                  ).format(Number(value))}`
-                }
+                  )
+                  return time ? `À ${time}` : ""
+                }}
                 formatter={(value) => `${numberFormat.format(Number(value))} %`}
               />
             }
@@ -916,79 +940,91 @@ function ResourceMonitorContent() {
                         )}
                       </p>
                     </div>
-                    <div
-                      className="h-24 w-full"
-                      role="img"
-                      aria-label={`Historique réseau ${label}`}
-                    >
-                      <ChartContainer
-                        className="aspect-auto h-full w-full"
-                        config={chartConfig}
+                    {networkHistory.length === 0 ? (
+                      <div
+                        className="flex h-24 items-center justify-center text-xs text-muted-foreground"
+                        role="img"
+                        aria-label={`Historique réseau ${label}`}
                       >
-                        <AreaChart
-                          data={networkHistory}
-                          margin={{ top: 6, right: 4, left: -24, bottom: 0 }}
+                        Le débit apparaîtra après la première mesure.
+                      </div>
+                    ) : (
+                      <div
+                        className="h-24 w-full"
+                        role="img"
+                        aria-label={`Historique réseau ${label}`}
+                      >
+                        <ChartContainer
+                          className="aspect-auto h-full w-full"
+                          config={chartConfig}
                         >
-                          <CartesianGrid
-                            strokeDasharray="3 3"
-                            vertical={false}
-                            className="stroke-border/50"
-                          />
-                          <XAxis
-                            dataKey="sampledAtMs"
-                            type="number"
-                            scale="time"
-                            domain={["dataMin", "dataMax"]}
-                            tickLine={false}
-                            axisLine={false}
-                            minTickGap={24}
-                            tickFormatter={(value: number) =>
-                              new Intl.DateTimeFormat("fr-FR", {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                                second: "2-digit",
-                              }).format(value)
-                            }
-                            className="fill-muted-foreground text-[10px]"
-                          />
-                          <YAxis
-                            tickLine={false}
-                            axisLine={false}
-                            tickFormatter={(value: number) => formatRate(value)}
-                            className="fill-muted-foreground text-[10px]"
-                            width={54}
-                          />
-                          <ChartTooltip
-                            content={
-                              <ChartTooltipContent
-                                labelFormatter={(value) =>
-                                  new Intl.DateTimeFormat("fr-FR", {
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                    second: "2-digit",
-                                  }).format(Number(value))
-                                }
-                                formatter={(value) =>
-                                  formatRate(
-                                    value == null ? null : Number(value)
-                                  )
-                                }
-                              />
-                            }
-                          />
-                          <Area
-                            type="monotone"
-                            dataKey={key}
-                            stroke={`var(--color-${key})`}
-                            strokeWidth={2}
-                            fill={`var(--color-${key})`}
-                            fillOpacity={0.16}
-                            isAnimationActive={false}
-                            connectNulls={false}
-                          />
-                        </AreaChart>
-                      </ChartContainer>
-                    </div>
+                          <AreaChart
+                            data={networkHistory}
+                            margin={{ top: 6, right: 4, left: -24, bottom: 0 }}
+                          >
+                            <CartesianGrid
+                              strokeDasharray="3 3"
+                              vertical={false}
+                              className="stroke-border/50"
+                            />
+                            <XAxis
+                              dataKey="sampledAtMs"
+                              type="number"
+                              scale="time"
+                              domain={["dataMin", "dataMax"]}
+                              tickLine={false}
+                              axisLine={false}
+                              minTickGap={24}
+                              tickFormatter={(value: number) =>
+                                formatChartTime(value, {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                  second: "2-digit",
+                                })
+                              }
+                              className="fill-muted-foreground text-[10px]"
+                            />
+                            <YAxis
+                              tickLine={false}
+                              axisLine={false}
+                              tickFormatter={(value: number) =>
+                                formatRate(value)
+                              }
+                              className="fill-muted-foreground text-[10px]"
+                              width={54}
+                            />
+                            <ChartTooltip
+                              content={
+                                <ChartTooltipContent
+                                  labelFormatter={(value) =>
+                                    formatChartTime(value, {
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                      second: "2-digit",
+                                    })
+                                  }
+                                  formatter={(value) =>
+                                    formatRate(
+                                      value == null ? null : Number(value)
+                                    )
+                                  }
+                                />
+                              }
+                            />
+                            <Area
+                              type="monotone"
+                              dataKey={key}
+                              stroke={`var(--color-${key})`}
+                              strokeWidth={2}
+                              fill={`var(--color-${key})`}
+                              fillOpacity={0.16}
+                              isAnimationActive={false}
+                              connectNulls={false}
+                            />
+                          </AreaChart>
+                        </ChartContainer>
+                      </div>
+                    )}
                   </div>
                 )
               })}
