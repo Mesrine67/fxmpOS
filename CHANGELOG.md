@@ -1,5 +1,14 @@
 # Journal des modifications
 
+## [0.0.37] - 2026-10-27
+
+### Publication corrective
+
+- Cette version reprend les améliorations de notifications publiées en `0.0.36` sous le numéro de version attendu `0.0.37`.
+- Les notifications Sonner dans FXMP OS et les notifications système Windows via `tauri-plugin-notification` restent indépendantes et peuvent fonctionner simultanément.
+- La correction CSP conserve les toasts Sonner visibles dans WebView2, et le canal Windows fonctionne aussi lorsque FXMP OS est au premier plan.
+- Aucun changement fonctionnel supplémentaire n’est introduit par cette republication.
+
 ## [0.0.36] - 2026-10-27
 
 ### Améliorations
