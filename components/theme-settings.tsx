@@ -37,6 +37,13 @@ const fontOptions: Array<{ value: ThemeFont; label: string }> = [
   { value: "inter", label: "Inter" },
   { value: "system", label: "Segoe UI · système Windows" },
 ]
+const chartBarClasses = [
+  "bg-chart-1",
+  "bg-chart-2",
+  "bg-chart-3",
+  "bg-chart-4",
+  "bg-chart-5",
+]
 
 export function ThemeSettings() {
   const preferences = useThemePreferences()
@@ -119,7 +126,11 @@ export function ThemeSettings() {
               <div className="flex items-center justify-between text-xs"><span className="text-muted-foreground">Mémoire vive</span><span className="font-medium">72 %</span></div>
               <div className="mt-2 flex h-14 items-end gap-1" aria-label={`Aperçu des graphiques ${preferences.chart}`}>
                 {[0.45, 0.72, 0.55, 0.92, 0.64, 0.8, 0.48, 0.7].map((height, index) => (
-                  <span key={index} className={`flex-1 rounded-t-sm bg-chart-${(index % 5) + 1}`} style={{ height: `${Math.round(height * 56)}px`, opacity: 1 - index * 0.055 }} />
+                  <span
+                    key={index}
+                    className={`flex-1 rounded-t-sm ${chartBarClasses[index % chartBarClasses.length]}`}
+                    style={{ height: `${Math.round(height * 56)}px`, opacity: 1 - index * 0.055 }}
+                  />
                 ))}
               </div>
             </div>
