@@ -9,11 +9,29 @@ pub struct InstalledApp {
     install_date: Option<String>,
     estimated_size_bytes: Option<u64>,
     scope: String,
+    source: String,
     icon_data_url: Option<String>,
 }
 
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct InventorySource {
+    id: String,
+    label: String,
+    count: usize,
+    available: bool,
+    warning: Option<String>,
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct InstalledAppsInventory {
+    apps: Vec<InstalledApp>,
+    sources: Vec<InventorySource>,
+}
+
 #[cfg(target_os = "windows")]
-fn read_installed_apps() -> Vec<InstalledApp> {
+fn read_registry_apps() -> Vec<InstalledApp> {
     use std::collections::HashSet;
     use winreg::RegKey;
     use winreg::enums::{
@@ -109,6 +127,7 @@ fn read_installed_apps() -> Vec<InstalledApp> {
                     install_date,
                     estimated_size_bytes,
                     scope: scope.to_owned(),
+                    source: "registry".to_owned(),
                     icon_data_url,
                 });
             }
@@ -117,6 +136,144 @@ fn read_installed_apps() -> Vec<InstalledApp> {
 
     apps.sort_by(|left, right| left.name.to_lowercase().cmp(&right.name.to_lowercase()));
     apps
+}
+
+#[cfg(target_os = "windows")]
+fn read_store_apps() -> Result<Vec<InstalledApp>, String> {
+    use std::collections::HashSet;
+    use windows::Management::Deployment::PackageManager;
+    use windows::Win32::System::WinRT::{RO_INIT_MULTITHREADED, RoInitialize, RoUninitialize};
+    use windows::core::HSTRING;
+
+    struct WinRtApartment;
+    impl Drop for WinRtApartment {
+        fn drop(&mut self) {
+            unsafe { RoUninitialize() };
+        }
+    }
+
+    unsafe { RoInitialize(RO_INIT_MULTITHREADED) }
+        .map_err(|_| "Windows n’a pas pu initialiser l’inventaire des paquets.".to_owned())?;
+    let _apartment = WinRtApartment;
+
+    let manager = PackageManager::new()
+        .map_err(|_| "Windows n’a pas pu ouvrir l’inventaire des paquets.".to_owned())?;
+    let packages = manager
+        .FindPackagesByUserSecurityId(&HSTRING::new())
+        .map_err(|_| "Windows a refusé l’accès aux paquets de l’utilisateur courant.".to_owned())?;
+
+    let mut apps = Vec::new();
+    let mut seen = HashSet::new();
+    for package in packages {
+        let is_framework = package.IsFramework().unwrap_or(false);
+        let is_resource_package = package.IsResourcePackage().unwrap_or(false);
+        if is_framework || is_resource_package {
+            continue;
+        }
+
+        let Ok(package_id) = package.Id() else {
+            continue;
+        };
+        let Ok(full_name) = package_id.FullName() else {
+            continue;
+        };
+        if !seen.insert(full_name.to_string_lossy()) {
+            continue;
+        }
+
+        let package_name = package_id
+            .Name()
+            .map(|value| value.to_string_lossy())
+            .unwrap_or_default();
+        let name = package
+            .DisplayName()
+            .map(|value| value.to_string_lossy())
+            .ok()
+            .filter(|value| !value.trim().is_empty() && !value.starts_with("ms-resource:"))
+            .unwrap_or_else(|| package_name.clone());
+        if name.trim().is_empty() {
+            continue;
+        }
+
+        let version = package_id.Version().ok().map(|value| {
+            format!(
+                "{}.{}.{}.{}",
+                value.Major, value.Minor, value.Build, value.Revision
+            )
+        });
+        let publisher = package
+            .PublisherDisplayName()
+            .ok()
+            .map(|value| value.to_string_lossy())
+            .filter(|value| !value.trim().is_empty());
+
+        apps.push(InstalledApp {
+            name,
+            publisher,
+            version,
+            install_date: None,
+            estimated_size_bytes: None,
+            scope: "Utilisateur courant".to_owned(),
+            source: "store".to_owned(),
+            icon_data_url: None,
+        });
+    }
+
+    apps.sort_by(|left, right| left.name.to_lowercase().cmp(&right.name.to_lowercase()));
+    Ok(apps)
+}
+
+#[cfg(target_os = "windows")]
+fn read_installed_apps() -> InstalledAppsInventory {
+    let mut desktop_apps = read_registry_apps();
+    let desktop_count = desktop_apps.len();
+    let (store_apps, store_source) = match read_store_apps() {
+        Ok(apps) => {
+            let count = apps.len();
+            (
+                apps,
+                InventorySource {
+                    id: "store".to_owned(),
+                    label: "Microsoft Store et MSIX".to_owned(),
+                    count,
+                    available: true,
+                    warning: None,
+                },
+            )
+        }
+        Err(warning) => (
+            Vec::new(),
+            InventorySource {
+                id: "store".to_owned(),
+                label: "Microsoft Store et MSIX".to_owned(),
+                count: 0,
+                available: false,
+                warning: Some(warning),
+            },
+        ),
+    };
+
+    desktop_apps.extend(store_apps);
+    desktop_apps.sort_by(|left, right| {
+        left.name
+            .to_lowercase()
+            .cmp(&right.name.to_lowercase())
+            .then_with(|| left.source.cmp(&right.source))
+    });
+
+    InstalledAppsInventory {
+        apps: desktop_apps,
+        sources: vec![
+            InventorySource {
+                id: "registry".to_owned(),
+                label: "Logiciels de bureau".to_owned(),
+                count: desktop_count,
+                available: true,
+                warning: None,
+            },
+            store_source,
+        ],
+    }
 }
 
 #[cfg(target_os = "windows")]
@@ -339,14 +496,17 @@ fn extract_icon_data_url(path: &std::path::Path, icon_index: i32) -> Option<Stri
 }
 
 #[cfg(not(target_os = "windows"))]
-fn read_installed_apps() -> Vec<InstalledApp> {
-    Vec::new()
+fn read_installed_apps() -> InstalledAppsInventory {
+    InstalledAppsInventory {
+        apps: Vec::new(),
+        sources: Vec::new(),
+    }
 }
 
-/// Lists installed desktop programs from the Windows uninstall registry keys.
-/// It is read-only and never returns uninstall commands, paths, or identifiers.
+/// Lists desktop programs and current-user Store/MSIX packages through native Windows APIs.
+/// It is read-only and never returns uninstall commands, paths, or package identifiers.
 #[tauri::command]
-pub async fn get_installed_apps() -> Result<Vec<InstalledApp>, String> {
+pub async fn get_installed_apps() -> Result<InstalledAppsInventory, String> {
     #[cfg(not(target_os = "windows"))]
     return Err("La liste des applications est disponible uniquement sous Windows.".to_owned());
 

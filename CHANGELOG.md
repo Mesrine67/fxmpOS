@@ -2,6 +2,23 @@
 
 Chaque version publiée possède sa propre section. Le workflow de release réutilise ces notes dans la release GitHub et dans le manifeste de l’updater Tauri.
 
+## [0.0.25] - 2026-10-27
+
+### Améliorations
+
+- La page Applications détecte maintenant les paquets Microsoft Store et MSIX installés pour l’utilisateur Windows courant, en plus des logiciels de bureau inscrits dans le registre.
+- Les cartes et la liste indiquent l’origine de chaque entrée; un filtre permet d’isoler les logiciels de bureau ou les paquets Store/MSIX.
+- Les erreurs d’accès à une source sont visibles sans masquer les résultats de l’autre source.
+
+### Confidentialité
+
+- L’inventaire Store/MSIX reste local et en lecture seule; aucun identifiant de paquet, chemin ou commande de désinstallation n’est renvoyé à l’interface.
+
+### Compatibilité
+
+- Windows x64, installateurs NSIS et MSI. WebView2 est requis.
+- macOS, Linux, Android et iOS ne sont pas distribués pour cette version.
+
 ## [0.0.24] - 2026-10-27
 
 ### Améliorations

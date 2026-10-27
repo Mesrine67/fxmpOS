@@ -56,10 +56,25 @@ type InstalledApp = {
   installDate: string | null
   estimatedSizeBytes: number | null
   scope: string
+  source: "registry" | "store"
   iconDataUrl: string | null
 }
 
+type InventorySource = {
+  id: "registry" | "store"
+  label: string
+  count: number
+  available: boolean
+  warning: string | null
+}
+
+type InstalledAppsInventory = {
+  apps: InstalledApp[]
+  sources: InventorySource[]
+}
+
 type ScopeFilter = "all" | "Utilisateur courant" | "Tous les utilisateurs"
+type SourceFilter = "all" | "registry" | "store"
 type SortMode = "name" | "size" | "date"
 type ViewMode = "list" | "grid"
 
@@ -125,6 +140,8 @@ export function InstalledAppsPage() {
   const [apps, setApps] = useState<InstalledApp[]>([])
   const [query, setQuery] = useState("")
   const [scope, setScope] = useState<ScopeFilter>("all")
+  const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all")
+  const [sources, setSources] = useState<InventorySource[]>([])
   const [sort, setSort] = useState<SortMode>("name")
   const [view, setView] = useState<ViewMode>("list")
   const [loading, setLoading] = useState(true)
@@ -133,8 +150,10 @@ export function InstalledAppsPage() {
   const loadApps = useCallback(async () => {
     setLoading(true)
     try {
-      const result = await trackedInvoke<InstalledApp[]>("get_installed_apps")
-      setApps(result)
+      const result =
+        await trackedInvoke<InstalledAppsInventory>("get_installed_apps")
+      setApps(result.apps)
+      setSources(result.sources)
       setError(null)
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : String(reason))
@@ -159,7 +178,9 @@ export function InstalledAppsPage() {
             value!.toLocaleLowerCase("fr-FR").includes(normalizedQuery)
           )
         const matchesScope = scope === "all" || app.scope === scope
-        return matchesQuery && matchesScope
+        const matchesSource =
+          sourceFilter === "all" || app.source === sourceFilter
+        return matchesQuery && matchesScope && matchesSource
       })
       .sort((left, right) => {
         if (sort === "size")
@@ -177,7 +198,7 @@ export function InstalledAppsPage() {
           sensitivity: "base",
         })
       })
-  }, [apps, query, scope, sort])
+  }, [apps, query, scope, sort, sourceFilter])
 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto px-5 py-6 md:px-8">
@@ -222,9 +243,9 @@ export function InstalledAppsPage() {
                     : `${filteredApps.length} application${filteredApps.length === 1 ? "" : "s"}`}
                 </CardTitle>
                 <CardDescription>
-                  {query || scope !== "all"
+                  {query || scope !== "all" || sourceFilter !== "all"
                     ? `${apps.length} entrées détectées au total`
-                    : "Logiciels de bureau détectés dans le registre Windows."}
+                    : `${sources.find((source) => source.id === "registry")?.count ?? 0} logiciels de bureau · ${sources.find((source) => source.id === "store")?.count ?? 0} paquets Store/MSIX`}
                 </CardDescription>
               </div>
               <ToggleGroup
@@ -249,7 +270,7 @@ export function InstalledAppsPage() {
               </ToggleGroup>
             </div>
 
-            <div className="grid gap-3 md:grid-cols-[minmax(15rem,1fr)_auto_auto]">
+            <div className="grid gap-3 lg:grid-cols-[minmax(15rem,1fr)_auto_auto_auto]">
               <div className="relative">
                 <SearchIcon
                   aria-hidden="true"
@@ -264,6 +285,24 @@ export function InstalledAppsPage() {
                   value={query}
                 />
               </div>
+              <Select
+                onValueChange={(value) => {
+                  if (value) setSourceFilter(value as SourceFilter)
+                }}
+                value={sourceFilter}
+              >
+                <SelectTrigger
+                  aria-label="Filtrer par source"
+                  className="w-full lg:w-48"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Toutes les sources</SelectItem>
+                  <SelectItem value="registry">Logiciels de bureau</SelectItem>
+                  <SelectItem value="store">Store et MSIX</SelectItem>
+                </SelectContent>
+              </Select>
               <Select
                 onValueChange={(value) => {
                   if (value) setScope(value as ScopeFilter)
@@ -307,6 +346,20 @@ export function InstalledAppsPage() {
             </div>
           </CardHeader>
           <CardContent>
+            {sources
+              .filter((source) => !source.available)
+              .map((source) => (
+                <div
+                  className="mb-4 rounded-lg border border-amber-500/40 bg-amber-500/5 p-3 text-sm"
+                  key={source.id}
+                  role="status"
+                >
+                  <p className="font-medium">
+                    Source partiellement indisponible : {source.label}
+                  </p>
+                  <p className="mt-1 text-muted-foreground">{source.warning}</p>
+                </div>
+              ))}
             {runtime === false ? (
               <Empty>
                 <EmptyHeader>
@@ -326,7 +379,7 @@ export function InstalledAppsPage() {
                 role="status"
               >
                 <LoaderCircleIcon className="size-4 animate-spin" />
-                Lecture locale du registre Windows…
+                Lecture locale des logiciels de bureau et paquets Store/MSIX…
               </div>
             ) : error ? (
               <div
@@ -349,21 +402,22 @@ export function InstalledAppsPage() {
                     <SearchIcon />
                   </EmptyMedia>
                   <EmptyTitle>
-                    {query || scope !== "all"
+                    {query || scope !== "all" || sourceFilter !== "all"
                       ? "Aucun résultat"
                       : "Aucune application détectée"}
                   </EmptyTitle>
                   <EmptyDescription>
-                    {query || scope !== "all"
+                    {query || scope !== "all" || sourceFilter !== "all"
                       ? "Modifie les filtres ou essaie une autre recherche."
-                      : "Aucune entrée de logiciel de bureau n’a été trouvée."}
+                      : "Aucune application n’a été trouvée dans les sources Windows disponibles."}
                   </EmptyDescription>
                 </EmptyHeader>
-                {(query || scope !== "all") && (
+                {(query || scope !== "all" || sourceFilter !== "all") && (
                   <Button
                     onClick={() => {
                       setQuery("")
                       setScope("all")
+                      setSourceFilter("all")
                     }}
                     variant="outline"
                   >
@@ -401,6 +455,9 @@ export function InstalledAppsPage() {
                       <TableCell>
                         <div className="space-y-1">
                           <Badge variant="outline">{app.scope}</Badge>
+                          <Badge variant="outline">
+                            {app.source === "store" ? "Store / MSIX" : "Bureau"}
+                          </Badge>
                           <p className="text-xs text-muted-foreground">
                             {formatDate(app.installDate)}
                           </p>
@@ -430,6 +487,9 @@ export function InstalledAppsPage() {
                       <AppDetails app={app} />
                       <div className="flex flex-wrap gap-2">
                         <Badge variant="outline">{app.scope}</Badge>
+                        <Badge variant="outline">
+                          {app.source === "store" ? "Store / MSIX" : "Bureau"}
+                        </Badge>
                         {app.version && (
                           <Badge variant="secondary">v{app.version}</Badge>
                         )}
@@ -459,9 +519,9 @@ export function InstalledAppsPage() {
               Les tailles viennent des valeurs déclarées par les programmes et
               ne représentent pas toujours l’espace réel utilisé. Cette page est
               en lecture seule : elle n’exécute aucune désinstallation et ne lit
-              ni chemins d’installation ni commandes de suppression. Les
-              applications Microsoft Store sans entrée de bureau peuvent
-              manquer.
+              ni chemins d’installation ni commandes de suppression. Les paquets
+              Store/MSIX sont lus pour l’utilisateur courant; certains paquets
+              provisionnés ou masqués par Windows peuvent manquer.
             </p>
           </CardContent>
         </Card>
