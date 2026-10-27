@@ -20,18 +20,33 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
 } from "@/components/ui/sidebar"
+import {
+  getServerSidebarWorkspace,
+  getSidebarWorkspace,
+  subscribeToSidebarWorkspace,
+  type SidebarWorkspace,
+} from "@/lib/sidebar-workspace"
+import { useSyncExternalStore } from "react"
+
+type NavigationItem = {
+  title: string
+  url: string
+  icon?: React.ReactNode
+  items?: { title: string; url: string }[]
+}
 
 export function NavMain({
-  items,
+  itemsByWorkspace,
 }: {
-  items: {
-    title: string
-    url: string
-    icon?: React.ReactNode
-    items?: { title: string; url: string }[]
-  }[]
+  itemsByWorkspace: Record<SidebarWorkspace, NavigationItem[]>
 }) {
   const pathname = usePathname()
+  const workspace = useSyncExternalStore(
+    subscribeToSidebarWorkspace,
+    getSidebarWorkspace,
+    getServerSidebarWorkspace
+  )
+  const items = itemsByWorkspace[workspace]
   const currentPath = pathname.replace(/\/$/, "") || "/"
   const isActive = (url: string) => {
     const path = url.replace(/\/$/, "") || "/"
@@ -56,11 +71,7 @@ export function NavMain({
                   render={<SidebarMenuItem />}
                 >
                   <CollapsibleTrigger
-                    render={
-                      <SidebarMenuButton
-                        tooltip={item.title}
-                      />
-                    }
+                    render={<SidebarMenuButton tooltip={item.title} />}
                   >
                     {item.icon}
                     <span>{item.title}</span>

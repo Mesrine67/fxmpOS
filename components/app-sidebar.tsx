@@ -1,18 +1,17 @@
 "use client"
 
 import * as React from "react"
-import Link from "next/link"
 import {
   AppWindowIcon,
   ActivityIcon,
   CommandIcon,
   Gamepad2Icon,
-  Layers3Icon,
   MonitorIcon,
   Settings2Icon,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
+import { SidebarWorkspaceSwitcher } from "@/components/sidebar-workspace-switcher"
 import { SidebarUpdaterAction } from "@/components/sidebar-updater-action"
 import { NavUser } from "@/components/nav-user"
 import {
@@ -20,48 +19,44 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
 } from "@/components/ui/sidebar"
 
-const navigation = [
-  { title: "Vue d’ensemble", url: "/", icon: <CommandIcon /> },
-  { title: "Ressources", url: "/monitor/", icon: <ActivityIcon /> },
-  { title: "Applications", url: "/apps/", icon: <AppWindowIcon /> },
-  {
-    title: "Games",
-    url: "/games/",
-    icon: <Gamepad2Icon />,
-    items: [
-      { title: "localhost", url: "/games/localhost/" },
-      { title: "app games list", url: "/games/apps/" },
-      { title: "settings", url: "/games/settings/" },
-    ],
-  },
-  { title: "Appareil", url: "/account/", icon: <MonitorIcon /> },
-  { title: "Paramètres", url: "/settings/", icon: <Settings2Icon /> },
-]
+const navigationByWorkspace = {
+  os: [
+    { title: "Vue d’ensemble", url: "/", icon: <CommandIcon /> },
+    { title: "Ressources", url: "/monitor/", icon: <ActivityIcon /> },
+    { title: "Applications", url: "/apps/", icon: <AppWindowIcon /> },
+    { title: "Appareil", url: "/account/", icon: <MonitorIcon /> },
+    { title: "Paramètres", url: "/settings/", icon: <Settings2Icon /> },
+  ],
+  overlays: [{ title: "Overlay", url: "/overlays/", icon: <MonitorIcon /> }],
+  games: [
+    {
+      title: "Games",
+      url: "/games/",
+      icon: <Gamepad2Icon />,
+      items: [
+        { title: "localhost", url: "/games/localhost/" },
+        { title: "app games list", url: "/games/apps/" },
+        { title: "settings", url: "/games/settings/" },
+      ],
+    },
+  ],
+}
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar collapsible="offcanvas" {...props}>
       <SidebarHeader>
-        <SidebarMenu>
-          <SidebarMenuItem className="flex items-center gap-2">
-            <SidebarMenuButton
-              className="min-w-0 flex-1 data-[slot=sidebar-menu-button]:p-1.5!"
-              render={<Link href="/" />}
-            >
-              <Layers3Icon className="size-5! text-primary" />
-              <span className="text-base font-semibold">FXMP OS</span>
-            </SidebarMenuButton>
-            <SidebarUpdaterAction />
-          </SidebarMenuItem>
-        </SidebarMenu>
+        <div className="flex items-center gap-2">
+          <div className="min-w-0 flex-1">
+            <SidebarWorkspaceSwitcher />
+          </div>
+          <SidebarUpdaterAction />
+        </div>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={navigation} />
+        <NavMain itemsByWorkspace={navigationByWorkspace} />
       </SidebarContent>
       <SidebarFooter>
         <NavUser />
