@@ -171,8 +171,12 @@ fn read_registry_apps() -> RegistryInventory {
 
 #[cfg(target_os = "windows")]
 fn read_store_apps() -> Result<Vec<InstalledApp>, String> {
+    use base64::Engine;
     use std::collections::HashSet;
+    use windows::ApplicationModel::Core::AppListEntry;
+    use windows::Foundation::Size;
     use windows::Management::Deployment::PackageManager;
+    use windows::Storage::Streams::DataReader;
     use windows::Win32::System::WinRT::{RO_INIT_MULTITHREADED, RoInitialize, RoUninitialize};
     use windows::core::HSTRING;
 
@@ -198,7 +202,8 @@ fn read_store_apps() -> Result<Vec<InstalledApp>, String> {
     for package in packages {
         let is_framework = package.IsFramework().unwrap_or(false);
         let is_resource_package = package.IsResourcePackage().unwrap_or(false);
-        if is_framework || is_resource_package {
+        let is_optional = package.IsOptional().unwrap_or(false);
+        if is_framework || is_resource_package || is_optional {
             continue;
         }
 
@@ -208,7 +213,17 @@ fn read_store_apps() -> Result<Vec<InstalledApp>, String> {
         let Ok(full_name) = package_id.FullName() else {
             continue;
         };
-        if !seen.insert(full_name.to_string_lossy()) {
+        let package_identity = full_name.to_string_lossy();
+        if !seen.insert(package_identity.clone()) {
+            continue;
+        }
+
+        // Settings should show user-facing apps, not every framework, codec,
+        // shell extension, or support package installed for this user.
+        let Ok(entries) = package.GetAppListEntries() else {
+            continue;
+        };
+        if entries.Size().unwrap_or(0) == 0 {
             continue;
         }
 
@@ -216,16 +231,12 @@ fn read_store_apps() -> Result<Vec<InstalledApp>, String> {
             .Name()
             .map(|value| value.to_string_lossy())
             .unwrap_or_default();
-        let name = package
+        let package_display_name = package
             .DisplayName()
             .map(|value| value.to_string_lossy())
             .ok()
             .filter(|value| !value.trim().is_empty() && !value.starts_with("ms-resource:"))
             .unwrap_or_else(|| package_name.clone());
-        if name.trim().is_empty() {
-            continue;
-        }
-
         let version = package_id.Version().ok().map(|value| {
             format!(
                 "{}.{}.{}.{}",
@@ -238,16 +249,72 @@ fn read_store_apps() -> Result<Vec<InstalledApp>, String> {
             .map(|value| value.to_string_lossy())
             .filter(|value| !value.trim().is_empty());
 
-        apps.push(InstalledApp {
-            name,
-            publisher,
-            version,
-            install_date: None,
-            estimated_size_bytes: None,
-            scope: "Utilisateur courant".to_owned(),
-            source: "store".to_owned(),
-            icon_data_url: None,
-        });
+        for index in 0..entries.Size().unwrap_or(0) {
+            let entry_result: windows::core::Result<AppListEntry> = entries.GetAt(index);
+            let Ok(entry) = entry_result else {
+                continue;
+            };
+            let app_id = entry
+                .AppUserModelId()
+                .map(|value| value.to_string_lossy())
+                .unwrap_or_else(|_| format!("{package_identity}:{index}"));
+            if !seen.insert(app_id) {
+                continue;
+            }
+            let name = entry
+                .DisplayInfo()
+                .and_then(|display| display.DisplayName())
+                .map(|value| value.to_string_lossy())
+                .ok()
+                .filter(|value| !value.trim().is_empty() && !value.starts_with("ms-resource:"))
+                .unwrap_or_else(|| package_display_name.clone());
+            if name.trim().is_empty() {
+                continue;
+            }
+            let icon_data_url = entry
+                .DisplayInfo()
+                .and_then(|display| {
+                    display.GetLogo(Size {
+                        Width: 64.0,
+                        Height: 64.0,
+                    })
+                })
+                .and_then(|logo| logo.OpenReadAsync())
+                .ok()
+                .and_then(|operation| operation.join().ok())
+                .and_then(|stream| {
+                    let size = stream.Size().ok()?;
+                    if size == 0 || size > 1024 * 1024 {
+                        return None;
+                    }
+                    let reader =
+                        DataReader::CreateDataReader(&stream.GetInputStreamAt(0).ok()?).ok()?;
+                    reader.LoadAsync(size as u32).ok()?.join().ok()?;
+                    let mut bytes = vec![0; size as usize];
+                    reader.ReadBytes(&mut bytes).ok()?;
+                    let mime_type = if bytes.starts_with(b"\x89PNG\r\n\x1a\n") {
+                        "image/png"
+                    } else if bytes.starts_with(b"\xff\xd8\xff") {
+                        "image/jpeg"
+                    } else {
+                        return None;
+                    };
+                    Some(format!(
+                        "data:{mime_type};base64,{}",
+                        base64::engine::general_purpose::STANDARD.encode(bytes)
+                    ))
+                });
+            apps.push(InstalledApp {
+                name,
+                publisher: publisher.clone(),
+                version: version.clone(),
+                install_date: None,
+                estimated_size_bytes: None,
+                scope: "Utilisateur courant".to_owned(),
+                source: "store".to_owned(),
+                icon_data_url,
+            });
+        }
     }
 
     apps.sort_by(|left, right| left.name.to_lowercase().cmp(&right.name.to_lowercase()));

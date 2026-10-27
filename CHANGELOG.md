@@ -2,6 +2,25 @@
 
 Chaque version publiée possède sa propre section. Le workflow de release réutilise ces notes dans la release GitHub et dans le manifeste de l’updater Tauri.
 
+## [0.0.26] - 2026-10-27
+
+### Améliorations
+
+- Les graphiques CPU et mémoire adaptent maintenant leur échelle aux mesures visibles pour rendre les variations récentes plus lisibles; la plage reste toujours exprimée en pourcentage.
+- Les infobulles des graphiques disposent d’un repère de survol plus visible et d’un indicateur coloré cohérent avec la série affichée.
+- L’inventaire Microsoft Store/MSIX s’appuie désormais sur les entrées d’applications déclarées par Windows et masque les paquets optionnels, de support ou sans application lançable.
+- Les applications empaquetées utilisent leur nom et leur logo Windows; chaque entrée lançable est comptée séparément.
+- Le tableau des applications garde une largeur minimale lisible et peut défiler horizontalement sur les fenêtres étroites.
+
+### Confidentialité
+
+- L’inventaire reste en lecture seule et local. Les identifiants Windows des applications empaquetées restent dans le backend et ne sont pas transmis à l’interface.
+
+### Compatibilité
+
+- Windows x64, installateurs NSIS et MSI. WebView2 est requis.
+- macOS, Linux, Android et iOS ne sont pas distribués pour cette version.
+
 ## [0.0.25] - 2026-10-27
 
 ### Améliorations

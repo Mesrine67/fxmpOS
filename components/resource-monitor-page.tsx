@@ -180,6 +180,20 @@ function ResourceChart({
   label: string
   range: HistoryRange
 }) {
+  const values = data.map((point) => point[dataKey])
+  const minimum = values.length ? Math.min(...values) : 0
+  const maximum = values.length ? Math.max(...values) : 100
+  const span = maximum - minimum
+  const padding = Math.max(5, span * 0.2)
+  const lowerBound = Math.max(0, Math.floor((minimum - padding) / 5) * 5)
+  const upperBound = Math.min(
+    100,
+    Math.max(20, Math.ceil((maximum + padding) / 5) * 5)
+  )
+  const chartDomain: [number, number] =
+    upperBound - lowerBound < 15
+      ? [Math.max(0, upperBound - 20), Math.min(100, lowerBound + 20)]
+      : [lowerBound, upperBound]
   const chartConfig = {
     [dataKey]: { label, color },
   } satisfies ChartConfig
@@ -197,14 +211,15 @@ function ResourceChart({
   }
 
   return (
-    <div className="h-36 w-full" role="img" aria-label={`Historique ${label}`}>
+    <div className="h-40 w-full" role="img" aria-label={`Historique ${label}`}>
       <ChartContainer
         className="aspect-auto h-full w-full"
         config={chartConfig}
       >
         <AreaChart
           data={data}
-          margin={{ top: 8, right: 4, left: -28, bottom: 0 }}
+          accessibilityLayer
+          margin={{ top: 8, right: 10, left: -20, bottom: 0 }}
         >
           <CartesianGrid
             strokeDasharray="3 3"
@@ -236,15 +251,17 @@ function ResourceChart({
             className="fill-muted-foreground text-[10px]"
           />
           <YAxis
-            domain={[0, 100]}
+            domain={chartDomain}
             tickLine={false}
             axisLine={false}
             tickFormatter={(value: number) => `${value}%`}
             className="fill-muted-foreground text-[10px]"
           />
           <ChartTooltip
+            cursor={{ stroke: "var(--border)", strokeDasharray: "3 3" }}
             content={
               <ChartTooltipContent
+                indicator="line"
                 labelFormatter={(value) => {
                   const time = formatChartTime(
                     value,
@@ -271,9 +288,15 @@ function ResourceChart({
             type="monotone"
             dataKey={dataKey}
             stroke={`var(--color-${dataKey})`}
-            strokeWidth={2}
+            strokeWidth={2.5}
             fill={`var(--color-${dataKey})`}
-            fillOpacity={0.16}
+            fillOpacity={0.22}
+            activeDot={{
+              r: 4,
+              fill: `var(--color-${dataKey})`,
+              stroke: "var(--background)",
+              strokeWidth: 2,
+            }}
             isAnimationActive={false}
           />
         </AreaChart>
