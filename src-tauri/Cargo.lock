@@ -1239,10 +1239,12 @@ dependencies = [
 
 [[package]]
 name = "fxmp-os"
-version = "0.0.23"
+version = "0.0.24"
 dependencies = [
+ "base64 0.22.1",
  "gdk",
  "log",
+ "png",
  "serde",
  "serde_json",
  "sysinfo",

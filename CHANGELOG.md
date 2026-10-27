@@ -2,6 +2,14 @@
 
 Chaque version publiée possède sa propre section. Le workflow de release réutilise ces notes dans la release GitHub et dans le manifeste de l’updater Tauri.
 
+## [0.0.24] - 2026-10-27
+
+### Améliorations
+
+- La page Applications affiche maintenant les icônes déclarées par les logiciels dans Windows, en vue liste et en grille.
+- Les icônes sont extraites localement et converties en images intégrées; les chemins des exécutables ne quittent pas le backend natif.
+- Une icône générique reste affichée lorsqu’un logiciel ne fournit pas d’icône exploitable.
+
 ## [0.0.23] - 2026-10-27
 
 ### Corrections
