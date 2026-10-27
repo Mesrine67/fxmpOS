@@ -1,6 +1,6 @@
 [package]
 name = "fxmp-os"
-version = "0.0.25"
+version = "0.0.26"
 description = "A FXMP Tauri App OS for monitoring and controlling your PC"
 authors = ["FXMP"]
 license = "MIT"
@@ -42,7 +42,7 @@ gdk = "0.18"
 [target.'cfg(target_os = "windows")'.dependencies]
 wmi = "0.18.4"
 winreg = "0.56.0"
-windows = { version = "0.62.2", features = ["ApplicationModel", "Management_Deployment", "Win32_System_WinRT"] }
+windows = { version = "0.62.2", features = ["ApplicationModel", "ApplicationModel_Core", "Foundation", "Management_Deployment", "Storage_Streams", "Win32_System_WinRT"] }
 windows-sys = { version = "0.61.2", features = ["Win32_Foundation", "Win32_Graphics_Gdi", "Win32_NetworkManagement_IpHelper", "Win32_Networking_WinSock", "Win32_System_LibraryLoader", "Win32_UI_Shell", "Win32_UI_WindowsAndMessaging"] }
 base64 = "0.22"
 png = "0.18"

@@ -245,7 +245,7 @@ export function InstalledAppsPage() {
                 <CardDescription>
                   {query || scope !== "all" || sourceFilter !== "all"
                     ? `${apps.length} entrées détectées au total`
-                    : `${sources.find((source) => source.id === "registry")?.count ?? 0} logiciels de bureau · ${sources.find((source) => source.id === "store")?.count ?? 0} paquets Store/MSIX`}
+                    : `${sources.find((source) => source.id === "registry")?.count ?? 0} logiciels de bureau · ${sources.find((source) => source.id === "store")?.count ?? 0} applications Store/MSIX`}
                 </CardDescription>
               </div>
               <ToggleGroup
@@ -426,7 +426,7 @@ export function InstalledAppsPage() {
                 )}
               </Empty>
             ) : view === "list" ? (
-              <Table>
+              <Table className="min-w-[46rem]">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Application</TableHead>
@@ -442,7 +442,7 @@ export function InstalledAppsPage() {
                     <TableRow
                       key={`${app.name}-${app.version}-${app.publisher}-${index}`}
                     >
-                      <TableCell className="min-w-64">
+                      <TableCell className="max-w-80 min-w-64">
                         <AppDetails app={app} />
                       </TableCell>
                       <TableCell>
