@@ -9,8 +9,8 @@ export type ResourceHistoryPoint = {
 
 const HISTORY_STORE_PATH = "fxmp-resource-history.json"
 const HISTORY_STORE_KEY = "minuteSamples"
-const HISTORY_RETENTION_MS = 24 * 60 * 60 * 1000
-const MAX_HISTORY_POINTS = 1_440
+const HISTORY_RETENTION_MS = 7 * 24 * 60 * 60 * 1000
+const MAX_HISTORY_POINTS = 10_080
 const historyStore = new LazyStore(HISTORY_STORE_PATH, { autoSave: false })
 let writeQueue = Promise.resolve()
 

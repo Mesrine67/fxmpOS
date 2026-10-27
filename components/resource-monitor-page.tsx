@@ -97,7 +97,12 @@ type HistoryPoint = {
   memory: number
 }
 
-type HistoryRange = "minute" | "hour" | "day"
+type HistoryRange = "minute" | "hour" | "day" | "week"
+type NetworkHistoryPoint = {
+  sampledAtMs: number
+  received: number | null
+  transmitted: number | null
+}
 type MinuteAccumulator = ResourceHistoryPoint & {
   cpuTotal: number
   memoryTotal: number
@@ -108,11 +113,13 @@ const HISTORY_RANGE_MS: Record<HistoryRange, number> = {
   minute: 60_000,
   hour: 60 * 60_000,
   day: 24 * 60 * 60_000,
+  week: 7 * 24 * 60 * 60_000,
 }
 const HISTORY_RANGE_LABEL: Record<HistoryRange, string> = {
   minute: "1 min",
   hour: "1 h",
   day: "24 h",
+  week: "7 j",
 }
 
 const numberFormat = new Intl.NumberFormat("fr-FR", {
@@ -190,11 +197,18 @@ function ResourceChart({
             axisLine={false}
             minTickGap={28}
             tickFormatter={(value: number) =>
-              new Intl.DateTimeFormat("fr-FR", {
-                hour: "2-digit",
-                minute: "2-digit",
-                ...(range === "minute" ? { second: "2-digit" as const } : {}),
-              }).format(value)
+              new Intl.DateTimeFormat(
+                "fr-FR",
+                range === "week"
+                  ? { day: "2-digit", month: "2-digit" }
+                  : {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      ...(range === "minute"
+                        ? { second: "2-digit" as const }
+                        : {}),
+                    }
+              ).format(value)
             }
             className="fill-muted-foreground text-[10px]"
           />
@@ -209,11 +223,21 @@ function ResourceChart({
             content={
               <ChartTooltipContent
                 labelFormatter={(value) =>
-                  `À ${new Intl.DateTimeFormat("fr-FR", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                    second: "2-digit",
-                  }).format(Number(value))}`
+                  `À ${new Intl.DateTimeFormat(
+                    "fr-FR",
+                    range === "week"
+                      ? {
+                          day: "2-digit",
+                          month: "long",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        }
+                      : {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          second: "2-digit",
+                        }
+                  ).format(Number(value))}`
                 }
                 formatter={(value) => `${numberFormat.format(Number(value))} %`}
               />
@@ -240,6 +264,9 @@ function ResourceMonitorContent() {
   const [networkSnapshot, setNetworkSnapshot] =
     useState<NetworkEndpointSnapshot | null>(null)
   const [history, setHistory] = useState<HistoryPoint[]>([])
+  const [networkHistory, setNetworkHistory] = useState<NetworkHistoryPoint[]>(
+    []
+  )
   const [savedHistory, setSavedHistory] = useState<ResourceHistoryPoint[]>([])
   const savedHistoryRef = useRef<ResourceHistoryPoint[]>([])
   const [historyRange, setHistoryRange] = useState<HistoryRange>("minute")
@@ -295,7 +322,7 @@ function ResourceMonitorContent() {
       point,
     ]
       .sort((left, right) => left.sampledAtMs - right.sampledAtMs)
-      .slice(-1_440)
+      .slice(-10_080)
     savedHistoryRef.current = updated
     setSavedHistory(updated)
     void saveResourceHistory(updated).then(
@@ -332,6 +359,16 @@ function ResourceMonitorContent() {
       setSample(next)
       setError(null)
       const memoryPercent = percent(next.memoryUsedBytes, next.memoryTotalBytes)
+      setNetworkHistory((current) =>
+        [
+          ...current,
+          {
+            sampledAtMs: next.sampledAtMs,
+            received: next.networkReceivedBytesPerSec,
+            transmitted: next.networkTransmittedBytesPerSec,
+          },
+        ].slice(-30)
+      )
       setHistory((current) =>
         [
           ...current,
@@ -499,6 +536,20 @@ function ResourceMonitorContent() {
     }
     return archived.sort((left, right) => left.sampledAtMs - right.sampledAtMs)
   }, [history, historyRange, memoryPercent, sample, savedHistory])
+
+  const historySummary = useMemo(() => {
+    if (visibleHistory.length === 0) return null
+    return {
+      cpuAverage:
+        visibleHistory.reduce((sum, point) => sum + point.cpu, 0) /
+        visibleHistory.length,
+      memoryAverage:
+        visibleHistory.reduce((sum, point) => sum + point.memory, 0) /
+        visibleHistory.length,
+      cpuPeak: Math.max(...visibleHistory.map((point) => point.cpu)),
+      memoryPeak: Math.max(...visibleHistory.map((point) => point.memory)),
+    }
+  }, [visibleHistory])
 
   const endpoints = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase("fr-FR")
@@ -786,8 +837,17 @@ function ResourceMonitorContent() {
               <p className="text-xs text-muted-foreground">
                 {historyRange === "minute"
                   ? "Échantillons en direct, actualisés toutes les 2 secondes."
-                  : "Moyennes par minute enregistrées localement pendant 24 heures."}
+                  : "Moyennes CPU et mémoire par minute conservées localement jusqu’à 7 jours."}
               </p>
+              {historySummary && historyRange !== "minute" && (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Moyenne · CPU {numberFormat.format(historySummary.cpuAverage)}{" "}
+                  %{" · "}mémoire{" "}
+                  {numberFormat.format(historySummary.memoryAverage)} %{" · "}
+                  pics {numberFormat.format(historySummary.cpuPeak)} % /{" "}
+                  {numberFormat.format(historySummary.memoryPeak)} %
+                </p>
+              )}
             </div>
             <div
               className="flex gap-2"
@@ -819,6 +879,121 @@ function ResourceMonitorContent() {
             noms et PID des processus et les ports réseau ne sont pas
             historisés.
           </p>
+
+          <Card>
+            <CardHeader className="grid-cols-[1fr_auto]">
+              <CardTitle className="flex items-center gap-2">
+                <NetworkIcon aria-hidden="true" className="size-4" />
+                Débit réseau en direct
+              </CardTitle>
+              <Badge variant="outline">Session actuelle</Badge>
+              <CardDescription className="col-span-2">
+                Réception et envoi agrégés des interfaces Windows · échantillons
+                en mémoire, jamais enregistrés.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-4 md:grid-cols-2">
+              {(
+                [
+                  ["received", "Réception", "var(--chart-3)"],
+                  ["transmitted", "Envoi", "var(--chart-4)"],
+                ] as const
+              ).map(([key, label, color]) => {
+                const chartConfig = {
+                  [key]: { label, color },
+                } satisfies ChartConfig
+                return (
+                  <div className="flex flex-col gap-2" key={key}>
+                    <div className="flex items-baseline justify-between gap-3">
+                      <p className="text-sm font-medium">{label}</p>
+                      <p className="text-sm tabular-nums">
+                        {formatRate(
+                          sample?.[
+                            key === "received"
+                              ? "networkReceivedBytesPerSec"
+                              : "networkTransmittedBytesPerSec"
+                          ]
+                        )}
+                      </p>
+                    </div>
+                    <div
+                      className="h-24 w-full"
+                      role="img"
+                      aria-label={`Historique réseau ${label}`}
+                    >
+                      <ChartContainer
+                        className="aspect-auto h-full w-full"
+                        config={chartConfig}
+                      >
+                        <AreaChart
+                          data={networkHistory}
+                          margin={{ top: 6, right: 4, left: -24, bottom: 0 }}
+                        >
+                          <CartesianGrid
+                            strokeDasharray="3 3"
+                            vertical={false}
+                            className="stroke-border/50"
+                          />
+                          <XAxis
+                            dataKey="sampledAtMs"
+                            type="number"
+                            scale="time"
+                            domain={["dataMin", "dataMax"]}
+                            tickLine={false}
+                            axisLine={false}
+                            minTickGap={24}
+                            tickFormatter={(value: number) =>
+                              new Intl.DateTimeFormat("fr-FR", {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                                second: "2-digit",
+                              }).format(value)
+                            }
+                            className="fill-muted-foreground text-[10px]"
+                          />
+                          <YAxis
+                            tickLine={false}
+                            axisLine={false}
+                            tickFormatter={(value: number) => formatRate(value)}
+                            className="fill-muted-foreground text-[10px]"
+                            width={54}
+                          />
+                          <ChartTooltip
+                            content={
+                              <ChartTooltipContent
+                                labelFormatter={(value) =>
+                                  new Intl.DateTimeFormat("fr-FR", {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                    second: "2-digit",
+                                  }).format(Number(value))
+                                }
+                                formatter={(value) =>
+                                  formatRate(
+                                    value == null ? null : Number(value)
+                                  )
+                                }
+                              />
+                            }
+                          />
+                          <Area
+                            type="monotone"
+                            dataKey={key}
+                            stroke={`var(--color-${key})`}
+                            strokeWidth={2}
+                            fill={`var(--color-${key})`}
+                            fillOpacity={0.16}
+                            isAnimationActive={false}
+                            connectNulls={false}
+                          />
+                        </AreaChart>
+                      </ChartContainer>
+                    </div>
+                  </div>
+                )
+              })}
+            </CardContent>
+          </Card>
 
           <Tabs defaultValue="processus" className="gap-4">
             <TabsList>

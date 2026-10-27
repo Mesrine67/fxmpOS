@@ -2,6 +2,23 @@
 
 Chaque version publiée possède sa propre section. Le workflow de release réutilise ces notes dans la release GitHub et dans le manifeste de l’updater Tauri.
 
+## [0.0.22] - 2026-10-27
+
+### Améliorations
+
+- L’accueil affiche maintenant les mesures locales CPU, mémoire et réseau en direct, actualisées toutes les 10 secondes uniquement lorsque la page est visible.
+- L’historique CPU et mémoire de la page Ressources couvre désormais jusqu’à 7 jours de moyennes par minute, avec une synthèse des moyennes et des pics sur la période choisie.
+- La page Ressources visualise les débits de réception et d’envoi avec des courbes interactives limitées à la session en cours.
+
+### Confidentialité
+
+- L’historique persistant ne contient toujours que les moyennes CPU et mémoire; les processus, PID, ports, adresses et débits réseau ne sont pas conservés.
+
+### Compatibilité
+
+- Windows x64, installateurs NSIS et MSI. WebView2 est requis.
+- macOS, Linux, Android et iOS ne sont pas distribués pour cette version.
+
 ## [0.0.21] - 2026-10-27
 
 ### Améliorations
