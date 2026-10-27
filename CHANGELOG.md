@@ -1,5 +1,14 @@
 # Journal des modifications
 
+## [0.0.30] - 2026-10-27
+
+### Améliorations
+
+- Les notifications FXMP OS utilisent Sonner dans l’application et le plugin officiel Tauri pour les notifications natives Windows en arrière-plan.
+- Une catégorie Notifications permet d’activer chaque canal, de choisir la position et la durée des toasts, et d’afficher ou non le bouton de fermeture.
+- L’autorisation Windows est demandée uniquement après une action explicite dans les réglages; une section de test prévisualise les niveaux de toast et la notification native.
+- Les préférences de notification sont partagées localement par le store Tauri. Les alertes natives restent désactivées par défaut et n’incluent aucune donnée système personnelle.
+
 Chaque version publiée possède sa propre section. Le workflow de release réutilise ces notes dans la release GitHub et dans le manifeste de l’updater Tauri.
 
 ## [0.0.29] - 2026-10-27

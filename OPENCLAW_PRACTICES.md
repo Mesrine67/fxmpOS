@@ -16,6 +16,10 @@ Revue ciblée effectuée le 18 octobre 2026 sur les surfaces OpenClaw liées à 
 | Origine de release | Un tag doit correspondre à la version Tauri. L'exécution manuelle de publication est limitée à la branche par défaut.                                                                                                                                                                                                                                                                                    |
 | Vie privée         | Les détails du PC et les dimensions/positions d'écran sont lus localement. FXMP OS n'expose pas de numéros de série, EDID ou identifiants matériels uniques et ne transmet pas ces informations au manifeste de mise à jour.                                                                                                                                                                                |
 
+## Notifications natives et toasts
+
+FXMP OS utilise Sonner pour les notifications visibles dans l'application et `tauri-plugin-notification` pour les alertes Windows natives en arrière-plan. La capacité `main` reçoit seulement les permissions de lecture de l'état, de demande explicite et d'envoi; `overlay` n'a aucune permission de notification. Le premier lancement ne déclenche jamais de boîte de permission. Les réglages partagés (activation, position, durée et bouton de fermeture) sont stockés dans `fxmp-settings.json`; le contenu des notifications ne doit jamais contenir de données système, processus, ports ou d'identifiants locaux. La demande d'autorisation est réservée au clic sur le bouton dans Paramètres.
+
 La mesure de latence est une action explicite depuis la fenêtre `main`, vers la cible TCP fixe `1.1.1.1:443` avec des tentatives bornées. Elle n'accorde aucune capacité réseau à l'overlay et n'est pas présentée comme une mesure ICMP.
 
 ## Choix OpenClaw qui ne sont pas importés

@@ -1,6 +1,6 @@
 {
   "name": "mon-app",
-  "version": "0.0.29",
+  "version": "0.0.30",
   "license": "LGPL-3.0-only",
   "type": "module",
   "private": true,
@@ -23,12 +23,13 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@tanstack/react-table": "^9.3.1",
     "@tauri-apps/api": "^2",
+    "@tauri-apps/plugin-autostart": "^2",
+    "@tauri-apps/plugin-log": "^2",
+    "@tauri-apps/plugin-notification": "^2.7.0",
     "@tauri-apps/plugin-opener": "^2",
-    "@tauri-apps/plugin-updater": "^2",
     "@tauri-apps/plugin-process": "^2",
     "@tauri-apps/plugin-store": "^2",
-    "@tauri-apps/plugin-log": "^2",
-    "@tauri-apps/plugin-autostart": "^2",
+    "@tauri-apps/plugin-updater": "^2",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.5.0",
     "lucide-react": "1.61.0",
@@ -44,6 +45,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@tauri-apps/cli": "^2",
     "@types/node": "^26",
     "@types/react": "^19",
     "@types/react-dom": "^19",
@@ -52,7 +54,6 @@
     "prettier": "^3.9.10",
     "prettier-plugin-tailwindcss": "^0.8.1",
     "tailwindcss": "^4",
-    "typescript": "^6",
-    "@tauri-apps/cli": "^2"
+    "typescript": "^6"
   }
 }

@@ -1,5 +1,6 @@
 import {
   ArrowDownToLineIcon,
+  BellIcon,
   Layers3Icon,
   MonitorCogIcon,
   ShieldCheckIcon,
@@ -8,6 +9,7 @@ import {
 
 import { AutostartSettings } from "@/components/autostart-settings"
 import { NetworkLatency } from "@/components/network-latency"
+import { NotificationSettings } from "@/components/notification-settings"
 import { OverlaySettings } from "@/components/overlay-settings"
 import { UpdaterSettings } from "@/components/updater-settings"
 import { Badge } from "@/components/ui/badge"
@@ -35,8 +37,8 @@ export function SettingsPage() {
                 Paramètres
               </h1>
               <p className="max-w-2xl text-sm text-muted-foreground">
-                Configure le comportement de l’application, son overlay et ses
-                mises à jour.
+                Configure le comportement de l’application, son overlay, ses
+                notifications et ses mises à jour.
               </p>
             </div>
           </div>
@@ -44,7 +46,7 @@ export function SettingsPage() {
         </header>
 
         <Tabs className="gap-5" defaultValue="application">
-          <TabsList className="grid h-auto w-full grid-cols-3 sm:w-fit">
+          <TabsList className="grid h-auto w-full grid-cols-2 sm:flex sm:w-fit">
             <TabsTrigger value="application">
               <MonitorCogIcon data-icon="inline-start" />
               Application
@@ -52,6 +54,10 @@ export function SettingsPage() {
             <TabsTrigger value="overlay">
               <Layers3Icon data-icon="inline-start" />
               Overlay
+            </TabsTrigger>
+            <TabsTrigger value="notifications">
+              <BellIcon data-icon="inline-start" />
+              Notifications
             </TabsTrigger>
             <TabsTrigger value="updates">
               <ArrowDownToLineIcon data-icon="inline-start" />
@@ -98,6 +104,10 @@ export function SettingsPage() {
           <TabsContent className="flex flex-col gap-4" value="overlay">
             <OverlaySettings />
             <NetworkLatency />
+          </TabsContent>
+
+          <TabsContent className="flex flex-col gap-4" value="notifications">
+            <NotificationSettings />
           </TabsContent>
 
           <TabsContent
