@@ -228,6 +228,7 @@ function ResourceMonitorContent() {
   const [paused, setPaused] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const inFlight = useRef(false)
+  const endpointsInFlight = useRef(false)
   const historyReady = useRef(false)
   const minuteAccumulator = useRef<MinuteAccumulator | null>(null)
 
@@ -324,8 +325,7 @@ function ResourceMonitorContent() {
           cpuPercent: 0,
           memoryPercent: 0,
           cpuTotal:
-            (previousMinute?.cpuPercent ?? 0) * previousCount +
-            next.cpuPercent,
+            (previousMinute?.cpuPercent ?? 0) * previousCount + next.cpuPercent,
           memoryTotal:
             (previousMinute?.memoryPercent ?? 0) * previousCount +
             memoryPercent,
@@ -361,7 +361,14 @@ function ResourceMonitorContent() {
   }, [persistHistoryPoint, runtime])
 
   const refreshEndpoints = useCallback(async () => {
-    if (runtime !== true || document.hidden) return
+    if (
+      runtime !== true ||
+      paused ||
+      document.hidden ||
+      endpointsInFlight.current
+    )
+      return
+    endpointsInFlight.current = true
     try {
       const result = await trackedInvoke<NetworkEndpointSnapshot>(
         "get_network_endpoints"
@@ -370,8 +377,10 @@ function ResourceMonitorContent() {
       setEndpointError(null)
     } catch (cause) {
       setEndpointError(cause instanceof Error ? cause.message : String(cause))
+    } finally {
+      endpointsInFlight.current = false
     }
-  }, [runtime])
+  }, [paused, runtime])
 
   useEffect(() => {
     if (runtime !== true || paused) return

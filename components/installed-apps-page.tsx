@@ -5,6 +5,8 @@ import {
   AppWindowIcon,
   CalendarDaysIcon,
   HardDriveIcon,
+  LayoutGridIcon,
+  ListIcon,
   LoaderCircleIcon,
   RefreshCwIcon,
   SearchIcon,
@@ -19,7 +21,30 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty"
 import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 import { useTauriRuntime } from "@/hooks/use-tauri-runtime"
 import { trackedInvoke } from "@/lib/tauri"
 
@@ -32,21 +57,59 @@ type InstalledApp = {
   scope: string
 }
 
-const bytesFormat = new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 1 })
+type ScopeFilter = "all" | "Utilisateur courant" | "Tous les utilisateurs"
+type SortMode = "name" | "size" | "date"
+type ViewMode = "list" | "grid"
+
+const numberFormat = new Intl.NumberFormat("fr-FR", {
+  maximumFractionDigits: 1,
+})
 
 function formatSize(bytes: number | null) {
   if (bytes === null) return "Taille non déclarée"
   if (bytes < 1024 ** 2)
-    return `${bytesFormat.format(bytes / 1024)} Ko déclarés`
+    return `${numberFormat.format(bytes / 1024)} Ko déclarés`
   if (bytes < 1024 ** 3)
-    return `${bytesFormat.format(bytes / 1024 ** 2)} Mo déclarés`
-  return `${bytesFormat.format(bytes / 1024 ** 3)} Go déclarés`
+    return `${numberFormat.format(bytes / 1024 ** 2)} Mo déclarés`
+  return `${numberFormat.format(bytes / 1024 ** 3)} Go déclarés`
+}
+
+function formatDate(value: string | null) {
+  if (!value) return "Date inconnue"
+  const date = new Date(`${value}T00:00:00`)
+  return Number.isNaN(date.getTime())
+    ? "Date inconnue"
+    : date.toLocaleDateString("fr-FR")
+}
+
+function AppDetails({ app }: { app: InstalledApp }) {
+  return (
+    <div className="flex min-w-0 items-center gap-3">
+      <div className="flex size-10 shrink-0 items-center justify-center rounded-lg border bg-muted/40 text-muted-foreground">
+        <AppWindowIcon aria-hidden="true" className="size-5" />
+      </div>
+      <div className="min-w-0 space-y-1">
+        <p className="truncate font-medium" title={app.name}>
+          {app.name}
+        </p>
+        <p
+          className="truncate text-xs text-muted-foreground"
+          title={app.publisher ?? undefined}
+        >
+          {app.publisher || "Éditeur non renseigné"}
+        </p>
+      </div>
+    </div>
+  )
 }
 
 export function InstalledAppsPage() {
   const runtime = useTauriRuntime()
   const [apps, setApps] = useState<InstalledApp[]>([])
   const [query, setQuery] = useState("")
+  const [scope, setScope] = useState<ScopeFilter>("all")
+  const [sort, setSort] = useState<SortMode>("name")
+  const [view, setView] = useState<ViewMode>("list")
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -71,14 +134,33 @@ export function InstalledAppsPage() {
 
   const filteredApps = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase("fr-FR")
-    return apps.filter((app) =>
-      [app.name, app.publisher, app.version]
-        .filter(Boolean)
-        .some((value) =>
-          value!.toLocaleLowerCase("fr-FR").includes(normalizedQuery)
-        )
-    )
-  }, [apps, query])
+    return apps
+      .filter((app) => {
+        const matchesQuery = [app.name, app.publisher, app.version]
+          .filter(Boolean)
+          .some((value) =>
+            value!.toLocaleLowerCase("fr-FR").includes(normalizedQuery)
+          )
+        const matchesScope = scope === "all" || app.scope === scope
+        return matchesQuery && matchesScope
+      })
+      .sort((left, right) => {
+        if (sort === "size")
+          return (
+            (right.estimatedSizeBytes ?? -1) -
+              (left.estimatedSizeBytes ?? -1) ||
+            left.name.localeCompare(right.name, "fr")
+          )
+        if (sort === "date")
+          return (
+            (right.installDate ?? "").localeCompare(left.installDate ?? "") ||
+            left.name.localeCompare(right.name, "fr")
+          )
+        return left.name.localeCompare(right.name, "fr", {
+          sensitivity: "base",
+        })
+      })
+  }, [apps, query, scope, sort])
 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto px-5 py-6 md:px-8">
@@ -94,9 +176,8 @@ export function InstalledAppsPage() {
                 Applications installées
               </h1>
               <p className="max-w-2xl text-sm text-muted-foreground">
-                Recherche locale dans les entrées de désinstallation Windows,
-                pour les applications installées pour cet utilisateur ou pour
-                tous les utilisateurs.
+                Parcourez les logiciels détectés sur ce PC, recherchez un
+                éditeur ou une version et organisez la liste.
               </p>
             </div>
           </div>
@@ -115,37 +196,113 @@ export function InstalledAppsPage() {
         </header>
 
         <Card>
-          <CardHeader className="gap-4 sm:flex-row sm:items-end sm:justify-between">
-            <div className="space-y-1">
-              <CardTitle>
-                {loading
-                  ? "Lecture…"
-                  : `${filteredApps.length} application${filteredApps.length === 1 ? "" : "s"}`}
-              </CardTitle>
-              <CardDescription>
-                {query
-                  ? `${apps.length} trouvées sur ce PC`
-                  : "Logiciels de bureau détectés dans le registre Windows."}
-              </CardDescription>
+          <CardHeader className="gap-4">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div className="space-y-1">
+                <CardTitle>
+                  {loading
+                    ? "Lecture…"
+                    : `${filteredApps.length} application${filteredApps.length === 1 ? "" : "s"}`}
+                </CardTitle>
+                <CardDescription>
+                  {query || scope !== "all"
+                    ? `${apps.length} entrées détectées au total`
+                    : "Logiciels de bureau détectés dans le registre Windows."}
+                </CardDescription>
+              </div>
+              <ToggleGroup
+                aria-label="Présentation des applications"
+                onValueChange={(values) => {
+                  const selected = values[0]
+                  if (selected === "list" || selected === "grid")
+                    setView(selected)
+                }}
+                value={[view]}
+                variant="outline"
+                spacing={0}
+              >
+                <ToggleGroupItem aria-label="Vue liste" value="list">
+                  <ListIcon />
+                  Liste
+                </ToggleGroupItem>
+                <ToggleGroupItem aria-label="Vue grille" value="grid">
+                  <LayoutGridIcon />
+                  Grille
+                </ToggleGroupItem>
+              </ToggleGroup>
             </div>
-            <div className="relative w-full sm:max-w-sm">
-              <SearchIcon className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                aria-label="Rechercher une application"
-                className="pl-9"
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Rechercher une application…"
-                type="search"
-                value={query}
-              />
+
+            <div className="grid gap-3 md:grid-cols-[minmax(15rem,1fr)_auto_auto]">
+              <div className="relative">
+                <SearchIcon
+                  aria-hidden="true"
+                  className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+                />
+                <Input
+                  aria-label="Rechercher une application"
+                  className="pl-9"
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="Rechercher par nom, éditeur ou version…"
+                  type="search"
+                  value={query}
+                />
+              </div>
+              <Select
+                onValueChange={(value) => {
+                  if (value) setScope(value as ScopeFilter)
+                }}
+                value={scope}
+              >
+                <SelectTrigger
+                  aria-label="Filtrer par installation"
+                  className="w-full md:w-52"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Toutes les installations</SelectItem>
+                  <SelectItem value="Utilisateur courant">
+                    Utilisateur actuel
+                  </SelectItem>
+                  <SelectItem value="Tous les utilisateurs">
+                    Tous les utilisateurs
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              <Select
+                onValueChange={(value) => {
+                  if (value) setSort(value as SortMode)
+                }}
+                value={sort}
+              >
+                <SelectTrigger
+                  aria-label="Trier les applications"
+                  className="w-full md:w-48"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="name">Nom, A à Z</SelectItem>
+                  <SelectItem value="size">Taille déclarée</SelectItem>
+                  <SelectItem value="date">Date d’installation</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </CardHeader>
           <CardContent>
             {runtime === false ? (
-              <p className="py-10 text-center text-sm text-muted-foreground">
-                Ouvre cette page dans l’application FXMP OS pour lire les
-                applications de Windows.
-              </p>
+              <Empty>
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <AppWindowIcon />
+                  </EmptyMedia>
+                  <EmptyTitle>Disponible dans FXMP OS</EmptyTitle>
+                  <EmptyDescription>
+                    Ouvre cette page dans l’application Windows pour lire les
+                    logiciels installés localement.
+                  </EmptyDescription>
+                </EmptyHeader>
+              </Empty>
             ) : loading ? (
               <div
                 className="flex items-center justify-center gap-2 py-10 text-sm text-muted-foreground"
@@ -169,41 +326,99 @@ export function InstalledAppsPage() {
                 </Button>
               </div>
             ) : filteredApps.length === 0 ? (
-              <p className="py-10 text-center text-sm text-muted-foreground">
-                {query
-                  ? "Aucune application ne correspond à cette recherche."
-                  : "Aucune entrée d’application détectée."}
-              </p>
-            ) : (
-              <ul className="divide-y divide-border/60">
-                {filteredApps.map((app, index) => (
-                  <li
-                    className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between"
-                    key={`${app.name}-${app.version}-${app.publisher}-${index}`}
+              <Empty>
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <SearchIcon />
+                  </EmptyMedia>
+                  <EmptyTitle>
+                    {query || scope !== "all"
+                      ? "Aucun résultat"
+                      : "Aucune application détectée"}
+                  </EmptyTitle>
+                  <EmptyDescription>
+                    {query || scope !== "all"
+                      ? "Modifie les filtres ou essaie une autre recherche."
+                      : "Aucune entrée de logiciel de bureau n’a été trouvée."}
+                  </EmptyDescription>
+                </EmptyHeader>
+                {(query || scope !== "all") && (
+                  <Button
+                    onClick={() => {
+                      setQuery("")
+                      setScope("all")
+                    }}
+                    variant="outline"
                   >
-                    <div className="flex min-w-0 items-start gap-3">
-                      <div className="mt-0.5 rounded-md border bg-muted/40 p-2 text-muted-foreground">
-                        <AppWindowIcon aria-hidden="true" className="size-4" />
-                      </div>
-                      <div className="min-w-0 space-y-1">
-                        <p className="truncate font-medium" title={app.name}>
-                          {app.name}
-                        </p>
-                        <p
-                          className="truncate text-sm text-muted-foreground"
-                          title={app.publisher ?? undefined}
-                        >
-                          {app.publisher || "Éditeur non renseigné"}
-                        </p>
-                        <div className="flex flex-wrap gap-2 pt-1">
+                    Effacer les filtres
+                  </Button>
+                )}
+              </Empty>
+            ) : view === "list" ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Application</TableHead>
+                    <TableHead>Version</TableHead>
+                    <TableHead>Installation</TableHead>
+                    <TableHead className="text-right">
+                      Taille déclarée
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredApps.map((app, index) => (
+                    <TableRow
+                      key={`${app.name}-${app.version}-${app.publisher}-${index}`}
+                    >
+                      <TableCell className="min-w-64">
+                        <AppDetails app={app} />
+                      </TableCell>
+                      <TableCell>
+                        {app.version ? (
+                          <Badge variant="secondary">{app.version}</Badge>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
                           <Badge variant="outline">{app.scope}</Badge>
-                          {app.version && (
-                            <Badge variant="secondary">v{app.version}</Badge>
-                          )}
+                          <p className="text-xs text-muted-foreground">
+                            {formatDate(app.installDate)}
+                          </p>
                         </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <span className="inline-flex items-center justify-end gap-1.5 text-muted-foreground">
+                          <HardDriveIcon
+                            aria-hidden="true"
+                            className="size-3.5"
+                          />
+                          {formatSize(app.estimatedSizeBytes)}
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {filteredApps.map((app, index) => (
+                  <Card
+                    key={`${app.name}-${app.version}-${app.publisher}-${index}`}
+                    size="sm"
+                  >
+                    <CardHeader className="gap-3">
+                      <AppDetails app={app} />
+                      <div className="flex flex-wrap gap-2">
+                        <Badge variant="outline">{app.scope}</Badge>
+                        {app.version && (
+                          <Badge variant="secondary">v{app.version}</Badge>
+                        )}
                       </div>
-                    </div>
-                    <div className="flex shrink-0 flex-wrap gap-x-4 gap-y-2 text-xs text-muted-foreground sm:justify-end">
+                    </CardHeader>
+                    <CardContent className="flex flex-wrap justify-between gap-2 text-xs text-muted-foreground">
                       <span className="inline-flex items-center gap-1.5">
                         <HardDriveIcon
                           aria-hidden="true"
@@ -211,29 +426,25 @@ export function InstalledAppsPage() {
                         />
                         {formatSize(app.estimatedSizeBytes)}
                       </span>
-                      {app.installDate && (
-                        <span className="inline-flex items-center gap-1.5">
-                          <CalendarDaysIcon
-                            aria-hidden="true"
-                            className="size-3.5"
-                          />
-                          Installée le{" "}
-                          {new Date(
-                            `${app.installDate}T00:00:00`
-                          ).toLocaleDateString("fr-FR")}
-                        </span>
-                      )}
-                    </div>
-                  </li>
+                      <span className="inline-flex items-center gap-1.5">
+                        <CalendarDaysIcon
+                          aria-hidden="true"
+                          className="size-3.5"
+                        />
+                        {formatDate(app.installDate)}
+                      </span>
+                    </CardContent>
+                  </Card>
                 ))}
-              </ul>
+              </div>
             )}
             <p className="mt-4 border-t pt-3 text-xs text-muted-foreground">
-              La taille est une estimation déclarée par le programme. Cette page
-              n’exécute aucune désinstallation et ne lit pas les chemins
-              d’installation ni les commandes de suppression. Les applications
-              Microsoft Store qui n’enregistrent pas d’entrée de bureau peuvent
-              ne pas apparaître.
+              Les tailles viennent des valeurs déclarées par les programmes et
+              ne représentent pas toujours l’espace réel utilisé. Cette page est
+              en lecture seule : elle n’exécute aucune désinstallation et ne lit
+              ni chemins d’installation ni commandes de suppression. Les
+              applications Microsoft Store sans entrée de bureau peuvent
+              manquer.
             </p>
           </CardContent>
         </Card>
