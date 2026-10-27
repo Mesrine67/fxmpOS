@@ -31,7 +31,13 @@ pub struct InstalledAppsInventory {
 }
 
 #[cfg(target_os = "windows")]
-fn read_registry_apps() -> Vec<InstalledApp> {
+struct RegistryInventory {
+    apps: Vec<InstalledApp>,
+    warning: Option<String>,
+}
+
+#[cfg(target_os = "windows")]
+fn read_registry_apps() -> RegistryInventory {
     use std::collections::HashSet;
     use winreg::RegKey;
     use winreg::enums::{
@@ -42,6 +48,7 @@ fn read_registry_apps() -> Vec<InstalledApp> {
 
     let mut apps = Vec::new();
     let mut seen = HashSet::new();
+    let mut read_failures = 0usize;
     let roots = [
         (
             RegKey::predef(HKEY_LOCAL_MACHINE),
@@ -66,19 +73,38 @@ fn read_registry_apps() -> Vec<InstalledApp> {
     ];
 
     for (root, flags, scope) in roots {
-        let Ok(uninstall_key) = root.open_subkey_with_flags(UNINSTALL_KEY, flags) else {
-            continue;
+        let uninstall_key = match root.open_subkey_with_flags(UNINSTALL_KEY, flags) {
+            Ok(key) => key,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => continue,
+            Err(_) => {
+                read_failures += 1;
+                continue;
+            }
         };
-        let Ok(subkeys) = uninstall_key.enum_keys().collect::<Result<Vec<_>, _>>() else {
-            continue;
+        let subkeys = match uninstall_key.enum_keys().collect::<Result<Vec<_>, _>>() {
+            Ok(subkeys) => subkeys,
+            Err(_) => {
+                read_failures += 1;
+                continue;
+            }
         };
 
         for subkey in subkeys {
-            let Ok(entry) = uninstall_key.open_subkey_with_flags(subkey, flags) else {
-                continue;
+            let entry = match uninstall_key.open_subkey_with_flags(subkey, flags) {
+                Ok(entry) => entry,
+                Err(error) if error.kind() == std::io::ErrorKind::NotFound => continue,
+                Err(_) => {
+                    read_failures += 1;
+                    continue;
+                }
             };
-            let Ok(name) = entry.get_value::<String, _>("DisplayName") else {
-                continue;
+            let name = match entry.get_value::<String, _>("DisplayName") {
+                Ok(name) => name,
+                Err(error) if error.kind() == std::io::ErrorKind::NotFound => continue,
+                Err(_) => {
+                    read_failures += 1;
+                    continue;
+                }
             };
             if name.trim().is_empty()
                 || entry.get_value::<u32, _>("SystemComponent").unwrap_or(0) == 1
@@ -135,7 +161,12 @@ fn read_registry_apps() -> Vec<InstalledApp> {
     }
 
     apps.sort_by(|left, right| left.name.to_lowercase().cmp(&right.name.to_lowercase()));
-    apps
+    RegistryInventory {
+        apps,
+        warning: (read_failures > 0).then(|| {
+            "Windows n’a pas permis de lire certaines entrées du registre; la liste des logiciels de bureau peut être incomplète.".to_owned()
+        }),
+    }
 }
 
 #[cfg(target_os = "windows")]
@@ -225,8 +256,16 @@ fn read_store_apps() -> Result<Vec<InstalledApp>, String> {
 
 #[cfg(target_os = "windows")]
 fn read_installed_apps() -> InstalledAppsInventory {
-    let mut desktop_apps = read_registry_apps();
+    let registry = read_registry_apps();
+    let mut desktop_apps = registry.apps;
     let desktop_count = desktop_apps.len();
+    let registry_source = InventorySource {
+        id: "registry".to_owned(),
+        label: "Logiciels de bureau".to_owned(),
+        count: desktop_count,
+        available: registry.warning.is_none(),
+        warning: registry.warning,
+    };
     let (store_apps, store_source) = match read_store_apps() {
         Ok(apps) => {
             let count = apps.len();
@@ -263,16 +302,7 @@ fn read_installed_apps() -> InstalledAppsInventory {
 
     InstalledAppsInventory {
         apps: desktop_apps,
-        sources: vec![
-            InventorySource {
-                id: "registry".to_owned(),
-                label: "Logiciels de bureau".to_owned(),
-                count: desktop_count,
-                available: true,
-                warning: None,
-            },
-            store_source,
-        ],
+        sources: vec![registry_source, store_source],
     }
 }
 
