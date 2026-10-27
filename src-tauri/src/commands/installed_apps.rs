@@ -294,7 +294,19 @@ fn extract_icon_data_url(path: &std::path::Path, icon_index: i32) -> Option<Stri
             } else {
                 pixel[3]
             };
-            rgba.extend_from_slice(&[pixel[2], pixel[1], pixel[0], alpha]);
+            let unpremultiply = |channel: u8| {
+                if alpha == 0 {
+                    0
+                } else {
+                    ((u16::from(channel) * 255 / u16::from(alpha)).min(255)) as u8
+                }
+            };
+            rgba.extend_from_slice(&[
+                unpremultiply(pixel[2]),
+                unpremultiply(pixel[1]),
+                unpremultiply(pixel[0]),
+                alpha,
+            ]);
         }
         let mut png_bytes = Cursor::new(Vec::new());
         let encoded = (|| {
