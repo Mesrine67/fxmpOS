@@ -24,7 +24,7 @@ html[data-fxmp-overlay="true"] [data-ui-app-shell] {
 }
 
 @theme inline {
-    --font-heading: var(--font-mono);
+    --font-heading: var(--fxmp-heading-font, var(--font-mono));
     --font-mono: var(--font-mono);
     --color-sidebar-ring: var(--sidebar-ring);
     --color-sidebar-border: var(--sidebar-border);
@@ -101,6 +101,39 @@ html[data-fxmp-overlay="true"] [data-ui-app-shell] {
     --sidebar-ring: oklch(0.705 0.015 286.067);
 }
 
+/* User-selected shadcn-compatible accent and chart palettes. */
+html[data-fxmp-accent="blue"] { --primary: oklch(0.546 0.245 262.881); --primary-foreground: oklch(0.985 0.002 247.839); --ring: oklch(0.546 0.245 262.881); --sidebar-primary: oklch(0.546 0.245 262.881); }
+html.dark[data-fxmp-accent="blue"] { --primary: oklch(0.623 0.214 259.815); --primary-foreground: oklch(0.985 0.002 247.839); --ring: oklch(0.623 0.214 259.815); --sidebar-primary: oklch(0.623 0.214 259.815); }
+html[data-fxmp-accent="green"] { --primary: oklch(0.532 0.157 131.589); --primary-foreground: oklch(0.985 0.018 155.826); --ring: oklch(0.532 0.157 131.589); --sidebar-primary: oklch(0.532 0.157 131.589); }
+html.dark[data-fxmp-accent="green"] { --primary: oklch(0.723 0.191 142.495); --primary-foreground: oklch(0.145 0.015 145); --ring: oklch(0.723 0.191 142.495); --sidebar-primary: oklch(0.723 0.191 142.495); }
+html[data-fxmp-accent="violet"] { --primary: oklch(0.541 0.281 293.009); --primary-foreground: oklch(0.985 0.005 293.009); --ring: oklch(0.541 0.281 293.009); --sidebar-primary: oklch(0.541 0.281 293.009); }
+html.dark[data-fxmp-accent="violet"] { --primary: oklch(0.702 0.183 293.541); --primary-foreground: oklch(0.145 0.01 293); --ring: oklch(0.702 0.183 293.541); --sidebar-primary: oklch(0.702 0.183 293.541); }
+html[data-fxmp-accent="amber"] { --primary: oklch(0.666 0.179 58.318); --primary-foreground: oklch(0.985 0.015 58.318); --ring: oklch(0.666 0.179 58.318); --sidebar-primary: oklch(0.666 0.179 58.318); }
+html.dark[data-fxmp-accent="amber"] { --primary: oklch(0.769 0.188 70.08); --primary-foreground: oklch(0.145 0.03 70); --ring: oklch(0.769 0.188 70.08); --sidebar-primary: oklch(0.769 0.188 70.08); }
+
+html[data-fxmp-chart="blue"] { --chart-1: oklch(0.809 0.105 251.813); --chart-2: oklch(0.707 0.165 254.624); --chart-3: oklch(0.623 0.214 259.815); --chart-4: oklch(0.546 0.245 262.881); --chart-5: oklch(0.488 0.243 264.376); }
+html[data-fxmp-chart="green"] { --chart-1: oklch(0.871 0.15 154.449); --chart-2: oklch(0.792 0.209 151.711); --chart-3: oklch(0.723 0.191 142.495); --chart-4: oklch(0.627 0.194 149.214); --chart-5: oklch(0.527 0.154 150.069); }
+html[data-fxmp-chart="violet"] { --chart-1: oklch(0.811 0.111 293.571); --chart-2: oklch(0.702 0.183 293.541); --chart-3: oklch(0.606 0.25 292.717); --chart-4: oklch(0.541 0.281 293.009); --chart-5: oklch(0.491 0.27 292.581); }
+html[data-fxmp-chart="amber"] { --chart-1: oklch(0.879 0.169 91.605); --chart-2: oklch(0.828 0.189 84.429); --chart-3: oklch(0.769 0.188 70.08); --chart-4: oklch(0.666 0.179 58.318); --chart-5: oklch(0.555 0.163 48.998); }
+
+/* Neutral bases tune supporting surfaces while keeping FXMP's semantic tokens. */
+html[data-fxmp-base="zinc"] { --muted-foreground: oklch(0.556 0.016 285.938); --border: oklch(0.92 0.004 286.32); --input: oklch(0.92 0.004 286.32); }
+html.dark[data-fxmp-base="zinc"] { --background: oklch(0.141 0.005 285.823); --card: oklch(0.21 0.006 285.885); --popover: oklch(0.21 0.006 285.885); --muted: oklch(0.274 0.006 286.033); --secondary: oklch(0.274 0.006 286.033); --accent: oklch(0.274 0.006 286.033); --border: oklch(1 0 0 / 10%); --input: oklch(1 0 0 / 15%); }
+html[data-fxmp-base="slate"] { --background: oklch(0.984 0.003 247.858); --foreground: oklch(0.208 0.042 265.755); --card: oklch(1 0 0); --popover: oklch(1 0 0); --muted: oklch(0.968 0.007 247.896); --secondary: oklch(0.968 0.007 247.896); --accent: oklch(0.968 0.007 247.896); --muted-foreground: oklch(0.554 0.046 257.417); --border: oklch(0.929 0.013 255.508); --input: oklch(0.929 0.013 255.508); }
+html.dark[data-fxmp-base="slate"] { --background: oklch(0.129 0.042 264.695); --foreground: oklch(0.984 0.003 247.858); --card: oklch(0.208 0.042 265.755); --popover: oklch(0.208 0.042 265.755); --muted: oklch(0.279 0.041 260.031); --secondary: oklch(0.279 0.041 260.031); --accent: oklch(0.279 0.041 260.031); --muted-foreground: oklch(0.704 0.04 256.788); --border: oklch(1 0 0 / 12%); --input: oklch(1 0 0 / 17%); }
+html[data-fxmp-base="stone"] { --background: oklch(0.985 0.001 106.423); --foreground: oklch(0.147 0.004 49.25); --card: oklch(1 0 0); --popover: oklch(1 0 0); --muted: oklch(0.97 0.001 106.424); --secondary: oklch(0.97 0.001 106.424); --accent: oklch(0.97 0.001 106.424); --muted-foreground: oklch(0.553 0.013 58.071); --border: oklch(0.923 0.003 48.717); --input: oklch(0.923 0.003 48.717); }
+html.dark[data-fxmp-base="stone"] { --background: oklch(0.147 0.004 49.25); --foreground: oklch(0.985 0.001 106.423); --card: oklch(0.216 0.006 56.043); --popover: oklch(0.216 0.006 56.043); --muted: oklch(0.268 0.007 34.298); --secondary: oklch(0.268 0.007 34.298); --accent: oklch(0.268 0.007 34.298); --muted-foreground: oklch(0.709 0.01 56.259); --border: oklch(1 0 0 / 11%); --input: oklch(1 0 0 / 16%); }
+
+html[data-fxmp-font="geist"] body { font-family: var(--font-sans), "Segoe UI", sans-serif; }
+html[data-fxmp-font="system"] body { font-family: "Segoe UI", system-ui, sans-serif; }
+html[data-fxmp-font="inter"] body { font-family: Inter, "Segoe UI", sans-serif; }
+html[data-fxmp-font="geist-mono"] body { font-family: var(--font-mono), Consolas, monospace; }
+html[data-fxmp-heading="geist"] { --fxmp-heading-font: var(--font-sans), "Segoe UI", sans-serif; }
+html[data-fxmp-heading="system"] { --fxmp-heading-font: "Segoe UI", system-ui, sans-serif; }
+html[data-fxmp-heading="inter"] { --fxmp-heading-font: Inter, "Segoe UI", sans-serif; }
+html[data-fxmp-heading="geist-mono"] { --fxmp-heading-font: var(--font-mono), Consolas, monospace; }
+html[data-fxmp-style="nova"] [data-slot="card"] { box-shadow: 0 10px 30px -20px color-mix(in oklab, var(--foreground) 22%, transparent); }
+
 .dark {
     --background: oklch(0.141 0.005 285.823);
     --foreground: oklch(0.985 0 0);
@@ -143,7 +176,7 @@ html[data-fxmp-overlay="true"] [data-ui-app-shell] {
     @apply bg-background text-foreground;
     }
   html {
-    @apply font-mono;
+    @apply font-sans;
     }
 }
 

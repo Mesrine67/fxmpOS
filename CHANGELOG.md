@@ -1,5 +1,25 @@
 # Journal des modifications
 
+## [0.0.31] - 2026-10-27
+
+### Améliorations
+
+- Une catégorie Thème permet de choisir l’apparence système/clair/sombre, les styles Mira/Nova, la base de couleur, les accents, les palettes de graphiques, les polices et le rayon des composants.
+- Les choix du thème modifient les tokens CSS shadcn utilisés par l’application, sont prévisualisés directement dans les réglages et partagés entre fenêtres via le store Tauri.
+- La fenêtre de mise à jour présente l’étape de téléchargement, sa progression et les données de taille disponibles, puis propose l’installation et le redémarrage comme action distincte.
+- Les installateurs et le désinstalleur NSIS reprennent maintenant l’identité visuelle FXMP OS; le bundle MSI reçoit aussi ses visuels WiX.
+
+### Sécurité et confidentialité
+
+- L’audit des capacités Windows confirme que l’application n’a pas besoin d’élévation et que cette version n’ajoute aucune permission Tauri.
+- Les préférences de thème restent locales dans le store Tauri; aucun profil ou réglage n’est envoyé à un service distant.
+
+### Compatibilité
+
+- Windows x64, installateurs NSIS et MSI. WebView2 est requis.
+- NSIS installe pour l’utilisateur courant sans élévation. Le MSI WiX généré utilise une portée par machine et peut demander l’élévation UAC; voir `UPDATE.md`.
+- macOS, Linux, Android et iOS ne sont pas distribués pour cette version.
+
 ## [0.0.30] - 2026-10-27
 
 ### Améliorations

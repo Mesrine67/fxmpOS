@@ -22,6 +22,8 @@ FXMP OS utilise Sonner pour les notifications visibles dans l'application et `ta
 
 La mesure de latence est une action explicite depuis la fenêtre `main`, vers la cible TCP fixe `1.1.1.1:443` avec des tentatives bornées. Elle n'accorde aucune capacité réseau à l'overlay et n'est pas présentée comme une mesure ICMP.
 
+Les préférences de thème (apparence, style, base neutre, accents, couleurs de graphiques, polices et rayon) sont stockées dans `fxmp-settings.json` sous `themePreferences` via le plugin Store déjà autorisé aux deux fenêtres. Elles changent les tokens CSS shadcn; aucune nouvelle permission ou donnée distante n'est nécessaire. Les installateurs gardent les pages natives NSIS/WiX, avec des visuels bitmap Tauri dimensionnés selon leur schéma, et NSIS demeure en installation utilisateur sans élévation.
+
 ## Choix OpenClaw qui ne sont pas importés
 
 - Le Windows Hub d'OpenClaw est une application native WinUI; FXMP OS cible actuellement Windows uniquement, avec Tauri comme shell desktop. Les builds macOS/Linux restent désactivés jusqu'à décision explicite de réactivation; le changement de cible ne retire pas les dépendances Linux transitives ni l'alerte glib suivie dans l'issue #7.
