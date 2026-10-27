@@ -1,5 +1,5 @@
 name: Signaler un bug
-description: Décrire un problème reproductible dans FXMP OS
+description: Signaler un problème de FXMP OS avec les informations nécessaires pour le reproduire.
 title: "[Bug]: "
 labels:
   - bug
@@ -8,54 +8,159 @@ body:
   - type: markdown
     attributes:
       value: |
-        Pour une faille de sécurité, utilisez le signalement privé du dépôt. Ne joignez aucune clé, aucun jeton ni donnée personnelle.
+        Merci de nous aider à améliorer FXMP OS.
+
+        Consultez les [bugs déjà signalés](https://github.com/Mesrine67/fxmpOS/issues?q=is%3Aissue%20label%3Abug) et les [dernières versions](https://github.com/Mesrine67/fxmpOS/releases). Si possible, précisez si le problème existe encore avec la dernière version.
+
+        FXMP OS est actuellement distribué pour **Windows x64 uniquement**.
+        Pour une vulnérabilité, utilisez le [signalement privé de sécurité](https://github.com/Mesrine67/fxmpOS/security/advisories/new).
+        Les Issues sont publiques : masquez les noms d’utilisateur, adresses IP, chemins personnels et autres informations privées dans vos captures et journaux.
+
   - type: input
     id: version
     attributes:
-      label: Version ou commit
-      description: Indiquez la version affichée par l’application ou le SHA du commit.
-      placeholder: 0.0.1-dev
+      label: Version de FXMP OS
+      description: Copiez la version affichée dans Paramètres → Mises à jour. Pour une compilation locale, ajoutez le SHA du commit si vous le connaissez.
+      placeholder: "Version exacte de l’application et, si utile, version avant la mise à jour"
     validations:
       required: true
+
   - type: dropdown
     id: operating-system
     attributes:
-      label: Système
+      label: Version de Windows
       options:
         - Windows 11
         - Windows 10
-        - Linux
-        - macOS
-        - Autre
+        - Autre système ou version inconnue (à préciser dans le contexte)
     validations:
       required: true
+
+  - type: input
+    id: windows-build
+    attributes:
+      label: Édition et build de Windows
+      description: Facultatif. Consultez la page Appareil ou la commande Windows « winver ». Ne copiez pas de clé produit ou d’identifiant d’appareil.
+      placeholder: "Windows 11 Pro · 24H2 · build 26100.x · x64"
+
+  - type: dropdown
+    id: install-method
+    attributes:
+      label: Mode d’installation ou de lancement
+      description: Choisissez l’origine de l’installation utilisée au moment du problème.
+      options:
+        - Installateur Windows EXE (NSIS) depuis GitHub Releases
+        - Installateur Windows MSI depuis GitHub Releases
+        - Mise à jour intégrée à FXMP OS
+        - Exécutable autonome expérimental
+        - Compilation locale depuis les sources
+        - Mode développement Tauri (pnpm tauri dev)
+        - Aperçu frontend dans un navigateur (pnpm dev)
+        - Autre ou inconnu (à préciser dans le contexte)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Partie concernée
+      description: Sélectionnez les fonctions touchées par ce même problème.
+      multiple: true
+      options:
+        - Accueil / Vue d’ensemble
+        - Ressources / CPU, mémoire ou GPU
+        - Ressources / Processus
+        - Ressources / Réseau, ports ou latence
+        - Applications / Détection, liste ou icônes
+        - Appareil / Informations Windows et matériel
+        - Overlay / Affichage, écran ou position
+        - Paramètres / Préférences et démarrage Windows
+        - Mises à jour / Vérification, téléchargement ou installation
+        - Installation / Désinstallation
+        - Fenêtre / Navigation / Barre latérale
+        - Zone de notification / Menu tray
+        - Compilation / CI / Release
+        - Autre (à préciser dans le contexte)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: frequency
+    attributes:
+      label: Fréquence du problème
+      options:
+        - À chaque tentative
+        - Parfois
+        - Une seule fois pour le moment
+        - Impossible à déterminer
+    validations:
+      required: true
+
   - type: textarea
     id: steps
     attributes:
       label: Étapes pour reproduire
-      description: Décrivez les actions dans l’ordre.
+      description: Décrivez les actions depuis l’ouverture de l’application. Si le problème est intermittent, indiquez les circonstances observées.
       placeholder: |
-        1. Ouvrir…
-        2. Sélectionner…
-        3. Constater…
+        1. Ouvrir FXMP OS…
+        2. Aller dans…
+        3. Cliquer sur…
+        4. Le problème apparaît lorsque…
     validations:
       required: true
+
   - type: textarea
     id: expected
     attributes:
       label: Résultat attendu
+      description: Quel comportement aurait dû se produire ?
+      placeholder: "La page devrait afficher…"
     validations:
       required: true
+
   - type: textarea
     id: actual
     attributes:
       label: Résultat observé
+      description: Décrivez le problème et le message d’erreur exact. Précisez si seule la page est en erreur ou si toute l’application se ferme.
+      placeholder: "À la place, l’application… Le message affiché est…"
     validations:
       required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Contexte et informations complémentaires
+      description: Facultatif. Ajoutez uniquement ce qui peut aider au diagnostic, sans données personnelles.
+      placeholder: |
+        - Depuis quand ? Dernière version qui fonctionnait, si connue :
+        - Changement récent (mise à jour Windows, pilote, écran…) :
+        - Ressources : CPU/GPU, mesure concernée, durée avant le problème :
+        - Applications : nom du logiciel manquant, origine bureau ou Store :
+        - Overlay : nombre d’écrans, résolution, mise à l’échelle :
+        - Mise à jour : version de départ, version proposée, étape en échec :
+        - Contournement déjà essayé et résultat :
+
   - type: textarea
     id: logs
     attributes:
-      label: Logs ou captures utiles
-      description: Retirez les secrets et informations personnelles avant tout partage.
-    validations:
-      required: false
+      label: Journaux et détails de l’erreur
+      description: Facultatif. Collez seulement les lignes utiles. Retirez les secrets, adresses IP, noms d’utilisateur et chemins personnels avant de les partager.
+      placeholder: "Collez ici un extrait expurgé du message d’erreur ou des journaux."
+      render: text
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Captures d’écran ou vidéo
+      description: Facultatif. Glissez une capture ou une courte vidéo ici. Masquez les informations personnelles et gardez le message d’erreur visible.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Avant d’envoyer
+      options:
+        - label: J’ai recherché un rapport existant pour ce problème.
+          required: true
+        - label: J’ai retiré les informations personnelles et les secrets du rapport et de ses pièces jointes.
+          required: true
