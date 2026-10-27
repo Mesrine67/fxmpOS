@@ -2,6 +2,20 @@
 
 Chaque version publiée possède sa propre section. Le workflow de release réutilise ces notes dans la release GitHub et dans le manifeste de l’updater Tauri.
 
+## [0.0.19] - 2026-10-27
+
+### Maintenance
+
+- Mise à jour de Next.js et de sa configuration ESLint vers 16.4.3, de Lucide vers 1.61.0 et de shadcn vers 4.22.1.
+- Mise à jour de Tauri et tauri-build vers 2.12.5 et 2.7.4, ainsi que de la CLI Tauri vers 2.12.4.
+- Mise à jour de l’action GitHub de cache Rust vers 2.9.3.
+- Build frontend, compilation Windows, MSRV Rust et CodeQL vérifiés sur les PR de dépendances fusionnées.
+
+### Compatibilité
+
+- Windows x64, installateurs NSIS et MSI. WebView2 est requis.
+- macOS, Linux, Android et iOS ne sont pas distribués pour cette version.
+
 ## [0.0.18] - 2026-10-27
 
 ### Améliorations
