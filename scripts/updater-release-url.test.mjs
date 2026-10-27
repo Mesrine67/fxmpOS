@@ -1,11 +1,9 @@
 import assert from "node:assert/strict"
 import test from "node:test"
-
 import {
   normalizeUpdaterAssetUrls,
   resolveUpdaterAsset,
 } from "./updater-release-url.mjs"
-
 const repository = "Mesrine67/fxmpOS"
 const asset = {
   id: 12345,

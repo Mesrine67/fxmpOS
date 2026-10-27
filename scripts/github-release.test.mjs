@@ -22,7 +22,6 @@ test("finds draft releases through GitHub's paginated release list", async () =>
     assert.deepEqual(options, { headers })
     const pageUrl = new URL(url)
     pages.push(pageUrl.searchParams.get("page") ?? "1")
-
     if (pageUrl.searchParams.get("page") === "2") {
       return jsonResponse([release])
     }
@@ -30,14 +29,12 @@ test("finds draft releases through GitHub's paginated release list", async () =>
       link: `<https://api.github.com/repos/${repository}/releases?per_page=100&page=2>; rel="next"`,
     })
   }
-
   const result = await fetchReleaseByTag({
     repository,
     tag,
     headers,
     fetchImpl,
   })
-
   assert.equal(result, release)
   assert.deepEqual(pages, ["1", "2"])
 })

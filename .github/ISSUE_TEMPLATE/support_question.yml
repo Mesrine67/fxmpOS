@@ -1,0 +1,55 @@
+name: Support question
+description: Ask for help when you are not sure whether something is a bug.
+title: "question: "
+labels:
+  - question
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form for questions about FXMP OS. For Windows, games, or third-party tools, include the relevant version and remove personal or secret data from logs and screenshots.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I checked the README and user guide first.
+          required: true
+        - label: I searched existing issues and did not find an answer.
+          required: true
+        - label: I removed passwords, tokens, license keys, private IP addresses, and other sensitive data.
+          required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Installation
+        - Windows and device information
+        - Installed applications
+        - Resource monitor
+        - Games
+        - Overlay
+        - Updates and installation
+        - Settings
+        - Logs and diagnostics
+        - Build / Release
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+      description: Explain what you are trying to understand or accomplish.
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Add the FXMP OS version, Windows version, relevant logs, screenshots, and what you already tried. Remove private data first.

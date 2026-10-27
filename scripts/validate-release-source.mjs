@@ -45,13 +45,11 @@ if (
     `Invalid Tauri application version: ${tauriVersion ?? "missing"}`
   )
 }
-
 if (packageVersion !== tauriVersion || cargoVersion !== tauriVersion) {
   throw new Error(
     `Version mismatch: package.json=${packageVersion ?? "missing"}, tauri.conf.json=${tauriVersion}, Cargo.toml=${cargoVersion ?? "missing"}`
   )
 }
-
 const eventName = process.env.GITHUB_EVENT_NAME
 const ref = process.env.GITHUB_REF
 if (eventName === "push") {
@@ -85,5 +83,4 @@ if (eventName === "push") {
 } else if (eventName) {
   throw new Error(`Unsupported release event: ${eventName}`)
 }
-
 process.stdout.write(`${tauriVersion}\n`)
