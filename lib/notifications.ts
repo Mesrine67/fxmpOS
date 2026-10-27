@@ -16,9 +16,10 @@ import {
 export type FxmpNotificationLevel = "success" | "info" | "warning" | "error"
 
 /**
- * Routes an FXMP event to an in-app toast while the main window is focused,
- * or to a Windows notification when the user enabled it and the app is in the
- * background. No system details should be placed in title/body.
+ * Routes an FXMP event to each enabled channel independently. In-app toasts
+ * are useful while the window is focused; native Windows notifications are
+ * controlled separately and remain available even while FXMP OS is focused.
+ * No system details should be placed in title/body.
  */
 export async function notifyFxmp(
   level: FxmpNotificationLevel,
@@ -38,18 +39,24 @@ export async function notifyFxmp(
         .catch(() => true)
     : true
 
+  const sent: Array<"in-app" | "native"> = []
+
   if (focused && preferences.inAppEnabled) {
     toast[level](title, body ? { description: body } : undefined)
-    return "in-app" as const
+    sent.push("in-app")
   }
 
-  if (!desktop || focused || !preferences.nativeEnabled) return undefined
-  try {
-    if (!(await isPermissionGranted())) return undefined
-    await sendNotification({ title, body })
-    return "native" as const
-  } catch (error) {
-    console.error("Impossible d’envoyer une notification Windows", error)
-    return undefined
+  if (desktop && preferences.nativeEnabled) {
+    try {
+      if (await isPermissionGranted()) {
+        await sendNotification({ title, body })
+        sent.push("native")
+      }
+    } catch (error) {
+      console.error("Impossible d’envoyer une notification Windows", error)
+    }
   }
+
+  if (sent.length === 2) return "both" as const
+  return sent[0]
 }

@@ -2,7 +2,7 @@
 
 Le moniteur de ressources utilise la commande native en lecture seule `get_resource_sample`, limitée à la capacité `main`. Elle collecte CPU, mémoire et métadonnées limitées des processus localement, avec une liste bornée à l'union des 25 premiers en CPU et des 25 premiers en mémoire. Les champs de processus restent limités au nom, PID, CPU normalisé sur 0–100 % machine et mémoire; aucun chemin, argument de lancement, utilisateur ou action de contrôle n'est permis.
 
-Revue ciblée d'OpenClaw effectuée le 18 octobre 2026 sur les surfaces liées à l'app Linux Tauri, au Windows Hub, aux mises à jour et à la sécurité; ce n'est pas un audit ligne par ligne de tout le dépôt. L'état FXMP OS de ce document a été réaligné le 27 octobre 2026 sur la version 0.0.31. FXMP OS est une application locale de monitoring; il ne partage pas le rôle de passerelle, de messagerie ou d'exécution d'agents d'OpenClaw.
+Revue ciblée d'OpenClaw effectuée le 18 octobre 2026 sur les surfaces liées à l'app Linux Tauri, au Windows Hub, aux mises à jour et à la sécurité; ce n'est pas un audit ligne par ligne de tout le dépôt. L'état FXMP OS de ce document a été réaligné le 27 octobre 2026 sur la version 0.0.36. FXMP OS est une application locale de monitoring; il ne partage pas le rôle de passerelle, de messagerie ou d'exécution d'agents d'OpenClaw.
 
 ## Ce que nous reprenons
 
@@ -18,7 +18,7 @@ Revue ciblée d'OpenClaw effectuée le 18 octobre 2026 sur les surfaces liées �
 
 ## Notifications natives et toasts
 
-FXMP OS utilise Sonner pour les notifications visibles dans l'application et `tauri-plugin-notification` pour les alertes Windows natives en arrière-plan. La capacité `main` reçoit seulement les permissions de lecture de l'état, de demande explicite et d'envoi; `overlay` n'a aucune permission de notification. Le premier lancement ne déclenche jamais de boîte de permission. Les réglages partagés (activation, position, durée et bouton de fermeture) sont stockés dans `fxmp-settings.json`; le contenu des notifications ne doit jamais contenir de données système, processus, ports ou d'identifiants locaux. La demande d'autorisation est réservée au clic sur le bouton dans Paramètres.
+FXMP OS utilise deux canaux indépendants : Sonner affiche les toasts dans l'application, tandis que `tauri-plugin-notification` envoie les notifications natives Windows. Chaque canal suit son propre réglage et les deux peuvent notifier le même événement, y compris lorsque la fenêtre principale est au premier plan. Les notifications système fonctionnent dans l'application installée; en développement, Windows peut les attribuer à PowerShell. La capacité `main` reçoit seulement les permissions de lecture de l'état, de demande explicite et d'envoi; `overlay` n'a aucune permission de notification. Le premier lancement ne déclenche jamais de boîte de permission. Les préférences partagées (activation, position, durée et bouton de fermeture) sont stockées dans `fxmp-settings.json`; le contenu des notifications ne doit jamais contenir de données système, processus, ports ou d'identifiants locaux. La demande d'autorisation est réservée au clic sur le bouton dans Paramètres.
 
 La mesure de latence est une action explicite depuis la fenêtre `main`, vers la cible TCP fixe `1.1.1.1:443` avec des tentatives bornées. Elle n'accorde aucune capacité réseau à l'overlay et n'est pas présentée comme une mesure ICMP.
 
