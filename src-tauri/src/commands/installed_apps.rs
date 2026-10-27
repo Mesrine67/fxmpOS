@@ -290,7 +290,7 @@ fn extract_icon_data_url(path: &std::path::Path, icon_index: i32) -> Option<Stri
         let mut rgba = Vec::with_capacity(pixel_count);
         for (index, pixel) in bgra.chunks_exact(4).enumerate() {
             let alpha = if has_alpha_mask {
-                if mask[index * 4] == 0 { 0 } else { 255 }
+                if mask[index * 4] == 0 { 255 } else { 0 }
             } else {
                 pixel[3]
             };
