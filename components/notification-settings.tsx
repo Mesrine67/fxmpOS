@@ -6,7 +6,14 @@ import {
   requestPermission,
   sendNotification,
 } from "@tauri-apps/plugin-notification"
-import { BellIcon, CheckIcon, InfoIcon, ShieldCheckIcon, TriangleAlertIcon, XIcon } from "lucide-react"
+import {
+  BellIcon,
+  CheckIcon,
+  InfoIcon,
+  ShieldCheckIcon,
+  TriangleAlertIcon,
+  XIcon,
+} from "lucide-react"
 import { toast } from "sonner"
 
 import { useTauriRuntime } from "@/hooks/use-tauri-runtime"
@@ -33,7 +40,8 @@ import {
 } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 
-type PermissionState = "loading" | "granted" | "prompt" | "denied" | "unavailable"
+type PermissionState =
+  "loading" | "granted" | "prompt" | "denied" | "unavailable"
 type NotificationTestKind = "success" | "info" | "warning" | "error"
 
 const notificationTests: {
@@ -78,6 +86,7 @@ export function NotificationSettings() {
   const [permission, setPermission] = useState<PermissionState>("loading")
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [nativeResult, setNativeResult] = useState<string | null>(null)
 
   useEffect(() => {
     if (desktopRuntime !== true) return
@@ -97,9 +106,7 @@ export function NotificationSettings() {
     }
   }, [desktopRuntime])
 
-  async function updatePreference(
-    update: Partial<typeof preferences>
-  ) {
+  async function updatePreference(update: Partial<typeof preferences>) {
     setError(null)
     try {
       await writeNotificationPreferences(update)
@@ -115,9 +122,13 @@ export function NotificationSettings() {
     try {
       const result = await requestPermission()
       const granted = result === "granted" || (await isPermissionGranted())
-      setPermission(granted ? "granted" : result === "denied" ? "denied" : "prompt")
+      setPermission(
+        granted ? "granted" : result === "denied" ? "denied" : "prompt"
+      )
       if (!granted) {
-        setError("Windows n’a pas accordé l’autorisation. Vérifie les paramètres de notification de Windows.")
+        setError(
+          "Windows n’a pas accordé l’autorisation. Vérifie les paramètres de notification de Windows."
+        )
       }
     } catch (reason) {
       setError(errorMessage(reason))
@@ -127,28 +138,35 @@ export function NotificationSettings() {
     }
   }
 
-  async function testNativeNotification(test: (typeof notificationTests)[number]) {
+  async function testNativeNotification(
+    test: (typeof notificationTests)[number]
+  ) {
     if (pending || desktopRuntime !== true || !preferences.nativeEnabled) return
     setPending(true)
     setError(null)
+    setNativeResult(null)
     try {
       let granted = await isPermissionGranted()
       if (!granted) {
         const result = await requestPermission()
         granted = result === "granted" || (await isPermissionGranted())
-        setPermission(granted ? "granted" : result === "denied" ? "denied" : "prompt")
+        setPermission(
+          granted ? "granted" : result === "denied" ? "denied" : "prompt"
+        )
       }
       if (!granted) {
-        setError("Autorisation Windows refusée. Autorise les notifications FXMP OS dans les paramètres de Windows.")
+        setError(
+          "Autorisation Windows refusée. Autorise les notifications FXMP OS dans les paramètres de Windows."
+        )
         return
       }
       await sendNotification({
         title: test.title,
         body: test.body,
       })
-      toast.success("Notification Windows envoyée", {
-        description: `Exemple « ${test.label} » transmis au plugin Tauri.`,
-      })
+      setNativeResult(
+        `Le plugin Tauri a accepté l’exemple « ${test.label} ». Vérifie la notification Windows et son centre de notifications.`
+      )
     } catch (reason) {
       setError(errorMessage(reason))
     } finally {
@@ -157,6 +175,7 @@ export function NotificationSettings() {
   }
 
   function testToast(kind: "success" | "info" | "warning" | "error") {
+    if (!preferences.inAppEnabled) return
     const message = "Aperçu de notification FXMP OS"
     const description = "Voici le rendu des notifications dans l’application."
     if (kind === "success") toast.success(message, { description })
@@ -192,8 +211,9 @@ export function NotificationSettings() {
               Notifications FXMP OS
             </CardTitle>
             <CardDescription>
-              Les alertes restent dans l’application quand elle est ouverte et
-              peuvent apparaître dans Windows lorsqu’elle est en arrière-plan.
+              Les notifications dans FXMP OS et Windows sont indépendantes.
+              Active chaque canal séparément ; les deux peuvent notifier quand
+              FXMP OS est ouvert.
             </CardDescription>
           </div>
           <Badge variant="outline">Windows</Badge>
@@ -201,7 +221,9 @@ export function NotificationSettings() {
         <CardContent className="flex flex-col gap-5">
           <div className="flex items-center justify-between gap-4 rounded-lg border p-3">
             <div className="space-y-1">
-              <p className="text-sm font-medium">Notifications dans l’application</p>
+              <p className="text-sm font-medium">
+                Notifications dans l’application
+              </p>
               <p className="text-xs text-muted-foreground">
                 Toasts Sonner pendant que FXMP OS est au premier plan.
               </p>
@@ -209,29 +231,41 @@ export function NotificationSettings() {
             <Switch
               aria-label="Activer les notifications dans FXMP OS"
               checked={preferences.inAppEnabled}
-              onCheckedChange={(checked) => void updatePreference({ inAppEnabled: checked })}
+              onCheckedChange={(checked) =>
+                void updatePreference({ inAppEnabled: checked })
+              }
             />
           </div>
           <div className="flex items-center justify-between gap-4 rounded-lg border p-3">
             <div className="space-y-1">
               <p className="text-sm font-medium">Notifications Windows</p>
               <p className="text-xs text-muted-foreground">
-                Notifications natives Windows quand FXMP OS n’est pas au premier plan.
+                Notifications système Windows, même quand FXMP OS est au
+                premier plan.
               </p>
             </div>
             <Switch
               aria-label="Activer les notifications Windows"
               checked={preferences.nativeEnabled}
               disabled={desktopRuntime !== true}
-              onCheckedChange={(checked) => void updatePreference({ nativeEnabled: checked })}
+              onCheckedChange={(checked) =>
+                void updatePreference({ nativeEnabled: checked })
+              }
             />
           </div>
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-muted/40 p-3">
             <div className="flex items-start gap-2">
-              <ShieldCheckIcon aria-hidden="true" className="mt-0.5 size-4 text-muted-foreground" />
+              <ShieldCheckIcon
+                aria-hidden="true"
+                className="mt-0.5 size-4 text-muted-foreground"
+              />
               <div className="space-y-1">
                 <p className="text-sm font-medium">Autorisation système</p>
-                <p aria-live="polite" className="text-xs text-muted-foreground" role="status">
+                <p
+                  aria-live="polite"
+                  className="text-xs text-muted-foreground"
+                  role="status"
+                >
                   {permissionText}
                 </p>
               </div>
@@ -247,7 +281,9 @@ export function NotificationSettings() {
               size="sm"
               variant="outline"
             >
-              {permission === "granted" ? <CheckIcon data-icon="inline-start" /> : null}
+              {permission === "granted" ? (
+                <CheckIcon data-icon="inline-start" />
+              ) : null}
               {permission === "granted" ? "Autorisé" : "Autoriser dans Windows"}
             </Button>
           </div>
@@ -258,7 +294,8 @@ export function NotificationSettings() {
         <CardHeader>
           <CardTitle>Apparence des toasts</CardTitle>
           <CardDescription>
-            Position, durée et fermeture des notifications affichées dans FXMP OS.
+            Position, durée et fermeture des notifications affichées dans FXMP
+            OS.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-3">
@@ -266,11 +303,17 @@ export function NotificationSettings() {
             Position
             <Select
               onValueChange={(value) => {
-                if (value) void updatePreference({ position: value as NotificationPosition })
+                if (value)
+                  void updatePreference({
+                    position: value as NotificationPosition,
+                  })
               }}
               value={preferences.position}
             >
-              <SelectTrigger className="w-full" aria-label="Position des notifications">
+              <SelectTrigger
+                className="w-full"
+                aria-label="Position des notifications"
+              >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -290,7 +333,10 @@ export function NotificationSettings() {
               }}
               value={String(preferences.duration)}
             >
-              <SelectTrigger className="w-full" aria-label="Durée d’affichage des notifications">
+              <SelectTrigger
+                className="w-full"
+                aria-label="Durée d’affichage des notifications"
+              >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -306,7 +352,9 @@ export function NotificationSettings() {
             <Switch
               aria-label="Afficher le bouton de fermeture des notifications"
               checked={preferences.closeButton}
-              onCheckedChange={(checked) => void updatePreference({ closeButton: checked })}
+              onCheckedChange={(checked) =>
+                void updatePreference({ closeButton: checked })
+              }
             />
           </div>
         </CardContent>
@@ -316,32 +364,54 @@ export function NotificationSettings() {
         <CardHeader>
           <CardTitle>Aperçu des notifications dans FXMP OS</CardTitle>
           <CardDescription>
-            Ces aperçus Sonner s’affichent dans l’interface quand FXMP OS est ouvert.
+            Ces aperçus Sonner s’affichent dans l’interface quand FXMP OS est
+            ouvert.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <div className="flex flex-wrap gap-2">
-            <Button onClick={() => testToast("success")} size="sm" variant="outline">
+            <Button
+              onClick={() => testToast("success")}
+              size="sm"
+              variant="outline"
+            >
               <CheckIcon data-icon="inline-start" /> Succès
             </Button>
-            <Button onClick={() => testToast("info")} size="sm" variant="outline">
+            <Button
+              onClick={() => testToast("info")}
+              size="sm"
+              variant="outline"
+            >
               <InfoIcon data-icon="inline-start" /> Information
             </Button>
-            <Button onClick={() => testToast("warning")} size="sm" variant="outline">
+            <Button
+              onClick={() => testToast("warning")}
+              size="sm"
+              variant="outline"
+            >
               <TriangleAlertIcon data-icon="inline-start" /> Attention
             </Button>
-            <Button onClick={() => testToast("error")} size="sm" variant="outline">
+            <Button
+              onClick={() => testToast("error")}
+              size="sm"
+              variant="outline"
+            >
               <XIcon data-icon="inline-start" /> Erreur
             </Button>
           </div>
           {error ? (
-            <p aria-live="polite" className="text-sm text-destructive" role="alert">
+            <p
+              aria-live="polite"
+              className="text-sm text-destructive"
+              role="alert"
+            >
               {error}
             </p>
           ) : null}
           {!preferences.inAppEnabled ? (
             <p className="text-xs text-muted-foreground">
-              Les aperçus visuels restent disponibles même si les notifications de l’application sont désactivées.
+              Active les notifications dans l’application pour afficher les
+              aperçus Sonner.
             </p>
           ) : null}
         </CardContent>
@@ -353,8 +423,9 @@ export function NotificationSettings() {
             Tests du plugin de notifications Tauri
           </CardTitle>
           <CardDescription>
-            Envoie un exemple natif au centre de notifications Windows. Les boutons changent le contenu;
-            Windows choisit lui-même l’apparence et le niveau d’interruption.
+            Envoie un exemple natif au centre de notifications Windows. Les
+            boutons changent le contenu; Windows choisit lui-même l’apparence et
+            le niveau d’interruption.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
@@ -371,7 +442,12 @@ export function NotificationSettings() {
               return (
                 <Button
                   key={test.kind}
-                  disabled={desktopRuntime !== true || !preferences.nativeEnabled || pending}
+                  aria-label={`Tester la notification Windows : ${test.label}`}
+                  disabled={
+                    desktopRuntime !== true ||
+                    !preferences.nativeEnabled ||
+                    pending
+                  }
                   onClick={() => void testNativeNotification(test)}
                   size="sm"
                   variant="outline"
@@ -382,16 +458,36 @@ export function NotificationSettings() {
               )
             })}
           </div>
+          {nativeResult ? (
+            <p
+              aria-live="polite"
+              className="text-sm text-muted-foreground"
+              role="status"
+            >
+              {nativeResult}
+            </p>
+          ) : null}
+          {error ? (
+            <p
+              aria-live="polite"
+              className="text-sm text-destructive"
+              role="alert"
+            >
+              {error}
+            </p>
+          ) : null}
           <p className="text-xs text-muted-foreground">
-            Sous Windows, les notifications du plugin Tauri sont prises en charge pour l’application installée.
-            En mode développement, Windows peut leur attribuer l’identité PowerShell. Si un envoi échoue,
-            le message d’erreur s’affiche ici.
+            Le plugin Tauri Windows ne fonctionne que pour une application
+            installée. En développement, Windows peut attribuer la notification
+            à PowerShell. Le retour ci-dessus confirme l’envoi au plugin, pas
+            son affichage par Windows.
           </p>
         </CardContent>
       </Card>
       <p className="text-xs text-muted-foreground">
-        Les préférences sont stockées localement dans le store FXMP OS. Aucune donnée du PC,
-        aucun identifiant de session et aucun contenu privé n’est ajouté aux notifications.
+        Les préférences sont stockées localement dans le store FXMP OS. Aucune
+        donnée du PC, aucun identifiant de session et aucun contenu privé n’est
+        ajouté aux notifications.
       </p>
     </div>
   )

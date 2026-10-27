@@ -1,5 +1,18 @@
 # Journal des modifications
 
+## [0.0.36] - 2026-10-27
+
+### Améliorations
+
+- Les notifications intégrées Sonner et les notifications système Windows via `tauri-plugin-notification` sont maintenant deux canaux indépendants. Quand les deux options sont activées, un événement au premier plan peut apparaître dans l’application et dans Windows.
+- Les paramètres distinguent clairement l’aperçu Sonner du test natif Windows; le résultat du test natif indique que Tauri a accepté l’envoi sans prétendre que Windows l’a affiché.
+- Les aperçus Sonner respectent le réglage des notifications dans FXMP OS.
+
+### Corrections
+
+- Les toasts Sonner restent visibles dans la fenêtre Tauri avec la CSP stricte : leurs styles sont inclus dans la feuille CSS empaquetée au lieu de dépendre d’un bloc `<style>` injecté et bloqué par WebView2.
+- Le canal Windows n’est plus ignoré lorsque la fenêtre FXMP OS est au premier plan.
+
 ## [0.0.35] - 2026-10-27
 
 ### Améliorations
