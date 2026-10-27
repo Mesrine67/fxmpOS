@@ -170,7 +170,13 @@ fn read_registry_apps() -> RegistryInventory {
 }
 
 #[cfg(target_os = "windows")]
-fn read_store_apps() -> Result<Vec<InstalledApp>, String> {
+struct StoreInventory {
+    apps: Vec<InstalledApp>,
+    warning: Option<String>,
+}
+
+#[cfg(target_os = "windows")]
+fn read_store_apps() -> Result<StoreInventory, String> {
     use base64::Engine;
     use std::collections::HashSet;
     use windows::ApplicationModel::Core::AppListEntry;
@@ -199,6 +205,7 @@ fn read_store_apps() -> Result<Vec<InstalledApp>, String> {
 
     let mut apps = Vec::new();
     let mut seen = HashSet::new();
+    let mut read_failures = 0usize;
     for package in packages {
         let is_framework = package.IsFramework().unwrap_or(false);
         let is_resource_package = package.IsResourcePackage().unwrap_or(false);
@@ -220,10 +227,29 @@ fn read_store_apps() -> Result<Vec<InstalledApp>, String> {
 
         // Settings should show user-facing apps, not every framework, codec,
         // shell extension, or support package installed for this user.
-        let Ok(entries) = package.GetAppListEntries() else {
-            continue;
+        // The synchronous API is unavailable on older supported Windows builds.
+        // Await the WinRT async API so the Store source remains compatible.
+        let entries = match package.GetAppListEntriesAsync() {
+            Ok(operation) => match operation.join() {
+                Ok(entries) => entries,
+                Err(_) => {
+                    read_failures += 1;
+                    continue;
+                }
+            },
+            Err(_) => {
+                read_failures += 1;
+                continue;
+            }
         };
-        if entries.Size().unwrap_or(0) == 0 {
+        let entry_count = match entries.Size() {
+            Ok(count) => count,
+            Err(_) => {
+                read_failures += 1;
+                continue;
+            }
+        };
+        if entry_count == 0 {
             continue;
         }
 
@@ -249,10 +275,14 @@ fn read_store_apps() -> Result<Vec<InstalledApp>, String> {
             .map(|value| value.to_string_lossy())
             .filter(|value| !value.trim().is_empty());
 
-        for index in 0..entries.Size().unwrap_or(0) {
+        for index in 0..entry_count {
             let entry_result: windows::core::Result<AppListEntry> = entries.GetAt(index);
-            let Ok(entry) = entry_result else {
-                continue;
+            let entry = match entry_result {
+                Ok(entry) => entry,
+                Err(_) => {
+                    read_failures += 1;
+                    continue;
+                }
             };
             let app_id = entry
                 .AppUserModelId()
@@ -318,7 +348,12 @@ fn read_store_apps() -> Result<Vec<InstalledApp>, String> {
     }
 
     apps.sort_by(|left, right| left.name.to_lowercase().cmp(&right.name.to_lowercase()));
-    Ok(apps)
+    Ok(StoreInventory {
+        apps,
+        warning: (read_failures > 0).then(|| {
+            "Windows n’a pas permis de lire certains paquets Store; cette source peut être incomplète.".to_owned()
+        }),
+    })
 }
 
 #[cfg(target_os = "windows")]
@@ -334,16 +369,16 @@ fn read_installed_apps() -> InstalledAppsInventory {
         warning: registry.warning,
     };
     let (store_apps, store_source) = match read_store_apps() {
-        Ok(apps) => {
-            let count = apps.len();
+        Ok(inventory) => {
+            let count = inventory.apps.len();
             (
-                apps,
+                inventory.apps,
                 InventorySource {
                     id: "store".to_owned(),
                     label: "Microsoft Store et MSIX".to_owned(),
                     count,
-                    available: true,
-                    warning: None,
+                    available: inventory.warning.is_none(),
+                    warning: inventory.warning,
                 },
             )
         }
