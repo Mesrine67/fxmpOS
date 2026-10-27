@@ -11,6 +11,7 @@ import {
   RefreshCwIcon,
   SearchIcon,
 } from "lucide-react"
+import Image from "next/image"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -55,6 +56,7 @@ type InstalledApp = {
   installDate: string | null
   estimatedSizeBytes: number | null
   scope: string
+  iconDataUrl: string | null
 }
 
 type ScopeFilter = "all" | "Utilisateur courant" | "Tous les utilisateurs"
@@ -85,8 +87,23 @@ function formatDate(value: string | null) {
 function AppDetails({ app }: { app: InstalledApp }) {
   return (
     <div className="flex min-w-0 items-center gap-3">
-      <div className="flex size-10 shrink-0 items-center justify-center rounded-lg border bg-muted/40 text-muted-foreground">
-        <AppWindowIcon aria-hidden="true" className="size-5" />
+      <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-lg border bg-muted/40 text-muted-foreground">
+        {app.iconDataUrl ? (
+          // Icons are extracted locally from the app's Windows uninstall entry.
+          // The native command returns image bytes and never exposes file paths.
+          <Image
+            alt=""
+            className="size-full object-contain p-1.5"
+            decoding="async"
+            height={64}
+            loading="lazy"
+            src={app.iconDataUrl}
+            unoptimized
+            width={64}
+          />
+        ) : (
+          <AppWindowIcon aria-hidden="true" className="size-5" />
+        )}
       </div>
       <div className="min-w-0 space-y-1">
         <p className="truncate font-medium" title={app.name}>
