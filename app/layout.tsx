@@ -1,16 +1,10 @@
-import { Suspense } from "react"
 import { Geist, Geist_Mono, Inter } from "next/font/google"
 
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { TooltipProvider } from "@/components/ui/tooltip"
-import { ExternalLinkGuard } from "@/components/external-link-guard"
-import { DebugPanelGate } from "@/components/debug-panel-gate"
-import { OverlayBootstrap } from "@/components/overlay-bootstrap"
-import { UpdaterProvider } from "@/components/updater-provider"
-import { Toaster } from "@/components/ui/sonner"
 import { cn } from "@/lib/utils"
-import { TrayNavigationListener } from "@/components/tray-navigation-listener"
+import { AppRuntimeShell } from "@/components/app-runtime-shell"
 
 const fontSans = Geist({
   subsets: ["latin"],
@@ -40,22 +34,9 @@ export default function RootLayout({
     >
       <body>
         <ThemeProvider>
-          <UpdaterProvider>
-            <TooltipProvider>
-              <div data-ui-app-shell>
-                <ExternalLinkGuard />
-                <Suspense fallback={null}>
-                  <TrayNavigationListener />
-                </Suspense>
-                {process.env.NODE_ENV === "development" ? (
-                  <DebugPanelGate />
-                ) : null}
-                <OverlayBootstrap />
-                {children}
-              </div>
-              <Toaster />
-            </TooltipProvider>
-          </UpdaterProvider>
+          <TooltipProvider>
+            <AppRuntimeShell>{children}</AppRuntimeShell>
+          </TooltipProvider>
         </ThemeProvider>
       </body>
     </html>

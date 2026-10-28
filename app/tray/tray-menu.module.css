@@ -1,0 +1,158 @@
+.root {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  color: #f4f3f5;
+  font-family: "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+  font-size: 12px;
+  -webkit-font-smoothing: antialiased;
+}
+
+.surface {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 9%);
+  border-radius: 11px;
+  background: rgb(20 20 22 / 83%);
+  box-shadow: 0 10px 34px rgb(0 0 0 / 38%), inset 0 1px rgb(255 255 255 / 4%);
+  backdrop-filter: blur(30px) saturate(125%);
+  -webkit-backdrop-filter: blur(30px) saturate(125%);
+}
+
+.header {
+  display: flex;
+  min-height: 47px;
+  flex: 0 0 47px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  border-bottom: 1px solid rgb(255 255 255 / 7%);
+}
+
+.brandMark {
+  display: grid;
+  width: 27px;
+  height: 27px;
+  flex: 0 0 27px;
+  place-items: center;
+  border: 1px solid rgb(224 74 67 / 20%);
+  border-radius: 8px;
+  background: rgb(224 74 67 / 10%);
+  color: #df625b;
+}
+
+.brandMark svg { width: 15px; height: 15px; stroke-width: 1.8; }
+.brandText { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 2px; line-height: 1.05; }
+.brandText strong { color: #f4f3f5; font-size: 11px; font-weight: 650; }
+.brandText span { color: rgb(225 223 231 / 54%); font-size: 9px; }
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 7px;
+  border: 1px solid rgb(117 202 139 / 16%);
+  border-radius: 999px;
+  background: rgb(117 202 139 / 8%);
+  color: #c3e9cc;
+  font-size: 9px;
+  line-height: 1;
+}
+
+.status span { width: 5px; height: 5px; border-radius: 50%; background: #7bd394; }
+
+.headerBadge {
+  display: grid;
+  width: 19px;
+  height: 19px;
+  flex: 0 0 19px;
+  place-items: center;
+  border: 1px solid rgb(255 255 255 / 13%);
+  border-radius: 50%;
+  background: rgb(0 0 0 / 20%);
+  color: #f4f3f5;
+  font-size: 9px;
+  font-weight: 650;
+}
+
+.scrollArea {
+  min-height: 0;
+  flex: 1;
+  overflow: auto;
+  padding: 6px 7px 5px;
+  scrollbar-color: rgb(255 255 255 / 16%) transparent;
+  scrollbar-width: thin;
+}
+
+.sectionLabel {
+  display: flex;
+  height: 19px;
+  align-items: center;
+  margin: 0;
+  padding: 0 8px;
+  color: rgb(224 222 230 / 45%);
+  font-size: 8px;
+  font-weight: 650;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
+
+.menuList { display: flex; flex-direction: column; }
+
+.menuItem {
+  display: flex;
+  width: 100%;
+  min-height: 42px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: #f1f0f3;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  transition: background-color 100ms ease;
+}
+
+.menuItem:hover,
+.menuItem:focus-visible { outline: none; background: rgb(255 255 255 / 7%); }
+.menuItem:active { background: rgb(255 255 255 / 11%); }
+.itemIcon { width: 14px; height: 14px; flex: 0 0 14px; color: rgb(225 223 232 / 72%); stroke-width: 1.8; }
+.itemCopy { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 2px; }
+.itemTitle { overflow: hidden; color: rgb(247 246 249 / 96%); font-size: 10px; font-weight: 560; line-height: 1.15; text-overflow: ellipsis; white-space: nowrap; }
+.itemDetail { overflow: hidden; color: rgb(220 218 227 / 52%); font-size: 8px; line-height: 1.15; text-overflow: ellipsis; white-space: nowrap; }
+.chevron { width: 11px; height: 11px; flex: 0 0 11px; color: rgb(222 220 228 / 42%); stroke-width: 1.8; }
+
+.menuList[aria-label="Accès rapide"] .menuItem + .menuItem { border-top-color: rgb(255 255 255 / 5%); border-top-left-radius: 0; border-top-right-radius: 0; }
+.divider { height: 1px; margin: 5px 7px 4px; background: rgb(255 255 255 / 8%); }
+.error { flex: 0 0 auto; margin: 2px 9px 4px; padding: 6px 8px; border: 1px solid rgb(245 93 93 / 25%); border-radius: 6px; background: rgb(245 93 93 / 8%); color: #ffaaaa; font-size: 9px; }
+
+.footer {
+  display: flex;
+  min-height: 45px;
+  flex: 0 0 45px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 5px;
+  padding: 0 9px;
+  border-top: 1px solid rgb(255 255 255 / 8%);
+  background: rgb(0 0 0 / 14%);
+}
+
+.footerCopy { display: flex; min-width: 0; align-items: center; gap: 7px; color: rgb(226 225 232 / 76%); }
+.footerIcon { width: 13px; height: 13px; flex: 0 0 13px; color: rgb(222 221 229 / 61%); stroke-width: 1.7; }
+.footerText { display: flex; min-width: 0; flex-direction: column; gap: 2px; }
+.footerText strong { overflow: hidden; color: rgb(241 239 245 / 88%); font-size: 8px; font-weight: 570; text-overflow: ellipsis; white-space: nowrap; }
+.footerText span { overflow: hidden; color: rgb(220 219 227 / 50%); font-size: 7px; text-overflow: ellipsis; white-space: nowrap; }
+
+.quitButton { display: inline-flex; height: 26px; flex: 0 0 auto; align-items: center; gap: 5px; padding: 0 7px; border: 1px solid transparent; border-radius: 6px; background: transparent; color: rgb(237 236 241 / 72%); cursor: pointer; font-family: inherit; font-size: 9px; }
+.quitButton:hover,
+.quitButton:focus-visible { outline: none; background: rgb(255 255 255 / 7%); color: #fff; }
+.quitButton svg { width: 11px; height: 11px; stroke-width: 1.8; }
+
+@media (prefers-reduced-motion: reduce) { .menuItem, .quitButton { transition: none; } }
