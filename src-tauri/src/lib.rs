@@ -1,6 +1,8 @@
 mod commands;
 mod navigation;
 mod tray;
+#[cfg(windows)]
+mod windows_installer;
 
 use tauri::{Manager, webview::PageLoadEvent};
 
@@ -53,18 +55,22 @@ pub fn run() {
                 .expect("tauri.conf.json must define the main window")
                 .clone();
 
-            tauri::WebviewWindowBuilder::from_config(app.handle(), &window_config)?
-                .on_page_load(move |window, payload| {
-                    if window.label() == "main"
-                        && matches!(payload.event(), PageLoadEvent::Finished)
-                    {
-                        log::info!("main webview finished loading");
-                        if !start_hidden {
-                            let _ = window.show();
+            let main_window =
+                tauri::WebviewWindowBuilder::from_config(app.handle(), &window_config)?
+                    .on_page_load(move |window, payload| {
+                        if window.label() == "main"
+                            && matches!(payload.event(), PageLoadEvent::Finished)
+                        {
+                            log::info!("main webview finished loading");
+                            if !start_hidden {
+                                let _ = window.show();
+                            }
                         }
-                    }
-                })
-                .build()?;
+                    })
+                    .build()?;
+
+            #[cfg(windows)]
+            windows_installer::allow_restart_manager_shutdown(&main_window);
 
             #[cfg(desktop)]
             tray::install(app)?;
@@ -85,6 +91,11 @@ pub fn run() {
         .on_window_event(|window, event| {
             if window.label() == "main" {
                 if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                    #[cfg(windows)]
+                    if windows_installer::is_restart_manager_shutdown() {
+                        return;
+                    }
+
                     api.prevent_close();
                     if let Err(error) = window.hide() {
                         log::error!("failed to hide main window: {error}");
