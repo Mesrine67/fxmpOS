@@ -1,5 +1,17 @@
 # Journal des modifications
 
+## [0.0.40] - 2026-10-28
+
+### Correctifs
+
+- Le setup NSIS peut maintenant fermer FXMP OS lorsqu'une mise à niveau ou une désinstallation est demandée par Windows Restart Manager. La fermeture normale de la fenêtre continue de masquer l'application dans la zone de notification.
+
+## [0.0.39] - 2026-10-28
+
+### Améliorations
+
+- À compléter avant la publication.
+
 ## [0.0.38] - 2026-10-28
 
 ### Améliorations

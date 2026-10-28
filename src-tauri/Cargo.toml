@@ -1,6 +1,6 @@
 [package]
 name = "fxmp-os"
-version = "0.0.38"
+version = "0.0.40"
 description = "A FXMP Tauri App OS for monitoring and controlling your PC"
 authors = ["FXMP"]
 license = "LGPL-3.0-only"
