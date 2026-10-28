@@ -1,3 +1,4 @@
+import { Suspense } from "react"
 import { Geist, Geist_Mono, Inter } from "next/font/google"
 
 import "./globals.css"
@@ -9,6 +10,7 @@ import { OverlayBootstrap } from "@/components/overlay-bootstrap"
 import { UpdaterProvider } from "@/components/updater-provider"
 import { Toaster } from "@/components/ui/sonner"
 import { cn } from "@/lib/utils"
+import { TrayNavigationListener } from "@/components/tray-navigation-listener"
 
 const fontSans = Geist({
   subsets: ["latin"],
@@ -42,6 +44,9 @@ export default function RootLayout({
             <TooltipProvider>
               <div data-ui-app-shell>
                 <ExternalLinkGuard />
+                <Suspense fallback={null}>
+                  <TrayNavigationListener />
+                </Suspense>
                 {process.env.NODE_ENV === "development" ? (
                   <DebugPanelGate />
                 ) : null}

@@ -28,11 +28,11 @@ La barre latérale propose trois espaces : **OS** (centre de contrôle, Ressourc
 
 Sous Windows, le setup NSIS installe FXMP OS pour l'utilisateur courant sans demander les droits administrateur. Il suit la langue de Windows (français ou anglais), utilise l'icône FXMP OS et crée le raccourci Menu Démarrer; le runtime WebView2 est vérifié et son bootstrapper est lancé silencieusement uniquement s'il manque. L'installation MSI reste également disponible. Voir [UPDATE.md](UPDATE.md) pour la signature Authenticode et les avertissements SmartScreen.
 
-La version source de l'application est `0.0.31` (27 octobre 2026); les versions 0.x sont publiques mais restent antérieures à 1.0. Les pratiques d'OpenClaw pertinentes pour cette application et celles qui ne correspondent pas à son architecture sont résumées dans [OPENCLAW_PRACTICES.md](OPENCLAW_PRACTICES.md).
+La version source de l'application est `0.0.38` (28 octobre 2026); les versions 0.x sont publiques mais restent antérieures à 1.0. Les pratiques d'OpenClaw pertinentes pour cette application et celles qui ne correspondent pas à son architecture sont résumées dans [OPENCLAW_PRACTICES.md](OPENCLAW_PRACTICES.md).
 
 Les choix réutilisables d'OpenHuman concernant la séparation Rust/interface, les permissions, les futures actions système et la protection des secrets sont évalués dans [OPENHUMAN_PRACTICES.md](OPENHUMAN_PRACTICES.md).
 
-FXMP OS possède une icône de zone de notification : fermer la fenêtre la masque sans arrêter le processus. Le menu de l’icône permet de la rouvrir ou de quitter réellement l’application. Le démarrage automatique est désactivé par défaut et peut être activé dans **Settings**; le lancement automatique démarre l’application masquée. Une seule instance est autorisée.
+FXMP OS possède une icône de zone de notification : fermer la fenêtre la masque sans arrêter le processus. Un clic gauche sur l’icône ouvre ou masque la fenêtre; le menu natif au clic droit propose l’accès au centre de contrôle, aux principales pages, aux onglets de paramètres, ainsi qu’aux actions pour afficher ou quitter FXMP OS. Le démarrage automatique est désactivé par défaut et peut être activé dans **Paramètres**; le lancement automatique démarre l’application masquée. Une seule instance est autorisée.
 
 ## Lancer l'application
 
