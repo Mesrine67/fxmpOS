@@ -1,5 +1,14 @@
 # Journal des modifications
 
+## [0.0.41] - 2026-10-28
+
+### Améliorations
+
+- Remplace le menu système du tray par un flyout FXMP OS compact, translucide et ancré près de l’icône, avec des accès rapides, les paramètres, la page À propos et une action Quitter.
+- Le clic droit ouvre ou ferme le flyout ; les raccourcis naviguent vers les pages autorisées, tandis que le clic gauche continue d’afficher ou de masquer la fenêtre principale.
+- Isole le panneau tray dans une fenêtre Tauri dédiée et limitée à ses permissions nécessaires ; son fond Acrylic suit le style du compagnon OpenClaw sous Windows.
+- Charge les informations locales du profil à l’ouverture du menu utilisateur afin d’éviter un chargement inutile au démarrage.
+
 ## [0.0.40] - 2026-10-28
 
 ### Correctifs

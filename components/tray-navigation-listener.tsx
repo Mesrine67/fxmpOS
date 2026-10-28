@@ -4,6 +4,7 @@ import { useEffect } from "react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { isTauri } from "@tauri-apps/api/core"
 import { listen } from "@tauri-apps/api/event"
+import { invoke } from "@tauri-apps/api/core"
 
 const allowedTrayPaths = new Set([
   "/",
@@ -39,6 +40,9 @@ export function TrayNavigationListener() {
     void listen<string>("tray:navigate", (event) => {
       if (allowedTrayPaths.has(event.payload)) {
         router.push(event.payload)
+        void invoke("activate_main_window").catch((error) => {
+          console.error("Impossible de restaurer la fenêtre principale", error)
+        })
       }
     }).then((stopListening) => {
       if (cancelled) stopListening()

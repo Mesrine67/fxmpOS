@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useRef, useState } from "react"
 import Link from "next/link"
 import {
   ChevronDownIcon,
@@ -72,10 +72,6 @@ export function NavUser() {
     }
   }, [device, isLoading, runtime])
 
-  useEffect(() => {
-    void loadDeviceInfo()
-  }, [loadDeviceInfo])
-
   const displayName =
     device?.windowsUser || device?.hostname || "Appareil Windows"
   const platform =
@@ -84,7 +80,12 @@ export function NavUser() {
   return (
     <SidebarMenu>
       <SidebarMenuItem>
-        <DropdownMenu onOpenChange={setIsOpen}>
+        <DropdownMenu
+          onOpenChange={(open) => {
+            setIsOpen(open)
+            if (open) void loadDeviceInfo()
+          }}
+        >
           <DropdownMenuTrigger
             render={
               <SidebarMenuButton
