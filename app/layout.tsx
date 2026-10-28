@@ -1,3 +1,4 @@
+import { Suspense } from "react"
 import { Geist, Geist_Mono, Inter } from "next/font/google"
 
 import "./globals.css"
@@ -43,7 +44,9 @@ export default function RootLayout({
             <TooltipProvider>
               <div data-ui-app-shell>
                 <ExternalLinkGuard />
-                <TrayNavigationListener />
+                <Suspense fallback={null}>
+                  <TrayNavigationListener />
+                </Suspense>
                 {process.env.NODE_ENV === "development" ? (
                   <DebugPanelGate />
                 ) : null}

@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { isTauri } from "@tauri-apps/api/core"
 import { listen } from "@tauri-apps/api/event"
 
@@ -21,6 +21,14 @@ const allowedTrayPaths = new Set([
 
 export function TrayNavigationListener() {
   const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+
+  useEffect(() => {
+    if (pathname === "/settings" || pathname === "/settings/") {
+      window.dispatchEvent(new Event("fxmp:settings-tab-changed"))
+    }
+  }, [pathname, searchParams])
 
   useEffect(() => {
     if (!isTauri()) return
@@ -31,11 +39,6 @@ export function TrayNavigationListener() {
     void listen<string>("tray:navigate", (event) => {
       if (allowedTrayPaths.has(event.payload)) {
         router.push(event.payload)
-        // SettingsPage subscribes to URL changes so tab selections from the
-        // native tray stay in sync with its controlled tabs.
-        if (event.payload.startsWith("/settings/")) {
-          window.dispatchEvent(new Event("fxmp:settings-tab-changed"))
-        }
       }
     }).then((stopListening) => {
       if (cancelled) stopListening()
