@@ -11,7 +11,7 @@ import {
   Power,
   Settings2,
 } from "lucide-react"
-import { emit } from "@tauri-apps/api/event"
+import { emit, emitTo } from "@tauri-apps/api/event"
 import { Effect, EffectState, getCurrentWindow } from "@tauri-apps/api/window"
 import { useEffect, useState } from "react"
 
@@ -48,7 +48,7 @@ export default function TrayMenuPage() {
   async function navigate(route: string) {
     setActionError(false)
     try {
-      await emit("tray:navigate", route)
+      await emitTo("main", "tray:navigate", route)
       await getCurrentWindow().hide()
     } catch (error) {
       console.error("Impossible d’ouvrir la page depuis le menu tray", error)

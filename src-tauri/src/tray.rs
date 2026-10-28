@@ -99,13 +99,12 @@ fn position_tray_menu<R: Runtime>(
     let monitor = monitors
         .iter()
         .find(|monitor| {
-            let area = monitor.work_area();
-            let position = area.position;
-            let size = area.size;
+            let position = monitor.position();
+            let size = monitor.size();
             tray_center_x >= position.x
-                && tray_center_x <= position.x + size.width as i32
+                && tray_center_x < position.x + size.width as i32
                 && tray_center_y >= position.y
-                && tray_center_y <= position.y + size.height as i32
+                && tray_center_y < position.y + size.height as i32
         })
         .or_else(|| monitors.first());
 

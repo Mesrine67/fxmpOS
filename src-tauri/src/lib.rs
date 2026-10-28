@@ -6,6 +6,11 @@ mod windows_installer;
 
 use tauri::{Manager, webview::PageLoadEvent};
 
+#[tauri::command]
+fn activate_main_window(app: tauri::AppHandle) {
+    tray::show_main_window(&app);
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let start_hidden = std::env::args().any(|argument| argument == "--background");
@@ -88,6 +93,7 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            activate_main_window,
             commands::greet::greet,
             commands::system::get_system_snapshot,
             commands::system::get_resource_sample,
@@ -102,6 +108,13 @@ pub fn run() {
             if window.label() == "tray-menu" && matches!(event, tauri::WindowEvent::Focused(false))
             {
                 tray::hide_tray_menu(&window.app_handle());
+            }
+
+            if window.label() == "tray-menu" {
+                if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                    api.prevent_close();
+                    tray::hide_tray_menu(&window.app_handle());
+                }
             }
 
             if window.label() == "main" {
