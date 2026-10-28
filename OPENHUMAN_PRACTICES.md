@@ -24,6 +24,8 @@ La sonde de latence suit aussi cette frontière d'architecture : le frontend ne 
 
 Les préférences de thème sont des réglages locaux non sensibles dans `fxmp-settings.json` (clé `themePreferences`) via les permissions Store déjà limitées à charger/lire/écrire/sauvegarder. Les composants shadcn consomment les tokens CSS configurés; aucun nouvel accès Windows n'est requis. Le packaging reste celui de Tauri NSIS/WiX avec visuels aux dimensions officielles; NSIS est `currentUser` et ne demande pas d'élévation.
 
+Sous Windows, la fermeture utilisateur de la fenêtre principale masque l'application dans le tray. Le hook natif `SetWindowSubclass` distingue ce geste de la fermeture de session demandée par Restart Manager (`WM_QUERYENDSESSION` / `WM_ENDSESSION` avec `ENDSESSION_CLOSEAPP`) lors du remplacement ou de la désinstallation NSIS; cette demande système est laissée passer pour permettre au setup de terminer, sans changer le comportement normal de la fermeture.
+
 L'historique des versions est la seule autre lecture distante de la fenêtre principale : il interroge sans authentification l'API publique GitHub pour les métadonnées et changelogs des releases. Aucune information système ou d'identité locale n'est incluse dans cette requête; l'installation reste exclusivement contrôlée par le vérificateur Tauri signé.
 
 ## Ce qui n'est pas repris
