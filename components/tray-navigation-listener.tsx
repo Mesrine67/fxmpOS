@@ -29,7 +29,14 @@ export function TrayNavigationListener() {
     let cancelled = false
 
     void listen<string>("tray:navigate", (event) => {
-      if (allowedTrayPaths.has(event.payload)) router.push(event.payload)
+      if (allowedTrayPaths.has(event.payload)) {
+        router.push(event.payload)
+        // SettingsPage subscribes to URL changes so tab selections from the
+        // native tray stay in sync with its controlled tabs.
+        if (event.payload.startsWith("/settings/")) {
+          window.dispatchEvent(new Event("fxmp:settings-tab-changed"))
+        }
+      }
     }).then((stopListening) => {
       if (cancelled) stopListening()
       else unlisten = stopListening
