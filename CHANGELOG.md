@@ -1,5 +1,14 @@
 # Journal des modifications
 
+## [0.0.38] - 2026-10-28
+
+### Améliorations
+
+- Le menu natif de la zone de notification donne accès au centre de contrôle, aux pages Vue d’ensemble, Ressources, Applications et Appareil, ainsi qu’aux catégories de paramètres.
+- Les raccourcis du tray affichent la fenêtre et ouvrent la page ou l’onglet demandé; le clic gauche continue d’ouvrir ou de masquer FXMP OS.
+- La page À propos présente la version installée, la cible Windows et les informations de confidentialité locales.
+- Le menu Windows propose une action explicite pour ouvrir FXMP OS et une autre pour quitter complètement l’application.
+
 ## [0.0.37] - 2026-10-27
 
 ### Publication corrective

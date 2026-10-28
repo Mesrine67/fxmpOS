@@ -1,3 +1,5 @@
+"use client"
+
 import {
   ArrowDownToLineIcon,
   BellIcon,
@@ -7,6 +9,7 @@ import {
   ShieldCheckIcon,
   SparklesIcon,
 } from "lucide-react"
+import { useSyncExternalStore } from "react"
 
 import { AutostartSettings } from "@/components/autostart-settings"
 import { NetworkLatency } from "@/components/network-latency"
@@ -24,7 +27,37 @@ import {
 } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
+const settingsTabValues = [
+  "application",
+  "overlay",
+  "notifications",
+  "theme",
+  "updates",
+]
+
+function subscribeToSettingsUrl(onChange: () => void) {
+  window.addEventListener("popstate", onChange)
+  window.addEventListener("fxmp:settings-tab-changed", onChange)
+  return () => {
+    window.removeEventListener("popstate", onChange)
+    window.removeEventListener("fxmp:settings-tab-changed", onChange)
+  }
+}
+
+function getSettingsTab() {
+  const requestedTab = new URLSearchParams(window.location.search).get("tab")
+  return settingsTabValues.includes(requestedTab ?? "")
+    ? requestedTab!
+    : "application"
+}
+
 export function SettingsPage() {
+  const activeTab = useSyncExternalStore(
+    subscribeToSettingsUrl,
+    getSettingsTab,
+    () => "application"
+  )
+
   return (
     <div className="min-h-0 flex-1 px-5 py-6 md:px-8">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
@@ -47,7 +80,22 @@ export function SettingsPage() {
           <Badge variant="secondary">Windows</Badge>
         </header>
 
-        <Tabs className="gap-5" defaultValue="application">
+        <Tabs
+          className="gap-5"
+          value={activeTab}
+          onValueChange={(value) => {
+            if (!value) return
+            const nextUrl = new URL(window.location.href)
+            if (value === "application") nextUrl.searchParams.delete("tab")
+            else nextUrl.searchParams.set("tab", value)
+            window.history.replaceState(
+              null,
+              "",
+              `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`
+            )
+            window.dispatchEvent(new Event("fxmp:settings-tab-changed"))
+          }}
+        >
           <TabsList className="grid h-auto w-full grid-cols-2 sm:flex sm:w-fit">
             <TabsTrigger value="application">
               <MonitorCogIcon data-icon="inline-start" />
