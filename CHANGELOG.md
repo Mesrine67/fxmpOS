@@ -1,5 +1,13 @@
 # Journal des modifications
 
+## [0.0.44] - 2026-10-30
+
+### Améliorations
+
+- Remplace le flyout WebView par le menu contextuel natif Windows fourni par Tauri `tray-icon`.
+- Le menu natif donne accès à la Vue d’ensemble, aux Ressources, aux Applications, à l’Appareil, aux Paramètres, à À propos et à Quitter.
+- Le clic gauche affiche ou masque la fenêtre principale; le clic droit ouvre le menu système Windows.
+
 ## [0.0.43] - 2026-10-29
 
 ### Améliorations
