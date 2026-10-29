@@ -103,35 +103,12 @@
         "visible": false,
         "focus": false,
         "userAgent": "fxmp-os-overlay"
-      },
-      {
-        "label": "tray-menu",
-        "create": false,
-        "title": "FXMP OS",
-        "url": "tray/",
-        "width": 320,
-        "height": 480,
-        "minWidth": 320,
-        "minHeight": 480,
-        "maxWidth": 320,
-        "maxHeight": 480,
-        "decorations": false,
-        "closable": false,
-        "resizable": false,
-        "transparent": true,
-        "shadow": false,
-        "skipTaskbar": true,
-        "alwaysOnTop": true,
-        "visible": false,
-        "focus": true,
-        "userAgent": "fxmp-os-tray-menu"
       }
     ],
     "security": {
       "capabilities": [
         "default",
-        "overlay",
-        "tray-menu"
+        "overlay"
       ],
       "csp": {
         "default-src": "'self'",

@@ -74,16 +74,6 @@ pub fn run() {
                     })
                     .build()?;
 
-            let tray_window_config = app
-                .config()
-                .app
-                .windows
-                .iter()
-                .find(|window| window.label == "tray-menu")
-                .expect("tauri.conf.json must define the tray-menu window")
-                .clone();
-            tauri::WebviewWindowBuilder::from_config(app.handle(), &tray_window_config)?.build()?;
-
             #[cfg(windows)]
             windows_installer::allow_restart_manager_shutdown(&main_window);
 
@@ -105,18 +95,6 @@ pub fn run() {
             commands::overlay::set_overlay_state
         ])
         .on_window_event(|window, event| {
-            if window.label() == "tray-menu" && matches!(event, tauri::WindowEvent::Focused(false))
-            {
-                tray::hide_tray_menu(&window.app_handle());
-            }
-
-            if window.label() == "tray-menu" {
-                if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-                    api.prevent_close();
-                    tray::hide_tray_menu(&window.app_handle());
-                }
-            }
-
             if window.label() == "main" {
                 if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                     #[cfg(windows)]
