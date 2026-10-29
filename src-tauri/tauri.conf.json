@@ -2,7 +2,7 @@
   "$schema": "https://schema.tauri.app/config/2",
   "mainBinaryName": "fxmp-os",
   "productName": "FXMP OS",
-  "version": "0.0.43",
+  "version": "0.0.44",
   "identifier": "org.computer.os",
   "build": {
     "beforeDevCommand": "pnpm dev",

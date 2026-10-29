@@ -1,5 +1,13 @@
 # Journal des modifications
 
+## [0.0.44] - 2026-10-30
+
+### Améliorations
+
+- Resserre le flyout Tray Windows et rapproche ses proportions du panneau compagnon OpenClaw.
+- Ajoute des raccourcis directs vers Paramètres et Appareil local dans le bandeau du menu.
+- Conserve les commandes Windows : clic gauche pour afficher/masquer FXMP OS, clic droit pour ouvrir/fermer le flyout et action explicite pour quitter.
+
 ## [0.0.43] - 2026-10-29
 
 ### Améliorations

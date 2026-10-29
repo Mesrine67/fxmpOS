@@ -4,8 +4,8 @@ use tauri::{
 };
 use tauri::{Position as DpiPosition, Size as DpiSize};
 
-const TRAY_MENU_WIDTH: f64 = 360.0;
-const TRAY_MENU_HEIGHT: f64 = 520.0;
+const TRAY_MENU_WIDTH: f64 = 320.0;
+const TRAY_MENU_HEIGHT: f64 = 480.0;
 
 pub fn install(app: &mut App) -> tauri::Result<()> {
     let icon = app

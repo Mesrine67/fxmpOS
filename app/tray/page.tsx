@@ -9,6 +9,7 @@ import {
   Layers3,
   Monitor,
   Power,
+  Settings,
   Settings2,
 } from "lucide-react"
 import { emit, emitTo } from "@tauri-apps/api/event"
@@ -76,14 +77,25 @@ export default function TrayMenuPage() {
             <span>Centre de contrôle</span>
           </span>
           <span className={styles.status}><span aria-hidden="true" />Actif</span>
-          <span className={styles.headerBadge} aria-hidden="true">F</span>
+          <button
+            type="button"
+            className={styles.headerBadge}
+            aria-label="Ouvrir les paramètres"
+            title="Paramètres"
+            onClick={() => void navigate("/settings/")}
+          ><Settings aria-hidden="true" /></button>
         </header>
 
         <div className={styles.scrollArea}>
           <div className={styles.connection}>
             <span className={styles.connectionDot} aria-hidden="true" />
             <span><strong>Appareil local</strong><small>Windows · session active</small></span>
-            <ChevronRight aria-hidden="true" />
+            <button
+              type="button"
+              className={styles.connectionAction}
+              aria-label="Afficher l’appareil"
+              onClick={() => void navigate("/account/")}
+            ><ChevronRight aria-hidden="true" /></button>
           </div>
           <p className={styles.sectionLabel}>Accès rapide</p>
           <nav aria-label="Accès rapide" className={styles.menuList}>
