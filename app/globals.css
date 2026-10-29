@@ -15,32 +15,6 @@ html:has([data-fxmp-overlay-page="true"]) [data-ui-app-shell] {
     background-color: transparent !important;
 }
 
-html:has([data-fxmp-tray-menu]),
-html:has([data-fxmp-tray-menu]) body,
-html:has([data-fxmp-tray-menu]) [data-ui-app-shell] {
-    background: transparent !important;
-    background-color: transparent !important;
-}
-
-html:has([data-fxmp-tray-menu]) body {
-    overflow: hidden;
-}
-
-html:has([data-fxmp-tray-menu]) {
-    color-scheme: dark;
-}
-
-html:has([data-fxmp-tray-menu]) body,
-html:has([data-fxmp-tray-menu]) [data-fxmp-tray-menu],
-html:has([data-fxmp-tray-menu]) [data-fxmp-tray-menu] button {
-    font-family: "Segoe UI", system-ui, sans-serif !important;
-}
-
-html:has([data-fxmp-tray-menu]) [data-fxmp-tray-menu] {
-    font-size: 12px;
-    letter-spacing: normal;
-}
-
 html[data-fxmp-overlay="true"] body {
     overflow: hidden;
 }

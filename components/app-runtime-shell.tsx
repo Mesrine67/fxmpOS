@@ -1,7 +1,6 @@
 "use client"
 
 import { Suspense } from "react"
-import { usePathname } from "next/navigation"
 
 import { DebugPanelGate } from "@/components/debug-panel-gate"
 import { ExternalLinkGuard } from "@/components/external-link-guard"
@@ -11,13 +10,6 @@ import { UpdaterProvider } from "@/components/updater-provider"
 import { TrayNavigationListener } from "@/components/tray-navigation-listener"
 
 function RuntimeShellContent({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname()
-  const isTrayMenu = pathname === "/tray" || pathname === "/tray/"
-
-  if (isTrayMenu) {
-    return <div data-ui-app-shell data-fxmp-tray-shell>{children}</div>
-  }
-
   return (
     <UpdaterProvider>
       <div data-ui-app-shell>
