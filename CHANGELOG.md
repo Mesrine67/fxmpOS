@@ -1,5 +1,14 @@
 # Journal des modifications
 
+## [0.0.43] - 2026-10-29
+
+### Améliorations
+
+- Remplace le menu Tray système par un flyout FXMP OS dédié, inspiré du panneau compagnon OpenClaw sous Windows.
+- Le clic gauche bascule la fenêtre principale ; le clic droit ouvre ou ferme le flyout près de l’icône Tray.
+- Ajoute des raccourcis vers les pages principales, les paramètres et les informations FXMP OS, avec une action pour quitter l’application.
+- Ajoute une capability Tauri dédiée au flyout et documente le comportement attendu du Tray.
+
 ## [0.0.42] - 2026-10-29
 
 ### Améliorations
