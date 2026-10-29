@@ -1,5 +1,14 @@
 # Journal des modifications
 
+## [0.0.42] - 2026-10-29
+
+### Améliorations
+
+- Restaure le menu natif Windows de la zone de notification avec les commandes FXMP OS directement accessibles.
+- Le clic droit ouvre le menu natif ; le clic gauche affiche ou masque la fenêtre principale.
+- Supprime le panneau tray HTML, sa fenêtre WebView dédiée, ses styles et sa capability Tauri.
+- Les commandes du menu natif ouvrent les pages autorisées et proposent une action explicite pour quitter FXMP OS.
+
 ## [0.0.41] - 2026-10-28
 
 ### Améliorations
