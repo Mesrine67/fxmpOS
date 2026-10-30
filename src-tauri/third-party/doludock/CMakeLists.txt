@@ -27,6 +27,11 @@ endif()
 
 add_executable(doludock WIN32)
 
+if(MSVC)
+    set_property(TARGET doludock PROPERTY MSVC_RUNTIME_LIBRARY
+        "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+endif()
+
 target_sources(doludock PRIVATE
     src/main.cpp
     src/App.cpp

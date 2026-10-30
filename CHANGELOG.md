@@ -9,6 +9,7 @@
 - Remplace le flyout HTML du tray par le menu système Tauri (`MenuBuilder` / `TrayIconBuilder`) suivant l’implémentation Tauri d’OpenClaw Desktop.
 - Supprime les bordures et thèmes factices du dock WebView; conserve les licences et attributions amont de DoluDock.
 - Ajoute la compilation des sources natives DoluDock au build Windows et à la CI.
+- Corrige la fermeture du processus natif, l’écran principal, l’ancrage à gauche, les grands dossiers avec défilement et les réglages désactivés/non pertinents en mode intégré; lie statiquement le runtime MSVC.
 
 ## [0.0.47] - 2026-10-30
 

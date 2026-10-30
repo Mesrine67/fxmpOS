@@ -33,19 +33,26 @@ fn launch_native_doludock(app: &AppHandle, action: &str) -> Result<(), String> {
         .ok()
         .and_then(|store| store.get("dockMonitorId"))
         .and_then(|value| value.as_str().map(str::to_owned))
-        .filter(|id| id != "primary");
-
-    if let Some(id) = selected_id {
-        let available = app
-            .available_monitors()
-            .map_err(|error| format!("Impossible de détecter les écrans : {error}"))?;
-        if available
+        .unwrap_or_else(|| "primary".to_owned());
+    let available = app
+        .available_monitors()
+        .map_err(|error| format!("Impossible de détecter les écrans : {error}"))?;
+    let primary = app
+        .primary_monitor()
+        .map_err(|error| format!("Impossible d’identifier l’écran principal : {error}"))?
+        .as_ref()
+        .map(monitor_identifier)
+        .unwrap_or_else(|| "primary".to_owned());
+    let monitor_id = if selected_id == "primary"
+        || available
             .iter()
-            .any(|monitor| monitor_identifier(monitor) == id)
-        {
-            command.arg(format!("--fxmp-monitor={id}"));
-        }
-    }
+            .any(|monitor| monitor_identifier(monitor) == selected_id)
+    {
+        selected_id
+    } else {
+        primary
+    };
+    command.arg(format!("--fxmp-monitor={monitor_id}"));
 
     command.creation_flags(CREATE_NO_WINDOW);
     command
@@ -73,9 +80,20 @@ fn native_doludock_path(app: &AppHandle) -> Result<std::path::PathBuf, String> {
 }
 
 #[tauri::command]
-pub async fn close_dock(app: AppHandle) -> Result<(), String> {
+pub fn close_dock(app: AppHandle) -> Result<(), String> {
     #[cfg(windows)]
-    return launch_native_doludock(&app, "--fxmp-exit");
+    {
+        let executable = native_doludock_path(&app)?;
+        let status = Command::new(executable)
+            .args(["--fxmp-mode", "--fxmp-exit"])
+            .creation_flags(CREATE_NO_WINDOW)
+            .status()
+            .map_err(|error| format!("Impossible d’arrêter le dock DoluDock : {error}"))?;
+        if !status.success() {
+            return Err("Le processus DoluDock n’a pas pu se fermer correctement.".to_owned());
+        }
+        return Ok(());
+    }
 
     #[cfg(not(windows))]
     {

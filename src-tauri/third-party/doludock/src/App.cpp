@@ -107,6 +107,8 @@ void App::ChooseFolderInteractive(HWND owner)
 
 void App::SetHotkey(unsigned modifiers, unsigned vk)
 {
+    if (integratedMode)
+        return;
     settings.hotkey.modifiers = modifiers;
     settings.hotkey.vk        = vk;
     ApplyHotkey();
@@ -115,6 +117,8 @@ void App::SetHotkey(unsigned modifiers, unsigned vk)
 
 void App::SetToggleMode(bool toggle)
 {
+    if (integratedMode)
+        return;
     settings.toggleMode = toggle;
     ApplyHotkey();
     SaveSettings(settings);
@@ -226,17 +230,23 @@ void App::SetAnimations(bool enabled)
 
 void App::SetAutostart(bool enabled)
 {
+    if (integratedMode)
+        return;
     SetAutostartEnabled(enabled); // writes the per-user Run key (Settings.cpp)
 }
 
 void App::SetCheckForUpdates(bool enabled)
 {
+    if (integratedMode)
+        return;
     settings.checkForUpdates = enabled;
     SaveSettings(settings);
 }
 
 void App::CheckForUpdates(bool userInitiated)
 {
+    if (integratedMode)
+        return;
     if (updateCheckInProgress_)
         return;
     updateCheckInProgress_ = true;
@@ -289,6 +299,8 @@ void App::OnUpdateChecked(UpdateResult* result)
 
 void App::BeginUpdateDownload(const std::wstring& url)
 {
+    if (integratedMode)
+        return;
     if (updateDownloadInProgress_)
         return;
     updateDownloadInProgress_ = true;

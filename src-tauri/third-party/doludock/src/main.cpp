@@ -192,7 +192,23 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE, PWSTR lpCmdLine, int)
                                         : fxmpSettings ? dk::WM_APP_SHOWSETTINGS
                                         : fxmpHide ? dk::WM_APP_HIDE
                                         : fxmpToggle ? dk::WM_APP_TOGGLE : dk::WM_APP_SHOW;
-                    PostMessageW(existing, command, 0, 0);
+                    if (fxmpExit)
+                    {
+                        SendMessageW(existing, WM_CLOSE, 0, 0);
+                        if (singleton)
+                        {
+                            const DWORD wait = WaitForSingleObject(singleton, 5000);
+                            if (wait == WAIT_ABANDONED || wait == WAIT_OBJECT_0)
+                                ReleaseMutex(singleton);
+                            else
+                            {
+                                CloseHandle(singleton);
+                                return 2;
+                            }
+                        }
+                    }
+                    else
+                        PostMessageW(existing, command, 0, 0);
                 }
                 else
                     PostMessageW(existing, dk::WM_APP_SHOWSETTINGS, 0, 0);
@@ -259,6 +275,7 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE, PWSTR lpCmdLine, int)
     app.overlay  = &overlay;
     app.hook     = &hook;
     app.settings = settings;
+    app.integratedMode = fxmpMode;
 
     HWND ctrl = CreateWindowExW(WS_EX_TOOLWINDOW, L"DoludockCtrl", L"doludock", WS_POPUP, 0, 0, 0,
                                 0, nullptr, nullptr, hInst, nullptr);

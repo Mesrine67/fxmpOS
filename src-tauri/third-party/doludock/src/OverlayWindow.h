@@ -95,7 +95,11 @@ private:
     int               panelPxH_   = 0;
     int               cols_       = 1;
     int               rows_       = 1;
+    int               totalRows_  = 1;
+    int               scrollRow_  = 0;
     int               visibleCount_ = 0; // items actually drawn (grid may clip)
+    float             maxPanelWDip_ = 4096.0f;
+    float             maxPanelHDip_ = 4096.0f;
     float             panelWDip_  = 0.0f;
     float             panelHDip_  = 0.0f;
     float             gridTopDip_ = 0.0f;

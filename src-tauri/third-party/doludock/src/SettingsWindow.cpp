@@ -389,6 +389,17 @@ void SettingsWindow::CreateControls()
                           fullW - 142, 30, IDC_UPDATE_STATUS, font_, nullptr);
     yc += 44;
 
+    if (app_.integratedMode)
+    {
+        EnableWindow(hHotkeyField_, FALSE);
+        EnableWindow(hHotkeyBtn_, FALSE);
+        EnableWindow(hToggle_, FALSE);
+        EnableWindow(hAutostart_, FALSE);
+        EnableWindow(hUpdateCheck_, FALSE);
+        EnableWindow(hUpdateNow_, FALSE);
+        SetWindowTextW(hUpdateStatus_, L"Shortcut, startup and updates are managed by FXMP OS.");
+    }
+
     make(L"BUTTON", L"Close", BS_DEFPUSHBUTTON | WS_TABSTOP, btnX, yc, btnW, 32, IDC_CLOSE, font_,
          L"DarkMode_Explorer");
     yc += 32 + 18; // bottom margin
@@ -506,7 +517,9 @@ void SettingsWindow::RefreshFromSettings()
     Button_SetCheck(hAnim_, s.animations ? BST_CHECKED : BST_UNCHECKED);
     Button_SetCheck(hAutostart_, IsAutostartEnabled() ? BST_CHECKED : BST_UNCHECKED);
     Button_SetCheck(hUpdateCheck_, s.checkForUpdates ? BST_CHECKED : BST_UNCHECKED);
-    SetWindowTextW(hUpdateStatus_, (L"Version " + dk::CurrentVersionW()).c_str());
+    SetWindowTextW(hUpdateStatus_, app_.integratedMode
+        ? L"Shortcut, startup and updates are managed by FXMP OS."
+        : (L"Version " + dk::CurrentVersionW()).c_str());
 }
 
 void SettingsWindow::SetUpdateStatus(const std::wstring& text)
@@ -523,7 +536,7 @@ void SettingsWindow::RefreshHotkeyField()
 
 void SettingsWindow::BeginHotkeyCapture()
 {
-    if (capturing_ || !app_.hook)
+    if (capturing_ || !app_.hook || app_.integratedMode)
         return;
     capturing_ = true;
     SetWindowTextW(hHotkeyField_, L"Press shortcut\u2026  (Esc to cancel)");

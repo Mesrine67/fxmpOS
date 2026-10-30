@@ -5,7 +5,7 @@
   "version": "0.0.48",
   "identifier": "org.computer.os",
   "build": {
-    "beforeDevCommand": "pnpm dev",
+    "beforeDevCommand": "pnpm build:windows-native && pnpm dev",
     "beforeBuildCommand": "pnpm build:windows-native && pnpm build",
     "devUrl": "http://localhost:3000",
     "frontendDist": "../out",

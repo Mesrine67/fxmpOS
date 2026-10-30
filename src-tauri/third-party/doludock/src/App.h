@@ -48,6 +48,7 @@ struct App
     std::unique_ptr<FolderWatcher>  watcher;
 
     Settings settings;
+    bool integratedMode = false;
 
     App();
     ~App();

@@ -305,23 +305,32 @@ void OverlayWindow::ComputeLayout(float scale)
     else
         cols = static_cast<int>(std::ceil(std::sqrt(static_cast<double>(std::max(1, n)))));
 
-    const int maxCols = (userCols_ > 0 || userRows_ > 0) ? kMaxDim : kMaxCols;
+    const int availableCols = std::max(
+        1, static_cast<int>(std::floor((maxPanelWDip_ - 2.0f * padding_) / kCellW)));
+    const int maxCols = std::min((userCols_ > 0 || userRows_ > 0) ? kMaxDim : kMaxCols,
+                                 availableCols);
     cols = std::clamp(cols, 1, maxCols);
     if (userCols_ == 0 && userRows_ == 0 && n > 0 && cols > n)
         cols = n;
 
-    const int neededRows = (n > 0) ? (n + cols - 1) / cols : 1;
-    int       rows = (userRows_ > 0) ? std::min(userRows_, neededRows) : neededRows;
+    totalRows_ = (n > 0) ? (n + cols - 1) / cols : 1;
+    const float gridTop = (showName_ || showCount_) ? (padding_ + kTitleH + 8.0f) : padding_;
+    const int availableRows = std::max(
+        1, static_cast<int>(std::floor((maxPanelHDip_ - gridTop - padding_) / kCellH)));
+    int rows = std::min(totalRows_, availableRows);
+    if (userRows_ > 0)
+        rows = std::min(rows, userRows_);
     rows = std::clamp(rows, 1, kMaxDim);
+    scrollRow_ = std::clamp(scrollRow_, 0, std::max(0, totalRows_ - rows));
 
     cols_         = cols;
     rows_         = rows;
-    visibleCount_ = (n > 0) ? std::min(n, cols * rows) : 0;
+    const int firstItem = std::min(n, scrollRow_ * cols_);
+    visibleCount_ = (n > firstItem) ? std::min(n - firstItem, cols_ * rows_) : 0;
 
     const float gridW = cols * kCellW;
-    const bool  hasHeader = showName_ || showCount_;
-    gridTopDip_       = hasHeader ? (padding_ + kTitleH + 8.0f) : padding_;
-    panelWDip_        = std::max(gridW + 2.0f * padding_, kMinWidth);
+    gridTopDip_       = gridTop;
+    panelWDip_        = std::min(maxPanelWDip_, std::max(gridW + 2.0f * padding_, kMinWidth));
     panelHDip_        = gridTopDip_ + ((n > 0) ? rows * kCellH : 60.0f) + padding_;
     gridLeftDip_      = (panelWDip_ - gridW) / 2.0f;
 
@@ -428,11 +437,13 @@ void OverlayWindow::Render(float scale)
     }
     else
     {
-        const size_t shown = std::min(items.size(), static_cast<size_t>(visibleCount_));
-        for (size_t i = 0; i < shown; ++i)
+        const size_t first = static_cast<size_t>(scrollRow_ * cols_);
+        const size_t shown = std::min(static_cast<size_t>(visibleCount_), items.size() - first);
+        for (size_t visible = 0; visible < shown; ++visible)
         {
-            const int   c  = static_cast<int>(i) % cols_;
-            const int   r  = static_cast<int>(i) / cols_;
+            const size_t i = first + visible;
+            const int   c  = static_cast<int>(visible) % cols_;
+            const int   r  = static_cast<int>(visible) / cols_;
             const float cx = gridLeftDip_ + c * kCellW;
             const float cy = gridTopDip_ + r * kCellH;
 
@@ -515,7 +526,6 @@ void OverlayWindow::Show()
     preview_       = false;
     const SIZE sz  = MeasureForMonitor(mon);
 
-    const int workW = mi.rcWork.right - mi.rcWork.left;
     const int workH = mi.rcWork.bottom - mi.rcWork.top;
     const int sw    = static_cast<int>(sz.cx);
     const int sh    = static_cast<int>(sz.cy);
@@ -554,6 +564,13 @@ void OverlayWindow::Show()
 SIZE OverlayWindow::MeasureForMonitor(HMONITOR mon)
 {
     scale_      = GetMonitorDpi(mon) / 96.0f;
+    MONITORINFO info{ sizeof(info) };
+    if (GetMonitorInfoW(mon, &info))
+    {
+        maxPanelWDip_ = std::max(1.0f, (info.rcWork.right - info.rcWork.left) / scale_);
+        maxPanelHDip_ = std::max(1.0f, (info.rcWork.bottom - info.rcWork.top) / scale_);
+    }
+    scrollRow_ = 0;
     hoverIndex_ = -1;
     tracking_   = false;
     ComputeLayout(scale_);
@@ -778,11 +795,10 @@ void OverlayWindow::RelayoutIfVisible()
     GetMonitorInfoW(mon, &mi);
 
     const SIZE sz    = MeasureForMonitor(mon);
-    const int  workW = mi.rcWork.right - mi.rcWork.left;
     const int  workH = mi.rcWork.bottom - mi.rcWork.top;
     const int  sw    = static_cast<int>(sz.cx);
     const int  sh    = static_cast<int>(sz.cy);
-    int        px    = static_cast<int>(mi.rcWork.left) + (workW - sw) / 2 + offsetX_;
+    int        px    = static_cast<int>(mi.rcWork.left) + offsetX_;
     int        py    = static_cast<int>(mi.rcWork.top) + (workH - sh) / 2 + offsetY_;
     px = std::clamp(px, static_cast<int>(mi.rcWork.left), static_cast<int>(mi.rcWork.right) - sw);
     py = std::clamp(py, static_cast<int>(mi.rcWork.top), static_cast<int>(mi.rcWork.bottom) - sh);
@@ -797,7 +813,7 @@ int OverlayWindow::HitTest(POINT pt) const
     for (size_t i = 0; i < itemRects_.size(); ++i)
     {
         if (PtInRect(&itemRects_[i], pt))
-            return static_cast<int>(i);
+            return scrollRow_ * cols_ + static_cast<int>(i);
     }
     return -1;
 }
@@ -875,6 +891,21 @@ LRESULT OverlayWindow::WndProc(UINT m, WPARAM w, LPARAM l)
             Render(scale_);
         }
         return 0;
+    case WM_MOUSEWHEEL:
+    {
+        const int delta = GET_WHEEL_DELTA_WPARAM(w);
+        const int step = std::max(1, std::abs(delta) / WHEEL_DELTA);
+        const int nextRow = std::clamp(scrollRow_ + (delta < 0 ? step : -step),
+                                       0, std::max(0, totalRows_ - rows_));
+        if (nextRow != scrollRow_)
+        {
+            scrollRow_ = nextRow;
+            hoverIndex_ = -1;
+            ComputeLayout(scale_);
+            Render(scale_);
+        }
+        return 0;
+    }
     case WM_SETCURSOR:
         if (LOWORD(l) == HTCLIENT)
         {
