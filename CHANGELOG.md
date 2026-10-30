@@ -1,5 +1,15 @@
 # Journal des modifications
 
+## [0.0.51] - 2026-10-30
+
+### Dock natif et intégration Windows
+
+- Renomme l'intégration native DoluDock embarquée en Dock et adapte les ressources Tauri, les commandes Rust et les scripts de compilation Windows.
+- Met à jour les réglages du Dock et les chemins des ressources natives dans la configuration et les workflows CI.
+- Corrige l'URL du projet dans les métadonnées de l'installateur Dock et conserve la licence et les attributions du projet amont.
+- Ajoute les utilitaires d'environnement Tauri et les composants React préparés sur la branche d'intégration.
+
+
 ## [0.0.50] - 2026-10-30
 
 ### Sécurité et maintenance

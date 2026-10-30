@@ -85,8 +85,8 @@ export function DockAppearanceSettings() {
       </CardHeader>
       <CardContent>
         <div className="rounded-lg bg-muted/40 p-4">
-          <p className="text-sm font-semibold">DoluDock · interface native Windows</p>
-          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">FXMP utilise le panneau Direct2D original de DoluDock. Son apparence et son matériau suivent le rendu Windows fourni par ce projet.</p>
+          <p className="text-sm font-semibold">Dock · interface native Windows</p>
+          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">FXMP utilise le panneau Direct2D original de Dock. Son apparence et son matériau suivent le rendu Windows fourni par ce projet.</p>
         </div>
         <button
           className="h-9 w-fit rounded-md bg-muted px-3 text-sm font-medium hover:bg-muted/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
@@ -94,7 +94,7 @@ export function DockAppearanceSettings() {
           onClick={() => void openNativeSettings()}
           type="button"
         >
-          {settingsOpening ? "Ouverture…" : "Réglages DoluDock"}
+          {settingsOpening ? "Ouverture…" : "Réglages Dock"}
         </button>
         {error && <p className="mt-3 text-sm text-destructive" role="alert">{error}</p>}
       </CardContent>

@@ -1,6 +1,6 @@
 {
   "name": "mon-app",
-  "version": "0.0.50",
+  "version": "0.0.51",
   "license": "LGPL-3.0-only",
   "type": "module",
   "private": true,
@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "build:windows-native": "node scripts/build-doludock.mjs",
+    "build:windows-native": "node scripts/build-dock.mjs",
     "start": "next start",
     "lint": "eslint app components hooks lib scripts next.config.ts postcss.config.mjs eslint.config.mjs",
     "format": "prettier --write \"**/*.{ts,tsx}\"",

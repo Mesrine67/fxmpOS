@@ -19,18 +19,18 @@ static DOCK_LAUNCH_REQUESTED: AtomicBool = AtomicBool::new(false);
 #[tauri::command]
 pub async fn toggle_dock(app: AppHandle) -> Result<(), String> {
     #[cfg(windows)]
-    return launch_native_doludock(&app, "--fxmp-toggle");
+    return launch_native_dock(&app, "--fxmp-toggle");
 
     #[cfg(not(windows))]
     {
         let _ = app;
-        Err("Le dock DoluDock natif est disponible dans la version Windows.".to_owned())
+        Err("Le dock Dock natif est disponible dans la version Windows.".to_owned())
     }
 }
 
 #[cfg(windows)]
-fn launch_native_doludock(app: &AppHandle, action: &str) -> Result<(), String> {
-    let executable = native_doludock_path(app)?;
+fn launch_native_dock(app: &AppHandle, action: &str) -> Result<(), String> {
+    let executable = native_dock_path(app)?;
     let mut command = Command::new(executable);
     command.arg("--fxmp-mode").arg(action);
 
@@ -66,27 +66,28 @@ fn launch_native_doludock(app: &AppHandle, action: &str) -> Result<(), String> {
         Ok(_) => Ok(()),
         Err(error) => {
             DOCK_LAUNCH_REQUESTED.store(false, Ordering::Release);
-            Err(format!("Impossible de démarrer le dock DoluDock : {error}"))
+            Err(format!("Impossible de démarrer le dock Dock : {error}"))
         }
     }
 }
 
 #[cfg(windows)]
-fn native_doludock_path(app: &AppHandle) -> Result<std::path::PathBuf, String> {
+fn native_dock_path(app: &AppHandle) -> Result<std::path::PathBuf, String> {
     let bundled = app
         .path()
         .resource_dir()
         .map_err(|error| format!("Impossible de localiser les ressources : {error}"))?
-        .join("third-party/doludock/build/Release/doludock.exe");
+        .join("third-party/dock/build/Release/dock.exe");
     if bundled.is_file() {
         return Ok(bundled);
     }
 
     let development = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("third-party/doludock/build/Release/doludock.exe");
-    development.is_file().then_some(development).ok_or_else(|| {
-        "DoluDock n’est pas compilé. Reconstruisez l’application Windows.".to_owned()
-    })
+        .join("third-party/dock/build/Release/dock.exe");
+    development
+        .is_file()
+        .then_some(development)
+        .ok_or_else(|| "Dock n’est pas compilé. Reconstruisez l’application Windows.".to_owned())
 }
 
 #[tauri::command]
@@ -98,14 +99,14 @@ pub fn close_dock(app: AppHandle) -> Result<(), String> {
         if !DOCK_LAUNCH_REQUESTED.load(Ordering::Acquire) {
             return Ok(());
         }
-        let executable = native_doludock_path(&app)?;
+        let executable = native_dock_path(&app)?;
         let status = Command::new(executable)
             .args(["--fxmp-mode", "--fxmp-exit"])
             .creation_flags(CREATE_NO_WINDOW)
             .status()
-            .map_err(|error| format!("Impossible d’arrêter le dock DoluDock : {error}"))?;
+            .map_err(|error| format!("Impossible d’arrêter le dock Dock : {error}"))?;
         if !status.success() {
-            return Err("Le processus DoluDock n’a pas pu se fermer correctement.".to_owned());
+            return Err("Le processus Dock n’a pas pu se fermer correctement.".to_owned());
         }
         DOCK_LAUNCH_REQUESTED.store(false, Ordering::Release);
         return Ok(());
@@ -121,12 +122,12 @@ pub fn close_dock(app: AppHandle) -> Result<(), String> {
 #[tauri::command]
 pub async fn open_dock_settings(app: AppHandle) -> Result<(), String> {
     #[cfg(windows)]
-    return launch_native_doludock(&app, "--fxmp-settings");
+    return launch_native_dock(&app, "--fxmp-settings");
 
     #[cfg(not(windows))]
     {
         let _ = app;
-        Err("Les réglages DoluDock natifs sont disponibles dans la version Windows.".to_owned())
+        Err("Les réglages Dock natifs sont disponibles dans la version Windows.".to_owned())
     }
 }
 

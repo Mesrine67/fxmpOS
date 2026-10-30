@@ -2,6 +2,7 @@ import type { NextConfig } from "next"
 
 const isProd = process.env.NODE_ENV === 'production';
 const internalHost = process.env.TAURI_DEV_HOST || 'localhost';
+const isEnvBrowser = process.env.TAURI_ENV_DEBUG;
 
 /** @type {import('next').NextConfig} */
 const nextConfig: NextConfig = {
@@ -18,6 +19,9 @@ const nextConfig: NextConfig = {
   assetPrefix: isProd ? undefined : `http://${internalHost}:3000`,
   turbopack: {
     root: process.cwd(),
+  },
+  env: {
+    NEXT_PUBLIC_TAURI_DEBUG: String(isEnvBrowser === "true"),
   },
 }
 
