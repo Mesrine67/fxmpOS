@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-open-dock-settings"
+description = "Enables the open_dock_settings command without any pre-configured scope."
+commands.allow = ["open_dock_settings"]
+
+[[permission]]
+identifier = "deny-open-dock-settings"
+description = "Denies the open_dock_settings command without any pre-configured scope."
+commands.deny = ["open_dock_settings"]

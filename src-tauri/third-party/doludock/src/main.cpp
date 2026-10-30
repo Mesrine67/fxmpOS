@@ -158,6 +158,8 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE, PWSTR lpCmdLine, int)
     const bool fxmpMode = lpCmdLine && wcsstr(lpCmdLine, L"--fxmp-mode") != nullptr;
     const bool fxmpToggle = lpCmdLine && wcsstr(lpCmdLine, L"--fxmp-toggle") != nullptr;
     const bool fxmpHide = lpCmdLine && wcsstr(lpCmdLine, L"--fxmp-hide") != nullptr;
+    const bool fxmpSettings = lpCmdLine && wcsstr(lpCmdLine, L"--fxmp-settings") != nullptr;
+    const bool fxmpExit = lpCmdLine && wcsstr(lpCmdLine, L"--fxmp-exit") != nullptr;
     std::wstring monitorId;
     if (lpCmdLine)
     {
@@ -186,10 +188,11 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE, PWSTR lpCmdLine, int)
                                                            : const_cast<wchar_t*>(monitorId.c_str()) };
                     if (!monitorId.empty())
                         SendMessageW(existing, WM_COPYDATA, 0, reinterpret_cast<LPARAM>(&data));
-                    PostMessageW(existing,
-                                 fxmpHide ? dk::WM_APP_HIDE
-                                          : (fxmpToggle ? dk::WM_APP_TOGGLE : dk::WM_APP_SHOW),
-                                 0, 0);
+                    const UINT command = fxmpExit ? WM_CLOSE
+                                        : fxmpSettings ? dk::WM_APP_SHOWSETTINGS
+                                        : fxmpHide ? dk::WM_APP_HIDE
+                                        : fxmpToggle ? dk::WM_APP_TOGGLE : dk::WM_APP_SHOW;
+                    PostMessageW(existing, command, 0, 0);
                 }
                 else
                     PostMessageW(existing, dk::WM_APP_SHOWSETTINGS, 0, 0);
@@ -200,7 +203,7 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE, PWSTR lpCmdLine, int)
 
     // Hide/exit are control messages only. They must never start a fresh dock
     // process if the native overlay is not already running.
-    if (fxmpMode && fxmpHide)
+    if (fxmpMode && (fxmpHide || fxmpExit))
     {
         if (singleton)
             CloseHandle(singleton);
@@ -285,7 +288,9 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE, PWSTR lpCmdLine, int)
     else if (!fxmpMode && app.settings.checkForUpdates)
         app.CheckForUpdates(false); // silent unless a newer release is available
 
-    if (fxmpMode && fxmpToggle)
+    if (fxmpMode && fxmpSettings)
+        PostMessageW(ctrl, dk::WM_APP_SHOWSETTINGS, 0, 0);
+    else if (fxmpMode && fxmpToggle)
         PostMessageW(ctrl, dk::WM_APP_TOGGLE, 0, 0);
 
     MSG msg;

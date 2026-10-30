@@ -24,6 +24,7 @@ export function DockAppearanceSettings() {
   const [monitors, setMonitors] = useState<{ id: string; name: string | null; width: number; height: number; primary: boolean }[]>([])
   const [monitorId, setMonitorId] = useState(DEFAULT_DOCK_MONITOR_ID)
   const [monitorSaving, setMonitorSaving] = useState(false)
+  const [settingsOpening, setSettingsOpening] = useState(false)
 
   useEffect(() => {
     void getDockMonitorId().then(setMonitorId).catch((cause: unknown) => {
@@ -56,6 +57,17 @@ export function DockAppearanceSettings() {
       setMonitorSaving(false)
     }
   }
+  const openNativeSettings = async () => {
+    setSettingsOpening(true)
+    setError(null)
+    try {
+      await invoke("open_dock_settings")
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause))
+    } finally {
+      setSettingsOpening(false)
+    }
+  }
   const displayedMonitorId = monitors.some((monitor) => monitor.id === monitorId)
     ? monitorId
     : DEFAULT_DOCK_MONITOR_ID
@@ -76,6 +88,14 @@ export function DockAppearanceSettings() {
           <p className="text-sm font-semibold">DoluDock · interface native Windows</p>
           <p className="mt-1 text-xs leading-relaxed text-muted-foreground">FXMP utilise le panneau Direct2D original de DoluDock. Son apparence et son matériau suivent le rendu Windows fourni par ce projet.</p>
         </div>
+        <button
+          className="h-9 w-fit rounded-md bg-muted px-3 text-sm font-medium hover:bg-muted/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
+          disabled={runtime !== true || settingsOpening}
+          onClick={() => void openNativeSettings()}
+          type="button"
+        >
+          {settingsOpening ? "Ouverture…" : "Réglages DoluDock"}
+        </button>
         {error && <p className="mt-3 text-sm text-destructive" role="alert">{error}</p>}
       </CardContent>
       <CardContent className="flex flex-col gap-3 border-t pt-5">

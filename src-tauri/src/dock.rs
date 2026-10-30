@@ -75,12 +75,24 @@ fn native_doludock_path(app: &AppHandle) -> Result<std::path::PathBuf, String> {
 #[tauri::command]
 pub async fn close_dock(app: AppHandle) -> Result<(), String> {
     #[cfg(windows)]
-    return launch_native_doludock(&app, "--fxmp-hide");
+    return launch_native_doludock(&app, "--fxmp-exit");
 
     #[cfg(not(windows))]
     {
         let _ = app;
         Ok(())
+    }
+}
+
+#[tauri::command]
+pub async fn open_dock_settings(app: AppHandle) -> Result<(), String> {
+    #[cfg(windows)]
+    return launch_native_doludock(&app, "--fxmp-settings");
+
+    #[cfg(not(windows))]
+    {
+        let _ = app;
+        Err("Les réglages DoluDock natifs sont disponibles dans la version Windows.".to_owned())
     }
 }
 

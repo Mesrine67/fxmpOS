@@ -111,6 +111,7 @@ pub fn run() {
             commands::overlay::set_overlay_state,
             dock::toggle_dock,
             dock::close_dock,
+            dock::open_dock_settings,
             dock::set_dock_shortcut,
             commands::input_viewer::get_input_snapshot,
             commands::input_viewer::get_input_viewer_state,
