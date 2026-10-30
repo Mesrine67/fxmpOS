@@ -1,5 +1,15 @@
 # Journal des modifications
 
+## [0.0.48] - 2026-10-30
+
+### Améliorations
+
+- Remplace le dock HTML simulé par le panneau DoluDock original, compilé en Win32 natif Direct2D et embarqué dans l’installateur Windows.
+- Connecte le dock à la sélection d’écran FXMP OS et au raccourci clavier global; le composant DoluDock fonctionne sans seconde icône de zone de notification ni hook clavier concurrent.
+- Remplace le flyout HTML du tray par le menu système Tauri (`MenuBuilder` / `TrayIconBuilder`) suivant l’implémentation Tauri d’OpenClaw Desktop.
+- Supprime les bordures et thèmes factices du dock WebView; conserve les licences et attributions amont de DoluDock.
+- Ajoute la compilation des sources natives DoluDock au build Windows et à la CI.
+
 ## [0.0.47] - 2026-10-30
 
 ### Améliorations

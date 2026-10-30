@@ -13,34 +13,19 @@ import {
 } from "@/components/ui/card"
 import { useTauriRuntime } from "@/hooks/use-tauri-runtime"
 import {
-  DEFAULT_DOCK_THEME,
   DEFAULT_DOCK_MONITOR_ID,
   getDockMonitorId,
-  getDockTheme,
   setDockMonitorId,
-  setDockTheme,
-  type DockTheme,
 } from "@/lib/dock-preferences"
-
-const themes: { value: DockTheme; name: string; description: string }[] = [
-  { value: "windows", name: "Windows", description: "Panneau Acrylic et grille d’accès rapide comme dans votre référence Doludock." },
-  { value: "fxmp", name: "FXMP", description: "Panneau sombre avec une bordure rouge FXMP OS." },
-  { value: "light", name: "Clair", description: "Panneau clair translucide assorti au thème clair de Windows." },
-]
 
 export function DockAppearanceSettings() {
   const runtime = useTauriRuntime()
-  const [theme, setTheme] = useState<DockTheme>(DEFAULT_DOCK_THEME)
-  const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [monitors, setMonitors] = useState<{ id: string; name: string | null; width: number; height: number; primary: boolean }[]>([])
   const [monitorId, setMonitorId] = useState(DEFAULT_DOCK_MONITOR_ID)
   const [monitorSaving, setMonitorSaving] = useState(false)
 
   useEffect(() => {
-    void getDockTheme().then(setTheme).catch((cause: unknown) => {
-      setError(cause instanceof Error ? cause.message : String(cause))
-    })
     void getDockMonitorId().then(setMonitorId).catch((cause: unknown) => {
       setError(cause instanceof Error ? cause.message : String(cause))
     })
@@ -58,19 +43,6 @@ export function DockAppearanceSettings() {
       setError(cause instanceof Error ? cause.message : String(cause))
     })
   }, [monitorId, monitors])
-
-  const chooseTheme = async (nextTheme: DockTheme) => {
-    setSaving(true)
-    setError(null)
-    try {
-      await setDockTheme(nextTheme)
-      setTheme(nextTheme)
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : String(cause))
-    } finally {
-      setSaving(false)
-    }
-  }
 
   const chooseMonitor = async (nextMonitorId: string) => {
     setMonitorSaving(true)
@@ -99,21 +71,12 @@ export function DockAppearanceSettings() {
           Le dock s’ouvre à gauche de l’écran choisi avec le matériau Acrylic natif de Windows.
         </CardDescription>
       </CardHeader>
-      <CardContent className="grid gap-3 sm:grid-cols-3">
-        {themes.map((option) => (
-          <button
-            key={option.value}
-            aria-pressed={theme === option.value}
-            className={`flex min-h-32 flex-col items-start gap-2 rounded-xl border p-4 text-left transition-colors hover:bg-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${theme === option.value ? "border-primary bg-primary/5" : "bg-card"}`}
-            disabled={runtime !== true || saving}
-            onClick={() => void chooseTheme(option.value)}
-            type="button"
-          >
-            <span className="text-sm font-semibold">{option.name}{option.value === "windows" ? " · recommandé" : ""}</span>
-            <span className="text-xs leading-relaxed text-muted-foreground">{option.description}</span>
-          </button>
-        ))}
-        {error && <p className="text-sm text-destructive sm:col-span-3" role="alert">{error}</p>}
+      <CardContent>
+        <div className="rounded-lg bg-muted/40 p-4">
+          <p className="text-sm font-semibold">DoluDock · interface native Windows</p>
+          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">FXMP utilise le panneau Direct2D original de DoluDock. Son apparence et son matériau suivent le rendu Windows fourni par ce projet.</p>
+        </div>
+        {error && <p className="mt-3 text-sm text-destructive" role="alert">{error}</p>}
       </CardContent>
       <CardContent className="flex flex-col gap-3 border-t pt-5">
         <div className="flex items-start gap-3">
@@ -124,7 +87,7 @@ export function DockAppearanceSettings() {
           </div>
           <select
             aria-label="Écran du dock"
-            className="h-9 max-w-[18rem] rounded-md border bg-background px-3 text-sm shadow-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="h-9 max-w-[18rem] rounded-md bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
             disabled={runtime !== true || monitorSaving || monitors.length === 0}
             onChange={(event) => void chooseMonitor(event.currentTarget.value)}
             value={displayedMonitorId}
