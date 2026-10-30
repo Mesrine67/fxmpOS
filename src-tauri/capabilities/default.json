@@ -30,6 +30,7 @@
     "notification:allow-notify",
     "allow-activate-main-window",
     "allow-toggle-dock",
+    "allow-get-dock-theme",
     "allow-set-dock-shortcut"
   ]
 }
