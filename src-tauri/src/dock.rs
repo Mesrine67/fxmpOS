@@ -1,5 +1,7 @@
 use crate::commands::display::monitor_identifier;
 use std::process::Command;
+#[cfg(windows)]
+use std::sync::atomic::{AtomicBool, Ordering};
 use tauri::{AppHandle, Manager, State};
 use tauri_plugin_global_shortcut::GlobalShortcutExt;
 use tauri_plugin_store::StoreExt;
@@ -9,6 +11,10 @@ use std::os::windows::process::CommandExt;
 
 #[cfg(windows)]
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+
+// Record launch attempts before spawning so shutdown also handles startup races.
+#[cfg(windows)]
+static DOCK_LAUNCH_REQUESTED: AtomicBool = AtomicBool::new(false);
 
 #[tauri::command]
 pub async fn toggle_dock(app: AppHandle) -> Result<(), String> {
@@ -55,10 +61,14 @@ fn launch_native_doludock(app: &AppHandle, action: &str) -> Result<(), String> {
     command.arg(format!("--fxmp-monitor={monitor_id}"));
 
     command.creation_flags(CREATE_NO_WINDOW);
-    command
-        .spawn()
-        .map(|_| ())
-        .map_err(|error| format!("Impossible de démarrer le dock DoluDock : {error}"))
+    DOCK_LAUNCH_REQUESTED.store(true, Ordering::Release);
+    match command.spawn() {
+        Ok(_) => Ok(()),
+        Err(error) => {
+            DOCK_LAUNCH_REQUESTED.store(false, Ordering::Release);
+            Err(format!("Impossible de démarrer le dock DoluDock : {error}"))
+        }
+    }
 }
 
 #[cfg(windows)]
@@ -83,6 +93,11 @@ fn native_doludock_path(app: &AppHandle) -> Result<std::path::PathBuf, String> {
 pub fn close_dock(app: AppHandle) -> Result<(), String> {
     #[cfg(windows)]
     {
+        // No dock was launched by this FXMP process: do not invoke the helper,
+        // which otherwise waits up to 30 seconds for a nonexistent mutex.
+        if !DOCK_LAUNCH_REQUESTED.load(Ordering::Acquire) {
+            return Ok(());
+        }
         let executable = native_doludock_path(&app)?;
         let status = Command::new(executable)
             .args(["--fxmp-mode", "--fxmp-exit"])
@@ -92,6 +107,7 @@ pub fn close_dock(app: AppHandle) -> Result<(), String> {
         if !status.success() {
             return Err("Le processus DoluDock n’a pas pu se fermer correctement.".to_owned());
         }
+        DOCK_LAUNCH_REQUESTED.store(false, Ordering::Release);
         return Ok(());
     }
 
