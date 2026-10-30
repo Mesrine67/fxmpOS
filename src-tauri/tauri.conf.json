@@ -145,6 +145,7 @@
         "alwaysOnTop": true,
         "visible": false,
         "focus": true,
+        "closable": false,
         "userAgent": "fxmp-os-tray-panel"
       },
       {

@@ -118,6 +118,14 @@ pub fn run() {
             commands::input_viewer::set_input_viewer_state,
         ])
         .on_window_event(|window, event| {
+            if window.label() == "tray-panel" {
+                if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                    api.prevent_close();
+                    if let Err(error) = window.hide() {
+                        log::error!("failed to hide tray panel: {error}");
+                    }
+                }
+            }
             if window.label() == "main" {
                 if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                     #[cfg(windows)]

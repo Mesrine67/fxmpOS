@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { invoke } from "@tauri-apps/api/core"
+import { listen } from "@tauri-apps/api/event"
 import { EyeIcon, MousePointer2Icon } from "lucide-react"
 import { useTauriRuntime } from "@/hooks/use-tauri-runtime"
 import { Button } from "@/components/ui/button"
@@ -15,9 +16,23 @@ export function InputViewerSettings() {
 
   useEffect(() => {
     if (!runtime) return
+    let active = true
+    let unlisten: (() => void) | undefined
     void invoke<boolean>("get_input_viewer_state").then(setVisible).catch((cause: unknown) => {
       setError(cause instanceof Error ? cause.message : String(cause))
     })
+    void listen<boolean>("input-viewer:visibility-changed", (event) => {
+      if (active) setVisible(event.payload)
+    }).then((stopListening) => {
+      if (active) unlisten = stopListening
+      else stopListening()
+    }).catch((cause: unknown) => {
+      if (active) setError(cause instanceof Error ? cause.message : String(cause))
+    })
+    return () => {
+      active = false
+      unlisten?.()
+    }
   }, [runtime])
 
   const toggle = async () => {
