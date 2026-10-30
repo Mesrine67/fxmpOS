@@ -1239,7 +1239,7 @@ dependencies = [
 
 [[package]]
 name = "fxmp-os"
-version = "0.0.45"
+version = "0.0.46"
 dependencies = [
  "base64 0.22.1",
  "gdk",
@@ -1260,6 +1260,7 @@ dependencies = [
  "tauri-plugin-single-instance",
  "tauri-plugin-store",
  "tauri-plugin-updater",
+ "window-vibrancy",
  "windows",
  "windows-sys 0.61.2",
  "winreg",
