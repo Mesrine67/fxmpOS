@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { emitTo } from "@tauri-apps/api/event"
+import { emitTo, listen } from "@tauri-apps/api/event"
 import { invoke, isTauri } from "@tauri-apps/api/core"
 import { CircleHelpIcon, FileCode2Icon, FileTextIcon, FolderIcon, XIcon } from "lucide-react"
 
@@ -35,10 +35,20 @@ export function DockWindow() {
   useEffect(() => {
     document.documentElement.dataset.fxmpDock = "true"
     let active = true
+    let unlisten: (() => void) | undefined
     void getDockTheme().then((savedTheme) => {
       if (!active) return
       setTheme(savedTheme)
-      document.documentElement.dataset.dockTheme = savedTheme
+    }).catch((error: unknown) => {
+      console.error("Impossible de lire le thème du dock", error)
+    })
+    void listen<DockTheme>("dock-theme-changed", (event) => {
+      setTheme(event.payload === "windows" || event.payload === "fxmp" || event.payload === "light" ? event.payload : DEFAULT_DOCK_THEME)
+    }).then((stopListening) => {
+      if (active) unlisten = stopListening
+      else stopListening()
+    }).catch((error: unknown) => {
+      console.error("Impossible d’écouter les changements de thème du dock", error)
     })
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape" && isTauri()) {
@@ -51,11 +61,16 @@ export function DockWindow() {
     window.addEventListener("keydown", onKeyDown)
     return () => {
       active = false
+      unlisten?.()
       window.removeEventListener("keydown", onKeyDown)
       delete document.documentElement.dataset.fxmpDock
       delete document.documentElement.dataset.dockTheme
     }
   }, [])
+
+  useEffect(() => {
+    document.documentElement.dataset.dockTheme = theme
+  }, [theme])
 
   return (
     <main className="flex h-screen w-screen items-center justify-center overflow-hidden bg-transparent p-2 text-white">
@@ -69,7 +84,7 @@ export function DockWindow() {
         <nav aria-label="Accès rapide FXMP OS" className="mt-3 grid grid-cols-3 gap-x-2 gap-y-2">
           {dockItems.map(({ label, shortcut, href, icon: Icon, kind }) => (
             <button
-              key={href}
+              key={label}
               aria-label={label}
               className="dock-item group flex h-[90px] min-w-0 flex-col items-center justify-center gap-1 rounded-[11px] px-1 text-center text-white/90 transition-colors hover:bg-white/10 focus-visible:bg-white/15 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/30"
               onClick={() => void (href ? navigateTo(href) : invoke("close_dock")).catch((error) => {

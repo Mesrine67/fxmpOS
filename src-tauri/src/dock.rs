@@ -1,6 +1,7 @@
 use std::sync::Mutex;
 use tauri::{AppHandle, Manager, PhysicalPosition, State, WebviewWindowBuilder};
 use tauri_plugin_global_shortcut::GlobalShortcutExt;
+use tauri_plugin_store::StoreExt;
 
 const DOCK_LABEL: &str = "dock";
 const DOCK_WIDTH: f64 = 360.0;
@@ -88,6 +89,16 @@ pub async fn close_dock(app: AppHandle) -> Result<(), String> {
             .map_err(|error| format!("Impossible de masquer le dock : {error}"))?;
     }
     Ok(())
+}
+
+#[tauri::command]
+pub fn get_dock_theme(app: AppHandle) -> String {
+    app.store("fxmp-settings.json")
+        .ok()
+        .and_then(|store| store.get("dockTheme"))
+        .and_then(|value| value.as_str().map(str::to_owned))
+        .filter(|theme| matches!(theme.as_str(), "windows" | "fxmp" | "light"))
+        .unwrap_or_else(|| "windows".to_owned())
 }
 
 #[tauri::command]

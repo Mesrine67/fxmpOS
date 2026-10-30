@@ -1,4 +1,5 @@
-import { isTauri } from "@tauri-apps/api/core"
+import { invoke, isTauri } from "@tauri-apps/api/core"
+import { emit } from "@tauri-apps/api/event"
 import { LazyStore } from "@tauri-apps/plugin-store"
 
 export const DOCK_THEMES = ["windows", "fxmp", "light"] as const
@@ -14,11 +15,13 @@ export function normalizeDockTheme(value: unknown): DockTheme {
 
 export async function getDockTheme(): Promise<DockTheme> {
   if (!isTauri()) return DEFAULT_DOCK_THEME
-  return normalizeDockTheme(await store.get<unknown>(key))
+  return normalizeDockTheme(await invoke<unknown>("get_dock_theme"))
 }
 
 export async function setDockTheme(theme: DockTheme): Promise<void> {
   if (!isTauri()) return
-  await store.set(key, normalizeDockTheme(theme))
+  const normalized = normalizeDockTheme(theme)
+  await store.set(key, normalized)
   await store.save()
+  await emit("dock-theme-changed", normalized)
 }

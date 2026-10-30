@@ -4,5 +4,5 @@
   "description": "Permissions limitées au dock de navigation FXMP OS",
   "local": true,
   "windows": ["dock"],
-  "permissions": ["core:default", "allow-close-dock"]
+  "permissions": ["core:default", "allow-close-dock", "allow-get-dock-theme"]
 }
