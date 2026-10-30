@@ -19,6 +19,7 @@ const allowedTrayPaths = new Set([
   "/settings/?tab=notifications",
   "/settings/?tab=theme",
   "/settings/?tab=updates",
+  "/overlays/",
   "/shortcuts/",
 ])
 

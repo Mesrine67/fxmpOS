@@ -5,6 +5,7 @@ import {
   BellIcon,
   Layers3Icon,
   MonitorCogIcon,
+  PanelTopIcon,
   PaletteIcon,
   ShieldCheckIcon,
   SparklesIcon,
@@ -12,6 +13,7 @@ import {
 import { useSyncExternalStore } from "react"
 
 import { AutostartSettings } from "@/components/autostart-settings"
+import { DockAppearanceSettings } from "@/components/dock-appearance-settings"
 import { NetworkLatency } from "@/components/network-latency"
 import { NotificationSettings } from "@/components/notification-settings"
 import { OverlaySettings } from "@/components/overlay-settings"
@@ -32,6 +34,7 @@ const settingsTabValues = [
   "overlay",
   "notifications",
   "theme",
+  "dock",
   "updates",
 ]
 
@@ -113,6 +116,10 @@ export function SettingsPage() {
               <PaletteIcon data-icon="inline-start" />
               Thème
             </TabsTrigger>
+            <TabsTrigger value="dock">
+              <PanelTopIcon data-icon="inline-start" />
+              Dock
+            </TabsTrigger>
             <TabsTrigger value="updates">
               <ArrowDownToLineIcon data-icon="inline-start" />
               Mises à jour
@@ -166,6 +173,10 @@ export function SettingsPage() {
 
           <TabsContent className="flex flex-col gap-4" value="theme">
             <ThemeSettings />
+          </TabsContent>
+
+          <TabsContent className="flex flex-col gap-4" value="dock">
+            <DockAppearanceSettings />
           </TabsContent>
 
           <TabsContent

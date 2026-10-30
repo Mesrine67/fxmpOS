@@ -1,10 +1,11 @@
 use std::sync::Mutex;
 use tauri::{AppHandle, Manager, PhysicalPosition, State, WebviewWindowBuilder};
 use tauri_plugin_global_shortcut::GlobalShortcutExt;
+use tauri_plugin_store::StoreExt;
 
 const DOCK_LABEL: &str = "dock";
-const DOCK_WIDTH: f64 = 660.0;
-const DOCK_HEIGHT: f64 = 112.0;
+const DOCK_WIDTH: f64 = 360.0;
+const DOCK_HEIGHT: f64 = 390.0;
 const DOCK_BOTTOM_MARGIN: f64 = 24.0;
 
 #[tauri::command]
@@ -59,6 +60,10 @@ pub async fn toggle_dock(app: AppHandle) -> Result<(), String> {
         .map_err(|error| format!("Impossible de préparer le dock : {error}"))?
         .build()
         .map_err(|error| format!("Impossible de créer le dock : {error}"))?;
+    #[cfg(target_os = "windows")]
+    if let Err(error) = window_vibrancy::apply_acrylic(&window, Some((27, 27, 29, 220))) {
+        log::warn!("L’effet Acrylic natif du dock n’est pas disponible : {error}");
+    }
     window
         .set_position(PhysicalPosition::new(x, y))
         .map_err(|error| format!("Impossible de placer le dock : {error}"))?;
@@ -84,6 +89,16 @@ pub async fn close_dock(app: AppHandle) -> Result<(), String> {
             .map_err(|error| format!("Impossible de masquer le dock : {error}"))?;
     }
     Ok(())
+}
+
+#[tauri::command]
+pub fn get_dock_theme(app: AppHandle) -> String {
+    app.store("fxmp-settings.json")
+        .ok()
+        .and_then(|store| store.get("dockTheme"))
+        .and_then(|value| value.as_str().map(str::to_owned))
+        .filter(|theme| matches!(theme.as_str(), "windows" | "fxmp" | "light"))
+        .unwrap_or_else(|| "windows".to_owned())
 }
 
 #[tauri::command]

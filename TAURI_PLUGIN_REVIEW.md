@@ -69,7 +69,7 @@ Les macros Rust `tauri::command`, `tauri::generate_handler!` et `tauri::generate
 - `tauri-plugin-network` concerne l'information réseau, et `tauri-plugin-tracing` remplacerait/dupliquerait le besoin de journalisation actuel.
 - `tauri-plugin-widgets` vise notamment les widgets mobiles; la fenêtre WebView Tauri satisfait déjà le template overlay desktop.
 
-La détection utilise `WebviewWindow::available_monitors`, `primary_monitor`, les dimensions et `work_area`. L'overlay utilise `WindowConfig`, `WebviewWindowBuilder::from_config`, `set_position`, `set_always_on_top` et `set_ignore_cursor_events`. Aucun plugin supplémentaire n'est nécessaire pour l'écran, la fenêtre transparente, l'ancrage ou l'opacité visuelle.
+La détection utilise `WebviewWindow::available_monitors`, `primary_monitor`, les dimensions et `work_area`. L'overlay utilise `WindowConfig`, `WebviewWindowBuilder::from_config`, `set_position`, `set_always_on_top` et `set_ignore_cursor_events`. Pour le panneau du dock, le crate Rust communautaire `window-vibrancy` applique le matériau Acrylic Windows à la fenêtre transparente; ce n'est pas un plugin Tauri et son erreur reste non bloquante, avec un fond CSS de secours. Les dimensions fixes du panneau évitent son usage pendant le redimensionnement.
 
 ## Références
 
@@ -79,3 +79,4 @@ La détection utilise `WebviewWindow::available_monitors`, `primary_monitor`, le
 - [Tauri — configuration des fenêtres et `create: false`](https://v2.tauri.app/reference/config/#windowconfig)
 - [Tauri — API Rust de `WebviewWindowBuilder`](https://docs.rs/tauri/latest/tauri/webview/struct.WebviewWindowBuilder.html)
 - [Tauri — API Rust de `Monitor`](https://docs.rs/tauri/latest/tauri/window/struct.Monitor.html)
+- [Tauri Apps — crate `window-vibrancy` et Acrylic Windows](https://github.com/tauri-apps/window-vibrancy)

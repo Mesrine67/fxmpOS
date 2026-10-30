@@ -111,6 +111,7 @@ pub fn run() {
             commands::overlay::set_overlay_state,
             dock::toggle_dock,
             dock::close_dock,
+            dock::get_dock_theme,
             dock::set_dock_shortcut
         ])
         .on_window_event(|window, event| {

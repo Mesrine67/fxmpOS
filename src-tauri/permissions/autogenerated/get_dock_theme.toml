@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-get-dock-theme"
+description = "Enables the get_dock_theme command without any pre-configured scope."
+commands.allow = ["get_dock_theme"]
+
+[[permission]]
+identifier = "deny-get-dock-theme"
+description = "Denies the get_dock_theme command without any pre-configured scope."
+commands.deny = ["get_dock_theme"]

@@ -1,5 +1,12 @@
 # Journal des modifications
 
+## [0.0.46] - 2026-10-30
+
+### Améliorations
+
+- Refonte le dock en panneau d’accès rapide Windows avec une grille 3 × 3, des icônes de dossiers et de fichiers et le matériau Acrylic natif.
+- Ajoute les thèmes Windows, FXMP et Clair dans Paramètres → Dock, avec mémorisation locale du choix.
+
 ## [0.0.45] - 2026-10-30
 
 ### Améliorations

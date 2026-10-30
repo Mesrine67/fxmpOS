@@ -22,6 +22,43 @@ html[data-fxmp-dock="true"] body {
     overflow: hidden;
 }
 
+.dock-panel {
+    border-color: rgb(255 255 255 / 10%);
+    background: rgb(27 27 29 / 91%);
+    color: #f7f7f7;
+    -webkit-backdrop-filter: blur(28px) saturate(145%);
+    backdrop-filter: blur(28px) saturate(145%);
+}
+
+.dock-panel-windows {
+    border-color: rgb(255 255 255 / 12%);
+    background: rgb(27 27 29 / 91%);
+    box-shadow: 0 28px 80px rgb(0 0 0 / 42%), inset 0 1px 0 rgb(255 255 255 / 3%);
+}
+
+.dock-panel-fxmp {
+    border-color: rgb(248 113 113 / 24%);
+    background: rgb(24 18 20 / 94%);
+    box-shadow: 0 28px 80px rgb(0 0 0 / 48%), inset 0 1px 0 rgb(248 113 113 / 10%);
+}
+
+.dock-panel-light {
+    border-color: rgb(255 255 255 / 55%);
+    background: rgb(246 246 248 / 90%);
+    color: #202124;
+    box-shadow: 0 28px 80px rgb(0 0 0 / 24%), inset 0 1px 0 rgb(255 255 255 / 65%);
+}
+
+.dock-panel-light header .text-white\/45 { color: rgb(32 33 36 / 48%); }
+.dock-panel-light header .text-white\/80 { color: rgb(32 33 36 / 78%); }
+.dock-panel-light .dock-item { color: rgb(32 33 36 / 90%); }
+.dock-panel-light .dock-item:hover,
+.dock-panel-light .dock-item:focus-visible { background: rgb(0 0 0 / 8%); }
+.dock-panel-light .dock-folder svg { color: #d99b16; }
+.dock-panel-light .dock-file svg { color: #69717b; }
+.dock-folder svg { fill: #facc15; color: #d99b16; stroke: #d99b16; }
+.dock-file svg { fill: #f8fafc; color: #cbd5e1; stroke: #aeb7c2; }
+
 html[data-fxmp-overlay="true"] body {
     overflow: hidden;
 }
