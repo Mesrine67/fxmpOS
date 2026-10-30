@@ -1,5 +1,14 @@
 # Journal des modifications
 
+## [0.0.50] - 2026-10-30
+
+### Sécurité et maintenance
+
+- Met à jour `tauri-plugin-updater` vers 2.14.1 et supprime la dépendance transitive vulnérable `zip` des builds Windows.
+- Désactive la fonctionnalité ZIP héritée de Tauri v1 tout en conservant les mises à jour signées NSIS/MSI, le TLS et la prise en charge du proxy système.
+- Exclut les fichiers de compilation CMake/MSVC générés localement pour DoluDock du suivi Git.
+
+
 ## [0.0.49] - 2026-10-30
 
 ### Publication corrective
