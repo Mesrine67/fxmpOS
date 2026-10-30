@@ -84,9 +84,10 @@ fn native_dock_path(app: &AppHandle) -> Result<std::path::PathBuf, String> {
 
     let development = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("third-party/dock/build/Release/dock.exe");
-    development.is_file().then_some(development).ok_or_else(|| {
-        "Dock n’est pas compilé. Reconstruisez l’application Windows.".to_owned()
-    })
+    development
+        .is_file()
+        .then_some(development)
+        .ok_or_else(|| "Dock n’est pas compilé. Reconstruisez l’application Windows.".to_owned())
 }
 
 #[tauri::command]
