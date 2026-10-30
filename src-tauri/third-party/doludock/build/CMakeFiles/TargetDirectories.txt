@@ -1,0 +1,3 @@
+C:/Users/Mike/Desktop/PC_MONITOR/V2/mon-app/src-tauri/third-party/doludock/build/CMakeFiles/doludock.dir
+C:/Users/Mike/Desktop/PC_MONITOR/V2/mon-app/src-tauri/third-party/doludock/build/CMakeFiles/ALL_BUILD.dir
+C:/Users/Mike/Desktop/PC_MONITOR/V2/mon-app/src-tauri/third-party/doludock/build/CMakeFiles/ZERO_CHECK.dir

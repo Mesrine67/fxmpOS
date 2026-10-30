@@ -1,0 +1,45 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="C:\Users\Mike\Desktop\PC_MONITOR\V2\mon-app\src-tauri\third-party\doludock\src\main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\Mike\Desktop\PC_MONITOR\V2\mon-app\src-tauri\third-party\doludock\src\App.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\Mike\Desktop\PC_MONITOR\V2\mon-app\src-tauri\third-party\doludock\src\FolderModel.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\Mike\Desktop\PC_MONITOR\V2\mon-app\src-tauri\third-party\doludock\src\FolderWatcher.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\Mike\Desktop\PC_MONITOR\V2\mon-app\src-tauri\third-party\doludock\src\KeyboardHook.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\Mike\Desktop\PC_MONITOR\V2\mon-app\src-tauri\third-party\doludock\src\OverlayWindow.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\Mike\Desktop\PC_MONITOR\V2\mon-app\src-tauri\third-party\doludock\src\Settings.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\Mike\Desktop\PC_MONITOR\V2\mon-app\src-tauri\third-party\doludock\src\SettingsWindow.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\Mike\Desktop\PC_MONITOR\V2\mon-app\src-tauri\third-party\doludock\src\UpdateChecker.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="C:\Users\Mike\Desktop\PC_MONITOR\V2\mon-app\src-tauri\third-party\doludock\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="C:\Users\Mike\Desktop\PC_MONITOR\V2\mon-app\src-tauri\third-party\doludock\src\app.rc">
+      <Filter>Source Files</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{F879B0D4-E895-35AF-9D5F-80D3FD20D520}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>
