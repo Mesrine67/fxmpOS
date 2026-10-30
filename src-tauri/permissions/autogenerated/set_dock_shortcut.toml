@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-set-dock-shortcut"
+description = "Enables the set_dock_shortcut command without any pre-configured scope."
+commands.allow = ["set_dock_shortcut"]
+
+[[permission]]
+identifier = "deny-set-dock-shortcut"
+description = "Denies the set_dock_shortcut command without any pre-configured scope."
+commands.deny = ["set_dock_shortcut"]

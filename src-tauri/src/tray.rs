@@ -16,6 +16,7 @@ pub fn install(app: &mut App) -> tauri::Result<()> {
         .item(&title)
         .separator()
         .text("open", "Ouvrir le centre de contrôle")
+        .text("open-dock", "Afficher le dock FXMP OS")
         .separator()
         .text("navigate-overview", "Vue d’ensemble")
         .text("navigate-resources", "Ressources système")
@@ -47,6 +48,14 @@ pub fn install(app: &mut App) -> tauri::Result<()> {
         .show_menu_on_left_click(false)
         .on_menu_event(|app, event| match event.id().as_ref() {
             "open" => show_main_window(app),
+            "open-dock" => {
+                let app = app.clone();
+                tauri::async_runtime::spawn(async move {
+                    if let Err(error) = crate::dock::toggle_dock(app).await {
+                        log::error!("failed to toggle dock from tray menu: {error}");
+                    }
+                });
+            }
             "about" => navigate_main_window(app, "/about/"),
             "navigate-overview" => navigate_main_window(app, "/"),
             "navigate-resources" => navigate_main_window(app, "/monitor/"),

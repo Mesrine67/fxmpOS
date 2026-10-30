@@ -1,5 +1,13 @@
 # Journal des modifications
 
+## [0.0.45] - 2026-10-30
+
+### Améliorations
+
+- Ajoute un dock FXMP OS flottant, accessible depuis le menu Tray et personnalisable avec un raccourci clavier global.
+- Ajoute une page Raccourcis clavier avec recherche et raccourcis utiles pour naviguer dans l’application.
+- Ajoute des raccourcis de navigation locaux pour les pages principales et les paramètres.
+
 ## [0.0.44] - 2026-10-30
 
 ### Améliorations
@@ -45,7 +53,9 @@
 
 ### Améliorations
 
-- À compléter avant la publication.
+- Ajoute un dock FXMP OS flottant, accessible depuis le menu Tray et personnalisable avec un raccourci clavier global.
+- Ajoute une page Raccourcis clavier avec recherche et raccourcis utiles pour naviguer dans l’application.
+- Ajoute des raccourcis de navigation locaux pour les pages principales et les paramètres.
 
 ## [0.0.38] - 2026-10-28
 

@@ -18,6 +18,8 @@ La page **Applications** combine les entrées de désinstallation des vues 32/64
 
 La page **Settings** regroupe les réglages d'application, d'overlay, de thème, de notifications et de mise à jour. L'overlay transparent mémorise l'écran, l'ancrage, la position physique, l'opacité, le premier plan et le clic traversant dans le store Tauri. Si l'écran mémorisé n'est plus présent, l'overlay revient sur l'écran principal. Il affiche la mémoire vive lue localement, actualisée toutes les cinq secondes. Settings propose une mesure réseau à la demande vers `1.1.1.1:443` : médiane, minimum, variation et pertes sur cinq connexions TCP (délai maximal de 750 ms par essai). Cette mesure n'est pas un ping ICMP et aucun résultat n'est envoyé à un service FXMP.
 
+Le dock FXMP OS est une fenêtre flottante de lancement rapide, ouverte depuis n'importe quelle application avec un raccourci global configurable. Elle donne accès aux pages principales et se ferme à Échap ou dès qu'elle perd le focus. La page **Raccourcis clavier** (`/shortcuts`) répertorie les actions clavier et permet de modifier le raccourci global du dock.
+
 Les thèmes offrent les apparences système/clair/sombre, les styles Mira/Nova, bases neutres, accents, couleurs de graphiques, polices et arrondis. Les composants shadcn utilisent les tokens CSS configurés et les aperçus montrent le résultat appliqué. Les préférences sont locales et partagées entre les fenêtres avec `@tauri-apps/plugin-store`.
 
 Les toasts dans FXMP OS utilisent Sonner; les notifications système Windows passent par `tauri-plugin-notification`. Ces canaux sont indépendants et peuvent tous deux envoyer un événement au premier plan si leurs options sont activées. Le canal natif est désactivé par défaut et l'autorisation Windows n'est demandée qu'après une action explicite dans Settings. Le contenu des notifications n'inclut pas de mesures du PC, processus, ports ni identifiants.
@@ -28,7 +30,7 @@ La barre latérale propose trois espaces : **OS** (centre de contrôle, Ressourc
 
 Sous Windows, le setup NSIS installe FXMP OS pour l'utilisateur courant sans demander les droits administrateur. Il suit la langue de Windows (français ou anglais), utilise l'icône FXMP OS et crée le raccourci Menu Démarrer; le runtime WebView2 est vérifié et son bootstrapper est lancé silencieusement uniquement s'il manque. L'installation MSI reste également disponible. Voir [UPDATE.md](UPDATE.md) pour la signature Authenticode et les avertissements SmartScreen.
 
-La version source de l'application est `0.0.38` (28 octobre 2026); les versions 0.x sont publiques mais restent antérieures à 1.0. Les pratiques d'OpenClaw pertinentes pour cette application et celles qui ne correspondent pas à son architecture sont résumées dans [OPENCLAW_PRACTICES.md](OPENCLAW_PRACTICES.md).
+La dernière version publiée est `0.0.44` (30 octobre 2026); les versions 0.x sont publiques mais restent antérieures à 1.0. Les pratiques d'OpenClaw pertinentes pour cette application et celles qui ne correspondent pas à son architecture sont résumées dans [OPENCLAW_PRACTICES.md](OPENCLAW_PRACTICES.md).
 
 Les choix réutilisables d'OpenHuman concernant la séparation Rust/interface, les permissions, les futures actions système et la protection des secrets sont évalués dans [OPENHUMAN_PRACTICES.md](OPENHUMAN_PRACTICES.md).
 
