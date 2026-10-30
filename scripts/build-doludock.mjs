@@ -17,12 +17,7 @@ function run(program, args) {
   if (result.status !== 0) process.exit(result.status ?? 1)
 }
 
-const vswhere = path.join(
-  process.env["ProgramFiles(x86)"],
-  "Microsoft Visual Studio",
-  "Installer",
-  "vswhere.exe",
-)
+const vswhere = "C:/Program Files (x86)/Microsoft Visual Studio/Installer/vswhere.exe"
 const detected = spawnSync(
   vswhere,
   ["-latest", "-products", "*", "-property", "installationVersion"],
