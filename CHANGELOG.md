@@ -1,5 +1,11 @@
 # Journal des modifications
 
+## [0.0.48] - 2026-10-30
+
+### Améliorations
+
+- À compléter avant la publication.
+
 ## [0.0.47] - 2026-10-30
 
 ### Améliorations
