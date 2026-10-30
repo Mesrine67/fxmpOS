@@ -177,6 +177,50 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE, PWSTR lpCmdLine, int)
     const wchar_t* ctrlClass = fxmpMode ? L"FxmpDoludockCtrl" : L"DoludockCtrl";
     const wchar_t* mutexName = fxmpMode ? L"Local\\fxmp_doludock_singleton_4F1C"
                                         : L"Local\\doludock_singleton_4F1C";
+
+    // Shutdown helpers may race the integrated instance while it is still
+    // initializing. Open the existing mutex (never create/own it here), then
+    // wait for either its control window or the owner's exit before succeeding.
+    if (fxmpMode && fxmpExit)
+    {
+        const ULONGLONG deadline = GetTickCount64() + 30000;
+        while (GetTickCount64() < deadline)
+        {
+            HANDLE running = OpenMutexW(SYNCHRONIZE | MUTEX_MODIFY_STATE, FALSE, mutexName);
+            if (!running)
+            {
+                Sleep(25);
+                continue;
+            }
+
+            if (HWND existing = FindWindowW(ctrlClass, nullptr))
+            {
+                DWORD_PTR ignored = 0;
+                SendMessageTimeoutW(existing, WM_CLOSE, 0, 0,
+                                    SMTO_ABORTIFHUNG | SMTO_BLOCK, 2000, &ignored);
+                const DWORD wait = WaitForSingleObject(running, 5000);
+                if (wait == WAIT_OBJECT_0 || wait == WAIT_ABANDONED)
+                {
+                    ReleaseMutex(running);
+                    CloseHandle(running);
+                    return 0;
+                }
+                CloseHandle(running);
+                return 2;
+            }
+
+            const DWORD wait = WaitForSingleObject(running, 25);
+            if (wait == WAIT_OBJECT_0 || wait == WAIT_ABANDONED)
+            {
+                ReleaseMutex(running);
+                CloseHandle(running);
+                return 0;
+            }
+            CloseHandle(running);
+        }
+        return 2;
+    }
+
     HANDLE singleton = CreateMutexW(nullptr, TRUE, mutexName);
     if (singleton && GetLastError() == ERROR_ALREADY_EXISTS)
     {
