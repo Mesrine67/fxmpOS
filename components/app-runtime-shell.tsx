@@ -8,6 +8,7 @@ import { OverlayBootstrap } from "@/components/overlay-bootstrap"
 import { Toaster } from "@/components/ui/sonner"
 import { UpdaterProvider } from "@/components/updater-provider"
 import { TrayNavigationListener } from "@/components/tray-navigation-listener"
+import { KeyboardShortcutsRuntime } from "@/components/keyboard-shortcuts-runtime"
 
 function RuntimeShellContent({ children }: { children: React.ReactNode }) {
   return (
@@ -17,6 +18,7 @@ function RuntimeShellContent({ children }: { children: React.ReactNode }) {
         <Suspense fallback={null}>
           <TrayNavigationListener />
         </Suspense>
+      <KeyboardShortcutsRuntime />
         {process.env.NODE_ENV === "development" ? <DebugPanelGate /> : null}
         <OverlayBootstrap />
         {children}

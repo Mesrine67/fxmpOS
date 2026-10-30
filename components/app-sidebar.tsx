@@ -6,6 +6,7 @@ import {
   ActivityIcon,
   CommandIcon,
   Gamepad2Icon,
+  KeyboardIcon,
   MonitorIcon,
   Settings2Icon,
 } from "lucide-react"
@@ -28,6 +29,7 @@ const navigationByWorkspace = {
     { title: "Applications", url: "/apps/", icon: <AppWindowIcon /> },
     { title: "Appareil", url: "/account/", icon: <MonitorIcon /> },
     { title: "Paramètres", url: "/settings/", icon: <Settings2Icon /> },
+    { title: "Raccourcis clavier", url: "/shortcuts/", icon: <KeyboardIcon /> },
   ],
   overlays: [{ title: "Overlay", url: "/overlays/", icon: <MonitorIcon /> }],
   games: [

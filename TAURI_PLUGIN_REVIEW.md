@@ -1,12 +1,13 @@
 # Revue des plugins Tauri pour FXMP OS
 
-Revue mise à jour le 27 octobre 2026 à partir du [catalogue officiel Tauri](https://v2.tauri.app/plugin/), de sa table de compatibilité, de `src-tauri/Cargo.toml`, `src-tauri/src/lib.rs` et des capacités Tauri. Elle distingue les plugins effectivement installés et initialisés des API intégrées et des candidats communautaires. La distribution de FXMP OS vise Windows x64; la présence d'une dépendance multiplateforme ne signifie pas que ces plateformes sont publiées.
+Revue mise à jour le 30 octobre 2026 à partir du [catalogue officiel Tauri](https://v2.tauri.app/plugin/), de sa table de compatibilité, de `src-tauri/Cargo.toml`, `src-tauri/src/lib.rs` et des capacités Tauri. Elle distingue les plugins effectivement installés et initialisés des API intégrées et des candidats communautaires. La distribution de FXMP OS vise Windows x64; la présence d'une dépendance multiplateforme ne signifie pas que ces plateformes sont publiées.
 
 ## Plugins déjà utilisés
 
 | Plugin | Usage dans FXMP OS |
 | --- | --- |
 | `autostart` | Démarrage Windows facultatif, désactivé par défaut. |
+| `global-shortcut` | Enregistre le raccourci global configurable qui affiche/masque le dock FXMP OS. |
 | `log` | Journaux Rust/WebView. |
 | `notification` | Notifications natives Windows en arrière-plan, après activation et autorisation explicites. |
 | `opener` | Ouverture contrôlée de liens externes. |
@@ -16,7 +17,7 @@ Revue mise à jour le 27 octobre 2026 à partir du [catalogue officiel Tauri](ht
 | `updater` | Vérification et installation des mises à jour signées. |
 | `store` | Préférences locales partagées (overlay, thème, notifications) et historique limité des moyennes de ressources. |
 
-`autostart`, `single-instance`, `notification`, `store` et les autres plugins listés sont déclarés dans Cargo et initialisés dans `src-tauri/src/lib.rs`. `autostart` et `single-instance` sont limités aux cibles desktop dans Cargo. Le tray est fourni par l'API Tauri (`tray-icon`), pas par un plugin séparé.
+`autostart`, `single-instance`, `notification`, `store`, `global-shortcut` et les autres plugins listés sont déclarés dans Cargo et initialisés dans `src-tauri/src/lib.rs`. `autostart`, `global-shortcut` et `single-instance` sont limités aux cibles desktop dans Cargo. L'enregistrement du raccourci passe par la commande native `set_dock_shortcut`; les commandes d'enregistrement du plugin ne sont pas exposées directement à la WebView. Le tray est fourni par l'API Tauri (`tray-icon`), pas par un plugin séparé.
 
 ## Catalogue officiel examiné
 
@@ -33,7 +34,7 @@ Ces plugins officiels sont listés sur la page Tauri; les versions mobiles, perm
 | Dialog | Pas de dialogue natif fichier actuellement. |
 | File System | La collecte actuelle n'a pas besoin d'exposer un accès fichier à la WebView. |
 | Geolocation | Sans rapport avec le monitoring PC. |
-| Global Shortcut | Candidat si un raccourci global configurable pour afficher/masquer l'overlay est demandé. |
+| Global Shortcut | Déjà utilisé pour le raccourci global du dock. |
 | Haptics | Ciblé mobile; sans usage dans cette app Windows. |
 | HTTP Client | Aucun client HTTP natif supplémentaire nécessaire. |
 | Localhost | Aucun serveur local en production. |
@@ -57,6 +58,8 @@ Ces plugins officiels sont listés sur la page Tauri; les versions mobiles, perm
 
 La table de compatibilité de la page contient aussi les entrées `torch`, `system-tray` et `window-customization`; le tray et la personnalisation des fenêtres utilisés ici relèvent déjà des API Tauri et aucun besoin de calcul Torch n'est présent.
 
+Les macros Rust `tauri::command`, `tauri::generate_handler!` et `tauri::generate_context!` viennent du crate Tauri déjà requis. Elles ne constituent pas un plugin à ajouter. Le CLI `@tauri-apps/cli` est déjà déclaré comme dépendance de développement dans `package.json`; aucun ajout CLI n'est requis pour le dock.
+
 ## Candidats communautaires pertinents
 
 - `tauri-plugin-device-info` et `tauri-plugin-system-info` recouvrent une partie des informations système, mais dupliqueraient `sysinfo`, WMI et la commande Rust typée déjà en place.
@@ -71,6 +74,8 @@ La détection utilise `WebviewWindow::available_monitors`, `primary_monitor`, le
 ## Références
 
 - [Tauri — catalogue des fonctionnalités, plugins et ressources communautaires](https://v2.tauri.app/plugin/)
+- [Tauri — plugin Global Shortcut](https://v2.tauri.app/plugin/global-shortcut/)
+- [Tauri — référence CLI](https://v2.tauri.app/reference/cli/)
 - [Tauri — configuration des fenêtres et `create: false`](https://v2.tauri.app/reference/config/#windowconfig)
 - [Tauri — API Rust de `WebviewWindowBuilder`](https://docs.rs/tauri/latest/tauri/webview/struct.WebviewWindowBuilder.html)
 - [Tauri — API Rust de `Monitor`](https://docs.rs/tauri/latest/tauri/window/struct.Monitor.html)

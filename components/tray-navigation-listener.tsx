@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { isTauri } from "@tauri-apps/api/core"
 import { listen } from "@tauri-apps/api/event"
 import { invoke } from "@tauri-apps/api/core"
+import { getCurrentWindow } from "@tauri-apps/api/window"
 
 const allowedTrayPaths = new Set([
   "/",
@@ -18,6 +19,7 @@ const allowedTrayPaths = new Set([
   "/settings/?tab=notifications",
   "/settings/?tab=theme",
   "/settings/?tab=updates",
+  "/shortcuts/",
 ])
 
 export function TrayNavigationListener() {
@@ -35,7 +37,10 @@ export function TrayNavigationListener() {
     if (!isTauri()) return
 
     let unlisten: (() => void) | undefined
+    let unlistenDock: (() => void) | undefined
     let cancelled = false
+
+    if (getCurrentWindow().label !== "main") return
 
     void listen<string>("tray:navigate", (event) => {
       if (allowedTrayPaths.has(event.payload)) {
@@ -49,9 +54,22 @@ export function TrayNavigationListener() {
       else unlisten = stopListening
     })
 
+    void listen<string>("dock:navigate", (event) => {
+      if (allowedTrayPaths.has(event.payload)) {
+        router.push(event.payload)
+        void invoke("activate_main_window").catch((error) => {
+          console.error("Impossible d’ouvrir la destination du dock", error)
+        })
+      }
+    }).then((stopListening) => {
+      if (cancelled) stopListening()
+      else unlistenDock = stopListening
+    })
+
     return () => {
       cancelled = true
       unlisten?.()
+      unlistenDock?.()
     }
   }, [router])
 

@@ -10,6 +10,9 @@ fn main() {
             "get_overlay_snapshot",
             "get_display_monitors",
             "set_overlay_state",
+            "toggle_dock",
+            "close_dock",
+            "set_dock_shortcut",
             "measure_network_latency",
         ]),
     ))

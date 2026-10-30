@@ -15,6 +15,13 @@ html:has([data-fxmp-overlay-page="true"]) [data-ui-app-shell] {
     background-color: transparent !important;
 }
 
+html[data-fxmp-dock="true"],
+html[data-fxmp-dock="true"] body {
+    background: transparent !important;
+    background-color: transparent !important;
+    overflow: hidden;
+}
+
 html[data-fxmp-overlay="true"] body {
     overflow: hidden;
 }

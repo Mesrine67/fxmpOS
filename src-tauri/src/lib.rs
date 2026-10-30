@@ -1,4 +1,5 @@
 mod commands;
+mod dock;
 mod navigation;
 mod tray;
 #[cfg(windows)]
@@ -29,6 +30,20 @@ pub fn run() {
                 .args(["--background"])
                 .app_name("FXMP OS")
                 .build(),
+        )
+        .plugin(
+            tauri_plugin_global_shortcut::Builder::new()
+                .with_handler(|app, _shortcut, event| {
+                    if event.state == tauri_plugin_global_shortcut::ShortcutState::Pressed {
+                        let app = app.clone();
+                        tauri::async_runtime::spawn(async move {
+                            if let Err(error) = dock::toggle_dock(app).await {
+                                log::error!("failed to toggle dock from global shortcut: {error}");
+                            }
+                        });
+                    }
+                })
+                .build(),
         );
 
     builder
@@ -51,6 +66,7 @@ pub fn run() {
         .plugin(navigation::init())
         .setup(move |app| {
             app.manage(commands::system::ResourceMonitor::new());
+            app.manage(std::sync::Mutex::new(String::new()));
             let window_config = app
                 .config()
                 .app
@@ -92,7 +108,10 @@ pub fn run() {
             commands::system::get_overlay_snapshot,
             commands::network::measure_network_latency,
             commands::display::get_display_monitors,
-            commands::overlay::set_overlay_state
+            commands::overlay::set_overlay_state,
+            dock::toggle_dock,
+            dock::close_dock,
+            dock::set_dock_shortcut
         ])
         .on_window_event(|window, event| {
             if window.label() == "main" {

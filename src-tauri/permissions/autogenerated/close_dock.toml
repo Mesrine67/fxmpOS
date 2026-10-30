@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-close-dock"
+description = "Enables the close_dock command without any pre-configured scope."
+commands.allow = ["close_dock"]
+
+[[permission]]
+identifier = "deny-close-dock"
+description = "Denies the close_dock command without any pre-configured scope."
+commands.deny = ["close_dock"]
