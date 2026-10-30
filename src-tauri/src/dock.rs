@@ -1,3 +1,4 @@
+use crate::commands::display::monitor_identifier;
 use std::sync::Mutex;
 use tauri::{AppHandle, Manager, PhysicalPosition, State, WebviewWindowBuilder};
 use tauri_plugin_global_shortcut::GlobalShortcutExt;
@@ -6,7 +7,7 @@ use tauri_plugin_store::StoreExt;
 const DOCK_LABEL: &str = "dock";
 const DOCK_WIDTH: f64 = 360.0;
 const DOCK_HEIGHT: f64 = 390.0;
-const DOCK_BOTTOM_MARGIN: f64 = 24.0;
+const DOCK_SCREEN_MARGIN: f64 = 18.0;
 
 #[tauri::command]
 pub async fn toggle_dock(app: AppHandle) -> Result<(), String> {
@@ -19,6 +20,7 @@ pub async fn toggle_dock(app: AppHandle) -> Result<(), String> {
                 .hide()
                 .map_err(|error| format!("Impossible de masquer le dock : {error}"));
         }
+        position_dock(&app, &window)?;
         window
             .show()
             .map_err(|error| format!("Impossible d’afficher le dock : {error}"))?;
@@ -27,26 +29,6 @@ pub async fn toggle_dock(app: AppHandle) -> Result<(), String> {
             .map_err(|error| format!("Impossible de donner le focus au dock : {error}"));
     }
 
-    let monitor = app
-        .primary_monitor()
-        .map_err(|error| format!("Impossible de détecter l’écran principal : {error}"))?
-        .or_else(|| app.available_monitors().ok()?.into_iter().next())
-        .ok_or_else(|| "Aucun écran disponible pour afficher le dock.".to_owned())?;
-    let work_area = monitor.work_area();
-    let scale = monitor.scale_factor();
-    let width = (DOCK_WIDTH * scale).round() as i32;
-    let height = (DOCK_HEIGHT * scale).round() as i32;
-    let margin = (DOCK_BOTTOM_MARGIN * scale).round() as i32;
-    let work_width = i32::try_from(work_area.size.width).unwrap_or(i32::MAX);
-    let work_bottom = work_area
-        .position
-        .y
-        .saturating_add(i32::try_from(work_area.size.height).unwrap_or(i32::MAX));
-    let x = work_area
-        .position
-        .x
-        .saturating_add((work_width - width) / 2);
-    let y = work_bottom.saturating_sub(height).saturating_sub(margin);
     let window_config = app
         .config()
         .app
@@ -64,9 +46,7 @@ pub async fn toggle_dock(app: AppHandle) -> Result<(), String> {
     if let Err(error) = window_vibrancy::apply_acrylic(&window, Some((27, 27, 29, 220))) {
         log::warn!("L’effet Acrylic natif du dock n’est pas disponible : {error}");
     }
-    window
-        .set_position(PhysicalPosition::new(x, y))
-        .map_err(|error| format!("Impossible de placer le dock : {error}"))?;
+    position_dock(&app, &window)?;
     let dock_window = window.clone();
     window.on_window_event(move |event| {
         if matches!(event, tauri::WindowEvent::Focused(false)) {
@@ -79,6 +59,56 @@ pub async fn toggle_dock(app: AppHandle) -> Result<(), String> {
     window
         .set_focus()
         .map_err(|error| format!("Impossible de donner le focus au dock : {error}"))
+}
+
+fn position_dock(app: &AppHandle, window: &tauri::WebviewWindow) -> Result<(), String> {
+    let monitors = app
+        .available_monitors()
+        .map_err(|error| format!("Impossible de détecter les écrans : {error}"))?;
+    let selected_id = app
+        .store("fxmp-settings.json")
+        .ok()
+        .and_then(|store| store.get("dockMonitorId"))
+        .and_then(|value| value.as_str().map(str::to_owned))
+        .filter(|id| id != "primary");
+    let monitor = selected_id
+        .and_then(|id| {
+            monitors
+                .iter()
+                .find(|monitor| monitor_identifier(monitor) == id)
+                .cloned()
+        })
+        .or(app
+            .primary_monitor()
+            .map_err(|error| format!("Impossible d’identifier l’écran principal : {error}"))?)
+        .or_else(|| monitors.first().cloned())
+        .ok_or_else(|| "Aucun écran disponible pour afficher le dock.".to_owned())?;
+
+    let work_area = monitor.work_area();
+    let scale = monitor.scale_factor();
+    let width = (DOCK_WIDTH * scale).round() as i32;
+    let height = (DOCK_HEIGHT * scale).round() as i32;
+    let margin = (DOCK_SCREEN_MARGIN * scale).round() as i32;
+    let right = work_area
+        .position
+        .x
+        .saturating_add(i32::try_from(work_area.size.width).unwrap_or(i32::MAX));
+    let bottom = work_area
+        .position
+        .y
+        .saturating_add(i32::try_from(work_area.size.height).unwrap_or(i32::MAX));
+    let x = work_area
+        .position
+        .x
+        .saturating_add(margin)
+        .min(right.saturating_sub(width));
+    let y = bottom
+        .saturating_sub(height)
+        .saturating_sub(margin)
+        .max(work_area.position.y);
+    window
+        .set_position(PhysicalPosition::new(x, y))
+        .map_err(|error| format!("Impossible de placer le dock sur l’écran choisi : {error}"))
 }
 
 #[tauri::command]

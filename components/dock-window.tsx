@@ -74,7 +74,7 @@ export function DockWindow() {
 
   return (
     <main className="flex h-screen w-screen items-center justify-center overflow-hidden bg-transparent p-2 text-white">
-      <section aria-label="Dock FXMP OS" className={`dock-panel dock-panel-${theme} h-full w-full overflow-hidden rounded-[20px] border px-4 py-4 shadow-2xl backdrop-blur-2xl`}>
+      <section aria-label="Dock FXMP OS" className={`dock-panel dock-panel-${theme} h-full w-full overflow-hidden rounded-[16px] border px-4 py-4 shadow-2xl backdrop-blur-2xl`}>
         <header className="flex h-7 items-center gap-2 px-0.5 text-[14px] font-semibold tracking-tight">
           <span>{theme === "windows" ? "Quick Access" : "FXMP OS"}</span>
           <span aria-hidden="true" className="text-white/45">·</span>

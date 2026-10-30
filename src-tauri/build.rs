@@ -14,6 +14,9 @@ fn main() {
             "close_dock",
             "set_dock_shortcut",
             "measure_network_latency",
+            "get_input_snapshot",
+            "get_input_viewer_state",
+            "set_input_viewer_state",
         ]),
     ))
     .expect("failed to build Tauri application metadata");

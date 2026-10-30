@@ -1,7 +1,8 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { PaletteIcon } from "lucide-react"
+import { MonitorIcon, PaletteIcon } from "lucide-react"
+import { invoke } from "@tauri-apps/api/core"
 
 import {
   Card,
@@ -13,7 +14,10 @@ import {
 import { useTauriRuntime } from "@/hooks/use-tauri-runtime"
 import {
   DEFAULT_DOCK_THEME,
+  DEFAULT_DOCK_MONITOR_ID,
+  getDockMonitorId,
   getDockTheme,
+  setDockMonitorId,
   setDockTheme,
   type DockTheme,
 } from "@/lib/dock-preferences"
@@ -29,12 +33,31 @@ export function DockAppearanceSettings() {
   const [theme, setTheme] = useState<DockTheme>(DEFAULT_DOCK_THEME)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [monitors, setMonitors] = useState<{ id: string; name: string | null; width: number; height: number; primary: boolean }[]>([])
+  const [monitorId, setMonitorId] = useState(DEFAULT_DOCK_MONITOR_ID)
+  const [monitorSaving, setMonitorSaving] = useState(false)
 
   useEffect(() => {
     void getDockTheme().then(setTheme).catch((cause: unknown) => {
       setError(cause instanceof Error ? cause.message : String(cause))
     })
-  }, [])
+    void getDockMonitorId().then(setMonitorId).catch((cause: unknown) => {
+      setError(cause instanceof Error ? cause.message : String(cause))
+    })
+    if (runtime) {
+      void invoke<typeof monitors>("get_display_monitors").then(setMonitors).catch((cause: unknown) => {
+        setError(cause instanceof Error ? cause.message : String(cause))
+      })
+    }
+  }, [runtime])
+
+  useEffect(() => {
+    if (monitorId === DEFAULT_DOCK_MONITOR_ID || monitors.length === 0) return
+    if (monitors.some((monitor) => monitor.id === monitorId)) return
+    void setDockMonitorId(DEFAULT_DOCK_MONITOR_ID).catch((cause: unknown) => {
+      setError(cause instanceof Error ? cause.message : String(cause))
+    })
+  }, [monitorId, monitors])
 
   const chooseTheme = async (nextTheme: DockTheme) => {
     setSaving(true)
@@ -49,6 +72,22 @@ export function DockAppearanceSettings() {
     }
   }
 
+  const chooseMonitor = async (nextMonitorId: string) => {
+    setMonitorSaving(true)
+    setError(null)
+    try {
+      await setDockMonitorId(nextMonitorId)
+      setMonitorId(nextMonitorId)
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause))
+    } finally {
+      setMonitorSaving(false)
+    }
+  }
+  const displayedMonitorId = monitors.some((monitor) => monitor.id === monitorId)
+    ? monitorId
+    : DEFAULT_DOCK_MONITOR_ID
+
   return (
     <Card>
       <CardHeader>
@@ -57,7 +96,7 @@ export function DockAppearanceSettings() {
           Apparence et thème
         </CardTitle>
         <CardDescription>
-          Le dock utilise le matériau Acrylic natif de Windows et mémorise le thème choisi sur cet appareil.
+          Le dock s’ouvre à gauche de l’écran choisi avec le matériau Acrylic natif de Windows.
         </CardDescription>
       </CardHeader>
       <CardContent className="grid gap-3 sm:grid-cols-3">
@@ -76,6 +115,30 @@ export function DockAppearanceSettings() {
         ))}
         {error && <p className="text-sm text-destructive sm:col-span-3" role="alert">{error}</p>}
       </CardContent>
+      <CardContent className="flex flex-col gap-3 border-t pt-5">
+        <div className="flex items-start gap-3">
+          <MonitorIcon aria-hidden="true" className="mt-0.5 size-4 text-primary" />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium">Écran du dock</p>
+            <p className="text-xs text-muted-foreground">Choisissez l’écran où le dock doit s’ouvrir, près du bord gauche.</p>
+          </div>
+          <select
+            aria-label="Écran du dock"
+            className="h-9 max-w-[18rem] rounded-md border bg-background px-3 text-sm shadow-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            disabled={runtime !== true || monitorSaving || monitors.length === 0}
+            onChange={(event) => void chooseMonitor(event.currentTarget.value)}
+            value={displayedMonitorId}
+          >
+            <option value={DEFAULT_DOCK_MONITOR_ID}>Écran principal</option>
+            {monitors.map((monitor, index) => (
+              <option key={monitor.id} value={monitor.id}>
+                {monitor.name || `Écran ${index + 1}`} · {monitor.width} × {monitor.height}{monitor.primary ? " · principal" : ""}
+              </option>
+            ))}
+          </select>
+        </div>
+      </CardContent>
+      {error && <CardContent className="border-t pt-0"><p className="text-sm text-destructive" role="alert">{error}</p></CardContent>}
     </Card>
   )
 }

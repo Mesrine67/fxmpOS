@@ -112,7 +112,10 @@ pub fn run() {
             dock::toggle_dock,
             dock::close_dock,
             dock::get_dock_theme,
-            dock::set_dock_shortcut
+            dock::set_dock_shortcut,
+            commands::input_viewer::get_input_snapshot,
+            commands::input_viewer::get_input_viewer_state,
+            commands::input_viewer::set_input_viewer_state,
         ])
         .on_window_event(|window, event| {
             if window.label() == "main" {

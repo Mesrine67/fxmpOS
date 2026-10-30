@@ -1,6 +1,6 @@
 [package]
 name = "fxmp-os"
-version = "0.0.46"
+version = "0.0.47"
 description = "A FXMP Tauri App OS for monitoring and controlling your PC"
 authors = ["FXMP"]
 license = "LGPL-3.0-only"
@@ -46,7 +46,7 @@ window-vibrancy = "0.8.1"
 wmi = "0.18.4"
 winreg = "0.56.0"
 windows = { version = "0.62.2", features = ["ApplicationModel", "ApplicationModel_Core", "Foundation", "Management_Deployment", "Storage_Streams", "Win32_System_WinRT"] }
-windows-sys = { version = "0.61.2", features = ["Win32_Foundation", "Win32_Graphics_Gdi", "Win32_NetworkManagement_IpHelper", "Win32_Networking_WinSock", "Win32_System_LibraryLoader", "Win32_UI_Shell", "Win32_UI_WindowsAndMessaging"] }
+windows-sys = { version = "0.61.2", features = ["Win32_Foundation", "Win32_Graphics_Gdi", "Win32_NetworkManagement_IpHelper", "Win32_Networking_WinSock", "Win32_System_LibraryLoader", "Win32_System_Threading", "Win32_UI_Input_KeyboardAndMouse", "Win32_UI_Shell", "Win32_UI_WindowsAndMessaging"] }
 base64 = "0.22"
 png = "0.18"
 

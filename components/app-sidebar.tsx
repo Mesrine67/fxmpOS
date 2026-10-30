@@ -8,6 +8,8 @@ import {
   Gamepad2Icon,
   KeyboardIcon,
   MonitorIcon,
+  PanelsTopLeftIcon,
+  MousePointer2Icon,
   Settings2Icon,
 } from "lucide-react"
 
@@ -31,7 +33,18 @@ const navigationByWorkspace = {
     { title: "Paramètres", url: "/settings/", icon: <Settings2Icon /> },
     { title: "Raccourcis clavier", url: "/shortcuts/", icon: <KeyboardIcon /> },
   ],
-  overlays: [{ title: "Overlay", url: "/overlays/", icon: <MonitorIcon /> }],
+  overlays: [
+    {
+      title: "Overlays",
+      url: "/overlays/",
+      icon: <MonitorIcon />,
+      items: [
+        { title: "Overlay système", url: "/overlays/" },
+        { title: "Dock FXMP OS", url: "/overlays/dock/", icon: <PanelsTopLeftIcon /> },
+        { title: "Input Viewer", url: "/overlays/input-viewer/", icon: <MousePointer2Icon /> },
+      ],
+    },
+  ],
   games: [
     {
       title: "Games",

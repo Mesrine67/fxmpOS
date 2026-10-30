@@ -1,5 +1,15 @@
 # Journal des modifications
 
+## [0.0.47] - 2026-10-30
+
+### Améliorations
+
+- Remplace le menu Tray par un panneau compagnon Windows inspiré du Hub OpenClaw, avec fermeture au clic extérieur et positionnement adapté près de la zone de notification.
+- Place le dock à gauche de l’écran et ajoute le choix de l’écran lorsqu’il y en a plusieurs.
+- Ajoute les entrées Overlay système, Dock FXMP OS et Input Viewer dans la section Overlays.
+- Ajoute un Input Viewer flottant avec état actuel des touches et boutons, position et déplacement du curseur, molette et visibilité du curseur; aucune frappe ni historique n’est enregistré.
+- Ajoute une fenêtre Tauri et des permissions restreintes dédiées à Input Viewer.
+
 ## [0.0.46] - 2026-10-30
 
 ### Améliorations

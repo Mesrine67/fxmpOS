@@ -31,6 +31,8 @@
     "allow-activate-main-window",
     "allow-toggle-dock",
     "allow-get-dock-theme",
-    "allow-set-dock-shortcut"
+    "allow-set-dock-shortcut",
+    "allow-get-input-viewer-state",
+    "allow-set-input-viewer-state"
   ]
 }
