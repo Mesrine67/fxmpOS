@@ -38,3 +38,9 @@ pnpm-debug.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Generated native Windows builds (DoluDock / CMake / MSVC)
+/src-tauri/third-party/doludock/build/
+
+# Accidental local command-output file
+/-remote --tags origin v0.0.49
