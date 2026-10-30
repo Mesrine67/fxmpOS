@@ -71,11 +71,13 @@ export function InputViewerOverlay() {
   return (
     <main className="flex h-screen w-screen items-center justify-center overflow-hidden bg-transparent p-2 text-[#ededed]">
       <section aria-label="Input Viewer" className="input-viewer-panel h-full w-full overflow-hidden rounded-[8px] border border-[#343434] bg-[#090909]/95 shadow-2xl">
-        <header className="flex h-8 select-none items-center gap-2 bg-[#191919] px-3 text-[11px] text-[#e5e5e5]" onMouseDown={startDragging}>
+        <header className="flex h-8 select-none items-center gap-2 bg-[#191919] px-3 text-[11px] text-[#e5e5e5]">
+          <span aria-hidden="true" className="flex flex-1 items-center gap-2" onMouseDown={startDragging}>
           <button aria-label={collapsed ? "Développer Input Viewer" : "Réduire Input Viewer"} className="flex size-5 items-center justify-center text-white/65 hover:text-white" onClick={() => setCollapsed((value) => !value)} type="button">
             {collapsed ? <ChevronUpIcon className="size-3.5" /> : <ChevronDownIcon className="size-3.5" />}
           </button>
-          <span className="flex-1">Input Viewer</span>
+          <span>Input Viewer</span>
+          </span>
           <button aria-label="Fermer Input Viewer" className="flex size-5 items-center justify-center text-white/60 hover:text-white" onClick={() => void close()} type="button"><XIcon className="size-3.5" /></button>
         </header>
 
