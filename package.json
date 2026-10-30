@@ -1,6 +1,6 @@
 {
   "name": "mon-app",
-  "version": "0.0.48",
+  "version": "0.0.49",
   "license": "LGPL-3.0-only",
   "type": "module",
   "private": true,

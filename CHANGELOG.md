@@ -1,5 +1,13 @@
 # Journal des modifications
 
+## [0.0.49] - 2026-10-30
+
+### Publication corrective
+
+- Republique les améliorations du dock natif DoluDock et du menu Tray Windows incluses dans la version 0.0.48, sous un nouveau numéro de version valide.
+- Inclut la correction de la fermeture de FXMP OS lorsqu'aucun processus DoluDock n'a été lancé.
+- Aucun autre changement fonctionnel n'est introduit dans cette republication.
+
 ## [0.0.48] - 2026-10-30
 
 ### Améliorations
