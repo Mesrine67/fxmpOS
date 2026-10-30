@@ -32,7 +32,7 @@ type NavigationItem = {
   title: string
   url: string
   icon?: React.ReactNode
-  items?: { title: string; url: string }[]
+  items?: { title: string; url: string; icon?: React.ReactNode }[]
 }
 
 export function NavMain({
@@ -91,6 +91,7 @@ export function NavMain({
                             }
                             render={<Link href={child.url} />}
                           >
+                            {child.icon}
                             <span>{child.title}</span>
                           </SidebarMenuSubButton>
                         </SidebarMenuSubItem>

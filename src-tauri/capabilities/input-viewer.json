@@ -1,0 +1,13 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "input-viewer",
+  "description": "Mesures d’état clavier/souris en direct pour Input Viewer",
+  "local": true,
+  "windows": ["input-viewer"],
+  "permissions": [
+    "core:default",
+    "core:window:allow-start-dragging",
+    "allow-get-input-snapshot",
+    "allow-set-input-viewer-state"
+  ]
+}

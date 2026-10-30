@@ -2,7 +2,7 @@
   "$schema": "https://schema.tauri.app/config/2",
   "mainBinaryName": "fxmp-os",
   "productName": "FXMP OS",
-  "version": "0.0.46",
+  "version": "0.0.47",
   "identifier": "org.computer.os",
   "build": {
     "beforeDevCommand": "pnpm dev",
@@ -116,6 +116,7 @@
         "maxWidth": 360,
         "maxHeight": 390,
         "decorations": false,
+        "closable": false,
         "resizable": false,
         "transparent": true,
         "shadow": false,
@@ -124,12 +125,59 @@
         "visible": false,
         "focus": true,
         "userAgent": "fxmp-os-dock"
+      },
+      {
+        "label": "tray-panel",
+        "create": false,
+        "title": "FXMP OS",
+        "url": "tray-panel/",
+        "width": 320,
+        "height": 500,
+        "minWidth": 320,
+        "minHeight": 500,
+        "maxWidth": 320,
+        "maxHeight": 500,
+        "decorations": false,
+        "resizable": false,
+        "transparent": true,
+        "shadow": false,
+        "skipTaskbar": true,
+        "alwaysOnTop": true,
+        "visible": false,
+        "focus": true,
+        "closable": false,
+        "userAgent": "fxmp-os-tray-panel"
+      },
+      {
+        "label": "input-viewer",
+        "create": false,
+        "title": "Input Viewer",
+        "url": "input-viewer/",
+        "width": 340,
+        "height": 510,
+        "minWidth": 340,
+        "minHeight": 510,
+        "maxWidth": 340,
+        "maxHeight": 510,
+        "decorations": false,
+        "resizable": false,
+        "transparent": true,
+        "shadow": false,
+        "skipTaskbar": true,
+        "alwaysOnTop": true,
+        "visible": false,
+        "focus": false,
+        "closable": false,
+        "userAgent": "fxmp-os-input-viewer"
       }
     ],
     "security": {
       "capabilities": [
         "default",
-        "overlay"
+        "overlay",
+        "dock",
+        "tray-panel",
+        "input-viewer"
       ],
       "csp": {
         "default-src": "'self'",

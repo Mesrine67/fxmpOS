@@ -9,11 +9,11 @@ export default function OverlaysPage() {
           <header className="flex flex-col gap-1">
             <p className="text-xs text-muted-foreground">FXMP OS · Overlays</p>
             <h1 className="text-2xl font-semibold tracking-tight">
-              Overlay de monitoring
+              Overlay système
             </h1>
             <p className="text-sm text-muted-foreground">
-              Configure le widget, son écran, son emplacement et son
-              comportement.
+              Configure le widget de monitoring système, son écran, son
+              emplacement et son comportement.
             </p>
           </header>
           <OverlaySettings />
