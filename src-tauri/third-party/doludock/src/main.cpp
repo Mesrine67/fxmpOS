@@ -174,11 +174,14 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE, PWSTR lpCmdLine, int)
 
     // Single-instance guard: a normal second launch asks the running one to open
     // its settings, then exits.
-    HANDLE singleton = CreateMutexW(nullptr, TRUE, L"Local\\doludock_singleton_4F1C");
+    const wchar_t* ctrlClass = fxmpMode ? L"FxmpDoludockCtrl" : L"DoludockCtrl";
+    const wchar_t* mutexName = fxmpMode ? L"Local\\fxmp_doludock_singleton_4F1C"
+                                        : L"Local\\doludock_singleton_4F1C";
+    HANDLE singleton = CreateMutexW(nullptr, TRUE, mutexName);
     if (singleton && GetLastError() == ERROR_ALREADY_EXISTS)
     {
         if (!afterUpdate)
-            if (HWND existing = FindWindowW(L"DoludockCtrl", nullptr))
+            if (HWND existing = FindWindowW(ctrlClass, nullptr))
             {
                 if (fxmpMode)
                 {
@@ -263,7 +266,7 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE, PWSTR lpCmdLine, int)
     WNDCLASSEXW wc{ sizeof(wc) };
     wc.lpfnWndProc   = CtrlProc;
     wc.hInstance     = hInst;
-    wc.lpszClassName = L"DoludockCtrl";
+    wc.lpszClassName = ctrlClass;
     RegisterClassExW(&wc);
 
     KeyboardHook hook;
@@ -277,7 +280,7 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE, PWSTR lpCmdLine, int)
     app.settings = settings;
     app.integratedMode = fxmpMode;
 
-    HWND ctrl = CreateWindowExW(WS_EX_TOOLWINDOW, L"DoludockCtrl", L"doludock", WS_POPUP, 0, 0, 0,
+    HWND ctrl = CreateWindowExW(WS_EX_TOOLWINDOW, ctrlClass, L"doludock", WS_POPUP, 0, 0, 0,
                                 0, nullptr, nullptr, hInst, nullptr);
     app.ctrl = ctrl;
     SetWindowLongPtrW(ctrl, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(&app));

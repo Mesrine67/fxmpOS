@@ -420,15 +420,14 @@ void App::OnSettingsClosed()
         overlay->Hide();
 }
 
-// Resolves where the overlay opens: centred on the work area, nudged by the
-// user offset, clamped so the whole panel stays on screen.
+// Resolves the left-edge dock position used by both the live overlay and its
+// settings preview, with the user offset clamped to the monitor work area.
 static POINT ResolveOverlayPos(const MONITORINFO& mi, SIZE ov, int offX, int offY)
 {
-    const int workW = mi.rcWork.right - mi.rcWork.left;
     const int workH = mi.rcWork.bottom - mi.rcWork.top;
     const int ow    = static_cast<int>(ov.cx);
     const int oh    = static_cast<int>(ov.cy);
-    int       x     = static_cast<int>(mi.rcWork.left) + (workW - ow) / 2 + offX;
+    int       x     = static_cast<int>(mi.rcWork.left) + offX;
     int       y     = static_cast<int>(mi.rcWork.top) + (workH - oh) / 2 + offY;
     x = std::clamp(x, static_cast<int>(mi.rcWork.left), static_cast<int>(mi.rcWork.right) - ow);
     y = std::clamp(y, static_cast<int>(mi.rcWork.top), static_cast<int>(mi.rcWork.bottom) - oh);
