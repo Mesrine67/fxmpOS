@@ -30,7 +30,7 @@
     "notification:allow-notify",
     "allow-activate-main-window",
     "allow-toggle-dock",
-    "allow-get-dock-theme",
+    "allow-open-dock-settings",
     "allow-set-dock-shortcut",
     "allow-get-input-viewer-state",
     "allow-set-input-viewer-state"

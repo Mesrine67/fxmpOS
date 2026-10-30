@@ -1,140 +1,139 @@
 use crate::commands::display::monitor_identifier;
-use std::sync::Mutex;
-use tauri::{AppHandle, Manager, PhysicalPosition, State, WebviewWindowBuilder};
+use std::process::Command;
+#[cfg(windows)]
+use std::sync::atomic::{AtomicBool, Ordering};
+use tauri::{AppHandle, Manager, State};
 use tauri_plugin_global_shortcut::GlobalShortcutExt;
 use tauri_plugin_store::StoreExt;
 
-const DOCK_LABEL: &str = "dock";
-const DOCK_WIDTH: f64 = 360.0;
-const DOCK_HEIGHT: f64 = 390.0;
-const DOCK_SCREEN_MARGIN: f64 = 18.0;
+#[cfg(windows)]
+use std::os::windows::process::CommandExt;
+
+#[cfg(windows)]
+const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+
+// Record launch attempts before spawning so shutdown also handles startup races.
+#[cfg(windows)]
+static DOCK_LAUNCH_REQUESTED: AtomicBool = AtomicBool::new(false);
 
 #[tauri::command]
 pub async fn toggle_dock(app: AppHandle) -> Result<(), String> {
-    if let Some(window) = app.get_webview_window(DOCK_LABEL) {
-        let visible = window
-            .is_visible()
-            .map_err(|error| format!("Impossible de lire l’état du dock : {error}"))?;
-        if visible {
-            return window
-                .hide()
-                .map_err(|error| format!("Impossible de masquer le dock : {error}"));
-        }
-        position_dock(&app, &window)?;
-        window
-            .show()
-            .map_err(|error| format!("Impossible d’afficher le dock : {error}"))?;
-        return window
-            .set_focus()
-            .map_err(|error| format!("Impossible de donner le focus au dock : {error}"));
-    }
+    #[cfg(windows)]
+    return launch_native_doludock(&app, "--fxmp-toggle");
 
-    let window_config = app
-        .config()
-        .app
-        .windows
-        .iter()
-        .find(|window| window.label == DOCK_LABEL)
-        .ok_or_else(|| "La fenêtre dock doit être définie dans tauri.conf.json.".to_owned())?
-        .clone();
-
-    let window = WebviewWindowBuilder::from_config(&app, &window_config)
-        .map_err(|error| format!("Impossible de préparer le dock : {error}"))?
-        .build()
-        .map_err(|error| format!("Impossible de créer le dock : {error}"))?;
-    #[cfg(target_os = "windows")]
-    if let Err(error) = window_vibrancy::apply_acrylic(&window, Some((27, 27, 29, 220))) {
-        log::warn!("L’effet Acrylic natif du dock n’est pas disponible : {error}");
+    #[cfg(not(windows))]
+    {
+        let _ = app;
+        Err("Le dock DoluDock natif est disponible dans la version Windows.".to_owned())
     }
-    position_dock(&app, &window)?;
-    let dock_window = window.clone();
-    window.on_window_event(move |event| {
-        if matches!(event, tauri::WindowEvent::Focused(false)) {
-            let _ = dock_window.hide();
-        }
-    });
-    window
-        .show()
-        .map_err(|error| format!("Impossible d’afficher le dock : {error}"))?;
-    window
-        .set_focus()
-        .map_err(|error| format!("Impossible de donner le focus au dock : {error}"))
 }
 
-fn position_dock(app: &AppHandle, window: &tauri::WebviewWindow) -> Result<(), String> {
-    let monitors = app
-        .available_monitors()
-        .map_err(|error| format!("Impossible de détecter les écrans : {error}"))?;
+#[cfg(windows)]
+fn launch_native_doludock(app: &AppHandle, action: &str) -> Result<(), String> {
+    let executable = native_doludock_path(app)?;
+    let mut command = Command::new(executable);
+    command.arg("--fxmp-mode").arg(action);
+
     let selected_id = app
         .store("fxmp-settings.json")
         .ok()
         .and_then(|store| store.get("dockMonitorId"))
         .and_then(|value| value.as_str().map(str::to_owned))
-        .filter(|id| id != "primary");
-    let monitor = selected_id
-        .and_then(|id| {
-            monitors
-                .iter()
-                .find(|monitor| monitor_identifier(monitor) == id)
-                .cloned()
-        })
-        .or(app
-            .primary_monitor()
-            .map_err(|error| format!("Impossible d’identifier l’écran principal : {error}"))?)
-        .or_else(|| monitors.first().cloned())
-        .ok_or_else(|| "Aucun écran disponible pour afficher le dock.".to_owned())?;
+        .unwrap_or_else(|| "primary".to_owned());
+    let available = app
+        .available_monitors()
+        .map_err(|error| format!("Impossible de détecter les écrans : {error}"))?;
+    let primary = app
+        .primary_monitor()
+        .map_err(|error| format!("Impossible d’identifier l’écran principal : {error}"))?
+        .as_ref()
+        .map(monitor_identifier)
+        .unwrap_or_else(|| "primary".to_owned());
+    let monitor_id = if selected_id == "primary"
+        || available
+            .iter()
+            .any(|monitor| monitor_identifier(monitor) == selected_id)
+    {
+        selected_id
+    } else {
+        primary
+    };
+    command.arg(format!("--fxmp-monitor={monitor_id}"));
 
-    let work_area = monitor.work_area();
-    let scale = monitor.scale_factor();
-    let width = (DOCK_WIDTH * scale).round() as i32;
-    let height = (DOCK_HEIGHT * scale).round() as i32;
-    let margin = (DOCK_SCREEN_MARGIN * scale).round() as i32;
-    let right = work_area
-        .position
-        .x
-        .saturating_add(i32::try_from(work_area.size.width).unwrap_or(i32::MAX));
-    let bottom = work_area
-        .position
-        .y
-        .saturating_add(i32::try_from(work_area.size.height).unwrap_or(i32::MAX));
-    let x = work_area
-        .position
-        .x
-        .saturating_add(margin)
-        .min(right.saturating_sub(width));
-    let y = bottom
-        .saturating_sub(height)
-        .saturating_sub(margin)
-        .max(work_area.position.y);
-    window
-        .set_position(PhysicalPosition::new(x, y))
-        .map_err(|error| format!("Impossible de placer le dock sur l’écran choisi : {error}"))
-}
-
-#[tauri::command]
-pub async fn close_dock(app: AppHandle) -> Result<(), String> {
-    if let Some(window) = app.get_webview_window(DOCK_LABEL) {
-        window
-            .hide()
-            .map_err(|error| format!("Impossible de masquer le dock : {error}"))?;
+    command.creation_flags(CREATE_NO_WINDOW);
+    DOCK_LAUNCH_REQUESTED.store(true, Ordering::Release);
+    match command.spawn() {
+        Ok(_) => Ok(()),
+        Err(error) => {
+            DOCK_LAUNCH_REQUESTED.store(false, Ordering::Release);
+            Err(format!("Impossible de démarrer le dock DoluDock : {error}"))
+        }
     }
-    Ok(())
+}
+
+#[cfg(windows)]
+fn native_doludock_path(app: &AppHandle) -> Result<std::path::PathBuf, String> {
+    let bundled = app
+        .path()
+        .resource_dir()
+        .map_err(|error| format!("Impossible de localiser les ressources : {error}"))?
+        .join("third-party/doludock/build/Release/doludock.exe");
+    if bundled.is_file() {
+        return Ok(bundled);
+    }
+
+    let development = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("third-party/doludock/build/Release/doludock.exe");
+    development.is_file().then_some(development).ok_or_else(|| {
+        "DoluDock n’est pas compilé. Reconstruisez l’application Windows.".to_owned()
+    })
 }
 
 #[tauri::command]
-pub fn get_dock_theme(app: AppHandle) -> String {
-    app.store("fxmp-settings.json")
-        .ok()
-        .and_then(|store| store.get("dockTheme"))
-        .and_then(|value| value.as_str().map(str::to_owned))
-        .filter(|theme| matches!(theme.as_str(), "windows" | "fxmp" | "light"))
-        .unwrap_or_else(|| "windows".to_owned())
+pub fn close_dock(app: AppHandle) -> Result<(), String> {
+    #[cfg(windows)]
+    {
+        // No dock was launched by this FXMP process: do not invoke the helper,
+        // which otherwise waits up to 30 seconds for a nonexistent mutex.
+        if !DOCK_LAUNCH_REQUESTED.load(Ordering::Acquire) {
+            return Ok(());
+        }
+        let executable = native_doludock_path(&app)?;
+        let status = Command::new(executable)
+            .args(["--fxmp-mode", "--fxmp-exit"])
+            .creation_flags(CREATE_NO_WINDOW)
+            .status()
+            .map_err(|error| format!("Impossible d’arrêter le dock DoluDock : {error}"))?;
+        if !status.success() {
+            return Err("Le processus DoluDock n’a pas pu se fermer correctement.".to_owned());
+        }
+        DOCK_LAUNCH_REQUESTED.store(false, Ordering::Release);
+        return Ok(());
+    }
+
+    #[cfg(not(windows))]
+    {
+        let _ = app;
+        Ok(())
+    }
+}
+
+#[tauri::command]
+pub async fn open_dock_settings(app: AppHandle) -> Result<(), String> {
+    #[cfg(windows)]
+    return launch_native_doludock(&app, "--fxmp-settings");
+
+    #[cfg(not(windows))]
+    {
+        let _ = app;
+        Err("Les réglages DoluDock natifs sont disponibles dans la version Windows.".to_owned())
+    }
 }
 
 #[tauri::command]
 pub fn set_dock_shortcut(
     app: AppHandle,
-    current_shortcut: State<'_, Mutex<String>>,
+    current_shortcut: State<'_, std::sync::Mutex<String>>,
     shortcut: String,
 ) -> Result<(), String> {
     let mut current = current_shortcut

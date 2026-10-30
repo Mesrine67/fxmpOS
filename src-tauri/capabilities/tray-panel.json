@@ -1,8 +1,0 @@
-{
-  "$schema": "../gen/schemas/desktop-schema.json",
-  "identifier": "tray-panel",
-  "description": "Accès rapides du panneau compagnon de la zone de notification",
-  "local": true,
-  "windows": ["tray-panel"],
-  "permissions": ["core:default", "core:window:allow-hide"]
-}

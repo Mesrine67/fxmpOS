@@ -111,21 +111,13 @@ pub fn run() {
             commands::overlay::set_overlay_state,
             dock::toggle_dock,
             dock::close_dock,
-            dock::get_dock_theme,
+            dock::open_dock_settings,
             dock::set_dock_shortcut,
             commands::input_viewer::get_input_snapshot,
             commands::input_viewer::get_input_viewer_state,
             commands::input_viewer::set_input_viewer_state,
         ])
         .on_window_event(|window, event| {
-            if window.label() == "tray-panel" {
-                if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-                    api.prevent_close();
-                    if let Err(error) = window.hide() {
-                        log::error!("failed to hide tray panel: {error}");
-                    }
-                }
-            }
             if window.label() == "main" {
                 if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                     #[cfg(windows)]
@@ -140,6 +132,12 @@ pub fn run() {
                 }
             }
         })
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building Tauri application")
+        .run(|app, event| {
+            #[cfg(windows)]
+            if matches!(event, tauri::RunEvent::Exit) {
+                let _ = dock::close_dock(app.clone());
+            }
+        });
 }
