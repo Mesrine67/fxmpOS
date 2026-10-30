@@ -10,9 +10,7 @@ const [
   version = new Date().toISOString().slice(0, 10),
 ] = process.argv
 if (!inputArgument || !outputArgument) {
-  console.error(
-    "Usage: node scripts/build-jooat-resolver-pack.mjs <wordlist.txt> <output-dir> [version]"
-  )
+  console.error("Usage: node scripts/build-jooat-resolver-pack.mjs <wordlist.txt> <output-dir> [version]")
   process.exit(1)
 }
 const workspaceRoot = path.resolve(process.cwd())
@@ -42,34 +40,19 @@ const lines = createInterface({
 for await (const line of lines) {
   const name = line.trim()
   if (!name || name.startsWith("#")) continue
-
   const normalized = name.toLowerCase()
   if (seen.has(normalized)) continue
   seen.add(normalized)
-
   const hash = jooat(normalized)
   const prefix = hash.toString(16).padStart(8, "0").slice(0, 2)
-  shardStreams
-    .get(prefix)
-    .write(
-      `0x${hash.toString(16).toUpperCase().padStart(8, "0")}\t${normalized}\n`
-    )
+  shardStreams.get(prefix).write(`0x${hash.toString(16).toUpperCase().padStart(8, "0")}\t${normalized}\n`)
   shardStats.get(prefix).hashes += 1
 }
 
-await Promise.all(
-  [...shardStreams].map(
-    ([prefix, stream]) =>
-      new Promise((resolve, reject) => {
-        stream.once("error", reject)
-        stream.end(() =>
-          streamErrors.has(prefix)
-            ? reject(streamErrors.get(prefix))
-            : resolve()
-        )
-      })
-  )
-)
+await Promise.all([...shardStreams].map(([prefix, stream]) => new Promise((resolve, reject) => {
+  stream.once("error", reject)
+  stream.end(() => streamErrors.has(prefix) ? reject(streamErrors.get(prefix)) : resolve())
+})))
 
 let sizeBytes = 0
 const shards = []
@@ -91,14 +74,9 @@ const manifest = {
   shards,
 }
 
-await writeFile(
-  path.join(outputDir, "manifest.json"),
-  `${JSON.stringify(manifest, null, 2)}\n`
-)
+await writeFile(path.join(outputDir, "manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`)
 
-console.log(
-  `Built JOOAT resolver pack with ${seen.size.toLocaleString()} names at ${outputDir}`
-)
+console.log(`Built JOOAT resolver pack with ${seen.size.toLocaleString()} names at ${outputDir}`)
 
 function jooat(input) {
   let hash = 0
@@ -116,11 +94,7 @@ function jooat(input) {
 function resolveWorkspacePath(value, label) {
   const resolved = path.resolve(workspaceRoot, value)
   const relative = path.relative(workspaceRoot, resolved)
-  if (
-    relative === ".." ||
-    relative.startsWith(`..${path.sep}`) ||
-    path.isAbsolute(relative)
-  ) {
+  if (relative === ".." || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
     throw new Error(`${label} must stay inside the current workspace`)
   }
   return resolved

@@ -1,7 +1,7 @@
 import { isTauri } from "@tauri-apps/api/core"
 import { LazyStore } from "@tauri-apps/plugin-store"
 
-export const DEFAULT_DOCK_THEME = "doludock" as const
+export const DEFAULT_DOCK_THEME = "dock" as const
 export type DockTheme = typeof DEFAULT_DOCK_THEME
 
 const store = new LazyStore("fxmp-settings.json", { autoSave: false })

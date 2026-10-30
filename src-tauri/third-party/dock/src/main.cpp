@@ -174,9 +174,9 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE, PWSTR lpCmdLine, int)
 
     // Single-instance guard: a normal second launch asks the running one to open
     // its settings, then exits.
-    const wchar_t* ctrlClass = fxmpMode ? L"FxmpDoludockCtrl" : L"DoludockCtrl";
-    const wchar_t* mutexName = fxmpMode ? L"Local\\fxmp_doludock_singleton_4F1C"
-                                        : L"Local\\doludock_singleton_4F1C";
+    const wchar_t* ctrlClass = fxmpMode ? L"FxmpDockCtrl" : L"DockCtrl";
+    const wchar_t* mutexName = fxmpMode ? L"Local\\fxmp_dock_singleton_4F1C"
+                                        : L"Local\\dock_singleton_4F1C";
 
     // Shutdown helpers may race the integrated instance while it is still
     // initializing. Open the existing mutex (never create/own it here), then
@@ -324,7 +324,7 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE, PWSTR lpCmdLine, int)
     app.settings = settings;
     app.integratedMode = fxmpMode;
 
-    HWND ctrl = CreateWindowExW(WS_EX_TOOLWINDOW, ctrlClass, L"doludock", WS_POPUP, 0, 0, 0,
+    HWND ctrl = CreateWindowExW(WS_EX_TOOLWINDOW, ctrlClass, L"dock", WS_POPUP, 0, 0, 0,
                                 0, nullptr, nullptr, hInst, nullptr);
     app.ctrl = ctrl;
     SetWindowLongPtrW(ctrl, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(&app));

@@ -6,26 +6,26 @@
 
 - Met à jour `tauri-plugin-updater` vers 2.14.1 et supprime la dépendance transitive vulnérable `zip` des builds Windows.
 - Désactive la fonctionnalité ZIP héritée de Tauri v1 tout en conservant les mises à jour signées NSIS/MSI, le TLS et la prise en charge du proxy système.
-- Exclut les fichiers de compilation CMake/MSVC générés localement pour DoluDock du suivi Git.
+- Exclut les fichiers de compilation CMake/MSVC générés localement pour Dock du suivi Git.
 
 
 ## [0.0.49] - 2026-10-30
 
 ### Publication corrective
 
-- Republique les améliorations du dock natif DoluDock et du menu Tray Windows incluses dans la version 0.0.48, sous un nouveau numéro de version valide.
-- Inclut la correction de la fermeture de FXMP OS lorsqu'aucun processus DoluDock n'a été lancé.
+- Republique les améliorations du dock natif Dock et du menu Tray Windows incluses dans la version 0.0.48, sous un nouveau numéro de version valide.
+- Inclut la correction de la fermeture de FXMP OS lorsqu'aucun processus Dock n'a été lancé.
 - Aucun autre changement fonctionnel n'est introduit dans cette republication.
 
 ## [0.0.48] - 2026-10-30
 
 ### Améliorations
 
-- Remplace le dock HTML simulé par le panneau DoluDock original, compilé en Win32 natif Direct2D et embarqué dans l’installateur Windows.
-- Connecte le dock à la sélection d’écran FXMP OS et au raccourci clavier global; le composant DoluDock fonctionne sans seconde icône de zone de notification ni hook clavier concurrent.
+- Remplace le dock HTML simulé par le panneau Dock original, compilé en Win32 natif Direct2D et embarqué dans l’installateur Windows.
+- Connecte le dock à la sélection d’écran FXMP OS et au raccourci clavier global; le composant Dock fonctionne sans seconde icône de zone de notification ni hook clavier concurrent.
 - Remplace le flyout HTML du tray par le menu système Tauri (`MenuBuilder` / `TrayIconBuilder`) suivant l’implémentation Tauri d’OpenClaw Desktop.
-- Supprime les bordures et thèmes factices du dock WebView; conserve les licences et attributions amont de DoluDock.
-- Ajoute la compilation des sources natives DoluDock au build Windows et à la CI.
+- Supprime les bordures et thèmes factices du dock WebView; conserve les licences et attributions amont de Dock.
+- Ajoute la compilation des sources natives Dock au build Windows et à la CI.
 - Corrige la fermeture du processus natif, l’écran principal, l’ancrage à gauche, les grands dossiers avec défilement et les réglages désactivés/non pertinents en mode intégré; lie statiquement le runtime MSVC.
 
 ## [0.0.47] - 2026-10-30

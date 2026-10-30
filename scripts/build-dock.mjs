@@ -3,11 +3,11 @@ import { fileURLToPath } from "node:url"
 import path from "node:path"
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
-const source = path.join(repoRoot, "src-tauri", "third-party", "doludock")
+const source = path.join(repoRoot, "src-tauri", "third-party", "dock")
 const build = path.join(source, "build")
 
 if (process.platform !== "win32") {
-  console.log("Skipping DoluDock's Windows native build on this platform.")
+  console.log("Skipping Dock's Windows native build on this platform.")
   process.exit(0)
 }
 
@@ -32,4 +32,4 @@ const year = new Map([[18, "2026"], [17, "2022"], [16, "2019"]]).get(major)
 if (!year) throw new Error(`Unsupported Visual Studio version: ${detected.stdout.trim()}`)
 
 run("cmake", ["-S", source, "-B", build, "-G", `Visual Studio ${major} ${year}`, "-A", "x64"])
-run("cmake", ["--build", build, "--config", "Release", "--target", "doludock"])
+run("cmake", ["--build", build, "--config", "Release", "--target", "dock"])

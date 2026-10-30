@@ -19,7 +19,7 @@
     ],
     "createUpdaterArtifacts": true,
     "resources": {
-      "third-party/doludock/build/Release/doludock.exe": "third-party/doludock/build/Release/doludock.exe"
+      "third-party/dock/build/Release/dock.exe": "third-party/dock/build/Release/dock.exe"
     },
     "icon": [
       "icons/32x32.png",
