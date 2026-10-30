@@ -21,7 +21,7 @@
 
 #define MyAppName "dock"
 #define MyAppPublisher "Dolu"
-#define MyAppURL "https://github.com/Mesrine67/doludock"
+#define MyAppURL "https://github.com/Mesrine67/dock"
 #define MyAppExeName "dock.exe"
 
 [Setup]
