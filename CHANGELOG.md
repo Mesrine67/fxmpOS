@@ -9,6 +9,12 @@
 - Corrige l'URL du projet dans les métadonnées de l'installateur Dock et conserve la licence et les attributions du projet amont.
 - Ajoute les utilitaires d'environnement Tauri et les composants React préparés sur la branche d'intégration.
 
+### Mise à jour des dépendances et compatibilité
+
+- Met à jour `base64` vers 0.23.1, `sysinfo` vers 0.40.0 et adapte les API de suivi système Rust aux changements de `sysinfo`.
+- Actualise les dépendances Cargo, le plugin Tauri de notifications, le plugin de mise à jour, Lucide, shadcn et les types Node, après validation des contrôles CI Windows.
+- La distribution demeure exclusivement Windows x64 ; l'alerte Linux GLib `GHSA-wrw7-89jp-8q8g` n'est **pas corrigée** et reste suivie dans l'[issue #7](https://github.com/Mesrine67/fxmpOS/issues/7).
+
 
 ## [0.0.50] - 2026-10-30
 
