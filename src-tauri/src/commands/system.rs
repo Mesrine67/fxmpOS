@@ -2,6 +2,7 @@
 use serde::Deserialize;
 use serde::Serialize;
 use std::collections::{HashMap, HashSet};
+use std::ffi::OsString;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 use sysinfo::{
@@ -16,31 +17,35 @@ pub struct ResourceMonitor {
 }
 
 impl ResourceMonitor {
-    pub fn new() -> Self {
-        Self {
-            system: Arc::new(Mutex::new(System::new_with_specifics(
-                RefreshKind::nothing()
-                    .with_cpu(CpuRefreshKind::everything())
-                    .with_memory(MemoryRefreshKind::everything()),
-            ))),
-            network: Arc::new(Mutex::new(NetworkRateSampler::new())),
-        }
+    pub fn new() -> Result<Self, String> {
+        let system = System::new_with_specifics(
+            RefreshKind::nothing()
+                .with_cpu(CpuRefreshKind::everything())
+                .with_memory(MemoryRefreshKind::everything()),
+        )
+        .map_err(|error| format!("Impossible d'initialiser le moniteur système : {error}"))?;
+        let network = NetworkRateSampler::new()?;
+
+        Ok(Self {
+            system: Arc::new(Mutex::new(system)),
+            network: Arc::new(Mutex::new(network)),
+        })
     }
 }
 
 struct NetworkRateSampler {
     networks: Networks,
-    previous: HashMap<String, (u64, u64)>,
+    previous: HashMap<OsString, (u64, u64)>,
     previous_at: Option<Instant>,
 }
 
 impl NetworkRateSampler {
-    fn new() -> Self {
-        Self {
-            networks: Networks::new(),
+    fn new() -> Result<Self, String> {
+        Ok(Self {
+            networks: Networks::new().map_err(|error| error.to_string())?,
             previous: HashMap::new(),
             previous_at: None,
-        }
+        })
     }
 
     fn refresh(&mut self) -> (Option<f64>, Option<f64>) {
@@ -429,7 +434,7 @@ pub async fn get_resource_sample(
         let cpu_cores = system
             .cpus()
             .iter()
-            .map(|cpu| cpu.cpu_usage().clamp(0.0, 100.0))
+            .map(|cpu| cpu.usage().clamp(0.0, 100.0))
             .collect();
         let (network_received_bytes_per_sec, network_transmitted_bytes_per_sec) = network
             .lock()
@@ -480,7 +485,7 @@ pub async fn get_resource_sample(
             cpu_cores,
             memory_total_bytes: system.total_memory(),
             memory_used_bytes: system.used_memory(),
-            uptime_seconds: System::uptime(),
+            uptime_seconds: System::uptime().unwrap_or_default(),
             network_received_bytes_per_sec,
             network_transmitted_bytes_per_sec,
             gpu_adapters: read_gpu_resource_sample(),
@@ -607,7 +612,7 @@ fn read_graphics_adapters() -> Option<Vec<GraphicsAdapterSnapshot>> {
 pub async fn get_system_snapshot() -> Result<SystemSnapshot, String> {
     tauri::async_runtime::spawn_blocking(read_system_snapshot)
         .await
-        .map_err(|error| format!("La lecture des informations système a échoué : {error}"))
+        .map_err(|error| format!("La lecture des informations système a échoué : {error}"))?
 }
 
 #[derive(Serialize)]
@@ -625,25 +630,27 @@ pub async fn get_overlay_snapshot() -> Result<OverlaySnapshot, String> {
     tauri::async_runtime::spawn_blocking(|| {
         let system = System::new_with_specifics(
             RefreshKind::nothing().with_memory(MemoryRefreshKind::everything()),
-        );
+        )
+        .map_err(|error| format!("Impossible de lire la mémoire : {error}"))?;
 
-        OverlaySnapshot {
+        Ok(OverlaySnapshot {
             hostname: tauri_plugin_os::hostname(),
             memory_total_bytes: system.total_memory(),
             memory_used_bytes: system.used_memory(),
-            uptime_seconds: System::uptime(),
-        }
+            uptime_seconds: System::uptime().unwrap_or_default(),
+        })
     })
     .await
-    .map_err(|error| format!("La lecture des mesures de l’overlay a échoué : {error}"))
+    .map_err(|error| format!("La lecture des mesures de l’overlay a échoué : {error}"))?
 }
 
-fn read_system_snapshot() -> SystemSnapshot {
+fn read_system_snapshot() -> Result<SystemSnapshot, String> {
     let system = System::new_with_specifics(
         RefreshKind::nothing()
             .with_cpu(CpuRefreshKind::everything())
             .with_memory(MemoryRefreshKind::everything()),
-    );
+    )
+    .map_err(|error| format!("Impossible de lire les informations système : {error}"))?;
     let first_cpu = system.cpus().first();
     let cpu_name = first_cpu.map(|cpu| {
         let brand = cpu.brand().trim();
@@ -665,18 +672,21 @@ fn read_system_snapshot() -> SystemSnapshot {
             )
         });
     let disks = Disks::new_with_refreshed_list()
-        .list()
-        .iter()
-        .map(|disk| DiskSnapshot {
-            name: disk.name().to_string_lossy().into_owned(),
-            mount_point: disk.mount_point().display().to_string(),
-            file_system: disk.file_system().to_string_lossy().into_owned(),
-            total_bytes: disk.total_space(),
-            available_bytes: disk.available_space(),
+        .map(|disks| {
+            (&disks)
+                .into_iter()
+                .map(|disk| DiskSnapshot {
+                    name: disk.name().to_string_lossy().into_owned(),
+                    mount_point: disk.mount_point().display().to_string(),
+                    file_system: disk.file_system().to_string_lossy().into_owned(),
+                    total_bytes: disk.total_space(),
+                    available_bytes: disk.available_space(),
+                })
+                .collect::<Vec<_>>()
         })
-        .collect();
+        .unwrap_or_default();
 
-    SystemSnapshot {
+    Ok(SystemSnapshot {
         hostname: tauri_plugin_os::hostname(),
         windows_user: std::env::var("USERNAME")
             .ok()
@@ -693,17 +703,17 @@ fn read_system_snapshot() -> SystemSnapshot {
         platform: tauri_plugin_os::platform().to_owned(),
         architecture: tauri_plugin_os::arch().to_owned(),
         os_version: tauri_plugin_os::version().to_string(),
-        os_name: System::long_os_version(),
-        kernel_version: System::kernel_long_version(),
+        os_name: System::long_os_version().ok(),
+        kernel_version: System::kernel_long_version().unwrap_or_default(),
         locale: tauri_plugin_os::locale(),
         cpu_name,
         cpu_frequency_mhz,
         logical_processors: system.cpus().len(),
-        physical_cores: System::physical_core_count(),
-        computer_manufacturer: clean_hardware_value(Product::vendor_name()),
-        computer_model: clean_hardware_value(Product::name()),
-        computer_family: clean_hardware_value(Product::family()),
-        computer_version: clean_hardware_value(Product::version()),
+        physical_cores: System::physical_core_count().ok(),
+        computer_manufacturer: clean_hardware_value(Product::vendor_name().ok()),
+        computer_model: clean_hardware_value(Product::name().ok()),
+        computer_family: clean_hardware_value(Product::family().ok()),
+        computer_version: clean_hardware_value(Product::version().ok()),
         motherboard_manufacturer,
         motherboard_model,
         motherboard_version,
@@ -711,8 +721,8 @@ fn read_system_snapshot() -> SystemSnapshot {
         memory_used_bytes: system.used_memory(),
         virtual_memory_total_bytes: system.total_swap(),
         virtual_memory_used_bytes: system.used_swap(),
-        uptime_seconds: System::uptime(),
+        uptime_seconds: System::uptime().unwrap_or_default(),
         disks,
         graphics_adapters: read_graphics_adapters(),
-    }
+    })
 }
