@@ -65,9 +65,7 @@ pub fn run() {
         .plugin(tauri_plugin_process::init())
         .plugin(navigation::init())
         .setup(move |app| {
-            app.manage(
-                commands::system::ResourceMonitor::new().map_err(std::io::Error::other)?,
-            );
+            app.manage(commands::system::ResourceMonitor::new().map_err(std::io::Error::other)?);
             app.manage(std::sync::Mutex::new(String::new()));
             let window_config = app
                 .config()
