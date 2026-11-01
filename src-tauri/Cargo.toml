@@ -31,7 +31,7 @@ tauri-plugin-os = "2.4.0"
 # Keep TLS and platform proxy support without enabling the legacy zip feature.
 tauri-plugin-updater = { version = "=2.14.1", default-features = false, features = ["rustls-tls", "system-proxy"] }
 tauri-plugin-process = "2"
-sysinfo = "0.39.6"
+sysinfo = "0.40.0"
 tauri-plugin-store = "2"
 tauri-plugin-notification = "2"
 
