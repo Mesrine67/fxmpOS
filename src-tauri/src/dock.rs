@@ -13,13 +13,17 @@ fn configure_monitor(app: &AppHandle) -> Result<(), String> {
         .unwrap_or_else(|| "primary".into());
 
     let available = app.available_monitors().map_err(|e| e.to_string())?;
-    let primary = app.primary_monitor()
+    let primary = app
+        .primary_monitor()
         .map_err(|e| e.to_string())?
         .as_ref()
         .map(monitor_identifier)
         .unwrap_or_else(|| "primary".into());
-    let monitor = if selected == "primary" ||
-        available.iter().any(|item| monitor_identifier(item) == selected) {
+    let monitor = if selected == "primary"
+        || available
+            .iter()
+            .any(|item| monitor_identifier(item) == selected)
+    {
         selected
     } else {
         primary
@@ -89,13 +93,18 @@ pub fn set_dock_shortcut(
     let mut current = current_shortcut
         .lock()
         .map_err(|_| "Impossible de synchroniser le raccourci du dock.".to_owned())?;
-    if *current == shortcut { return Ok(()); }
-    app.global_shortcut().register(shortcut.as_str())
+    if *current == shortcut {
+        return Ok(());
+    }
+    app.global_shortcut()
+        .register(shortcut.as_str())
         .map_err(|e| format!("Ce raccourci ne peut pas être enregistré : {e}"))?;
     if !current.is_empty() {
         if let Err(error) = app.global_shortcut().unregister(current.as_str()) {
             let _ = app.global_shortcut().unregister(shortcut.as_str());
-            return Err(format!("Impossible de remplacer l'ancien raccourci : {error}"));
+            return Err(format!(
+                "Impossible de remplacer l'ancien raccourci : {error}"
+            ));
         }
     }
     *current = shortcut;
