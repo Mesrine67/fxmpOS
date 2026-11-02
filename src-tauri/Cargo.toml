@@ -34,6 +34,9 @@ tauri-plugin-process = "2"
 sysinfo = "0.40.0"
 tauri-plugin-store = "2"
 tauri-plugin-notification = "2"
+# In-process Win32/Direct2D dock plugin; pin the reviewed integration branch until release.
+tauri-plugin-dock = { git = "https://github.com/Mesrine67/tauri-plugin-dock", branch = "feat/host-integration" }
+tauri-plugin-dialog = "2"
 
 [target.'cfg(any(target_os = "macos", windows, target_os = "linux"))'.dependencies]
 tauri-plugin-autostart = "2"
