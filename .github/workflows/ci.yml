@@ -61,6 +61,15 @@ jobs:
       - name: Build native Dock resource
         run: node scripts/build-dock.mjs
 
+      - name: Prefer Git Bash over Windows WSL bash shim
+        shell: pwsh
+        run: |
+          $gitBash = 'C:\Program Files\Git\bin'
+          if (-not (Test-Path -LiteralPath (Join-Path $gitBash 'bash.exe'))) {
+            throw 'Git for Windows Bash was not found.'
+          }
+          Add-Content -Path $env:GITHUB_PATH -Value $gitBash -Encoding utf8
+
       - name: Install Rust
         uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
         with:
@@ -83,6 +92,15 @@ jobs:
 
       - name: Build native Dock resource
         run: node scripts/build-dock.mjs
+
+      - name: Prefer Git Bash over Windows WSL bash shim
+        shell: pwsh
+        run: |
+          $gitBash = 'C:\Program Files\Git\bin'
+          if (-not (Test-Path -LiteralPath (Join-Path $gitBash 'bash.exe'))) {
+            throw 'Git for Windows Bash was not found.'
+          }
+          Add-Content -Path $env:GITHUB_PATH -Value $gitBash -Encoding utf8
 
       - name: Install minimum supported Rust version
         uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable

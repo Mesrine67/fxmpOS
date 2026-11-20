@@ -114,3 +114,5 @@ Les jobs Windows utilisent le runner dédié `FXMP-OS-Windows-CI`, enregistré s
 Le runner étant lancé sous la session Windows, il peut être relancé après un redémarrage à l'aide du script ci-dessus. Son inscription dans GitHub est indépendante de son état `online/offline`.
 
 - Les paramètres GitHub Actions utilisent une liste d'actions autorisées par SHA immuable. Après une mise à jour de pnpm/action-setup, ajouter uniquement le nouveau SHA valide dans Settings > Actions > General, sans autoriser toutes les actions. pnpm/action-setup v6.1.1 : 73e46992e05b19abd31f2f3c20e0e7370d762115. Une entrée manquante provoque startup_failure avant la création des jobs.
+
+- Sur Windows, les actions Rust fondées sur Bash doivent trouver le Bash de Git for Windows avant le shim WSL de System32 ; les workflows ajoutent `C:\Program Files\Git\bin` à `GITHUB_PATH` avant `dtolnay/rust-toolchain`. Ne pas modifier les binaires WSL globaux du PC.
