@@ -1,5 +1,16 @@
 # Journal des modifications
 
+## [0.0.52] - 2026-11-20
+
+### Maintenance des dépendances et de la CI
+
+- Intégration contrôlée des changements des PR #80, #83 et #84 : pnpm/action-setup 6.1.1, mises à jour du verrou Cargo et actualisation des paquets JavaScript.
+- Next.js et eslint-config-next passent à 16.4.6 (incluant les correctifs de sécurité de la série 16.4.x), Lucide React à 1.72.0, Tailwind CSS et @tailwindcss/postcss à 4.3.5.
+- Mises à jour des plugins Tauri log, notification, opener et store, de sysinfo et des autres dépendances indiquées dans les fichiers de verrou.
+- Ajout d'une feuille de route technique issue de la PR #86, distinguant les travaux Dock non validés des fonctions distribuées.
+- La PR #79 reste expérimentale : aucune modification du Dock natif ni de ses permissions n'est incluse dans cette release.
+- Distribution toujours limitée à Windows x64 ; l'alerte GLib Linux de l'issue #7 reste distincte et non résolue.
+
 ## [0.0.51] - 2026-10-30
 
 ### Dock natif et intégration Windows

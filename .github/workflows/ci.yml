@@ -15,7 +15,9 @@ concurrency:
 
 jobs:
   frontend:
-    runs-on: ubuntu-24.04
+    if: ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.user.login == 'Mesrine67' && github.event.pull_request.head.repo.full_name == github.repository) }}
+    runs-on: [self-hosted, Windows, X64, fxmpos-ci]
+    timeout-minutes: 45
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -44,12 +46,14 @@ jobs:
         run: pnpm build
 
   rust:
+    if: ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.user.login == 'Mesrine67' && github.event.pull_request.head.repo.full_name == github.repository) }}
     strategy:
       fail-fast: false
       matrix:
         platform:
           - windows-latest
-    runs-on: ${{ matrix.platform }}
+    runs-on: [self-hosted, Windows, X64, fxmpos-ci]
+    timeout-minutes: 75
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -70,7 +74,9 @@ jobs:
         run: cargo check --locked --manifest-path src-tauri/Cargo.toml
 
   rust-msrv:
-    runs-on: windows-latest
+    if: ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.user.login == 'Mesrine67' && github.event.pull_request.head.repo.full_name == github.repository) }}
+    runs-on: [self-hosted, Windows, X64, fxmpos-ci]
+    timeout-minutes: 75
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7

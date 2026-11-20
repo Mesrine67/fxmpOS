@@ -65,7 +65,8 @@ jobs:
             assetPattern: "[name]-[version]-[platform]-[arch][setup][ext]"
             uploadPlainBinary: false
             standaloneUpload: true
-    runs-on: ${{ matrix.platform }}
+    runs-on: [self-hosted, Windows, X64, fxmpos-ci]
+    timeout-minutes: 110
 
     steps:
       - name: Checkout repository
@@ -208,7 +209,8 @@ jobs:
             throw "Could not determine the Windows binary target from Cargo metadata."
           }
 
-          $binaryPath = Join-Path "src-tauri/target/release" "$($binaryTarget.name).exe"
+          $targetDir = if ($env:CARGO_TARGET_DIR) { $env:CARGO_TARGET_DIR } else { "src-tauri/target" }
+          $binaryPath = Join-Path (Join-Path $targetDir "release") "$($binaryTarget.name).exe"
           if (-not (Test-Path -LiteralPath $binaryPath)) {
               throw "The standalone executable was not found at $binaryPath."
           }
