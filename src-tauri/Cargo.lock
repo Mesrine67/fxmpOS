@@ -4182,7 +4182,7 @@ dependencies = [
 [[package]]
 name = "tauri-plugin-dock"
 version = "0.1.0"
-source = "git+https://github.com/Mesrine67/tauri-plugin-dock?branch=feat%2Fhost-integration#01ba76c20c133f36c947dc3228c5b89bd27ec53a"
+source = "git+https://github.com/Mesrine67/tauri-plugin-dock?rev=01ba76c20c133f36c947dc3228c5b89bd27ec53a#01ba76c20c133f36c947dc3228c5b89bd27ec53a"
 dependencies = [
  "cc",
  "serde",
