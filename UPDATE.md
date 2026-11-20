@@ -112,3 +112,5 @@ Les jobs Windows utilisent le runner dédié `FXMP-OS-Windows-CI`, enregistré s
 - Ne pas pousser de tag si le runner est hors ligne ou si les tests de la branche et de `main` ne sont pas verts. La publication reste contrôlée par la vérification des signatures et la validation du draft.
 
 Le runner étant lancé sous la session Windows, il peut être relancé après un redémarrage à l'aide du script ci-dessus. Son inscription dans GitHub est indépendante de son état `online/offline`.
+
+- Les paramètres GitHub Actions utilisent une liste d'actions autorisées par SHA immuable. Après une mise à jour de pnpm/action-setup, ajouter uniquement le nouveau SHA valide dans Settings > Actions > General, sans autoriser toutes les actions. pnpm/action-setup v6.1.1 : 73e46992e05b19abd31f2f3c20e0e7370d762115. Une entrée manquante provoque startup_failure avant la création des jobs.
