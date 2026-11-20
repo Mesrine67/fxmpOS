@@ -98,3 +98,21 @@ pnpm tauri build
 ```
 
 Les installateurs et signatures sont écrits dans `src-tauri/target/release/bundle/`. Ne pas publier avant la vérification des signatures, du manifeste et des sommes SHA-256.
+
+## Runner Windows local (CI et release)
+
+Les jobs Windows utilisent le runner dédié `FXMP-OS-Windows-CI`, enregistré sur PC-MIKE avec les labels `self-hosted, Windows, X64, fxmpos-ci`. Il est séparé des runners de FXMP Tools et d'HébergTonServ.
+
+- Lancement depuis PowerShell : `& 'C:\Users\Mike\Desktop\doctor-computer\start-fxmpos-ci-runner.ps1'`.
+- État du listener : `& 'C:\Users\Mike\Desktop\doctor-computer\start-fxmpos-ci-runner.ps1' -Action status`.
+- Répertoire runner : `D:\fxmpOS-actions-runner-ci`. Caches Cargo/Rust isolés : `D:\fxmpOS-actions-cache`. Store pnpm : `E:\DevCaches\fxmpOS\pnpm-store`.
+- Priorité Windows `BelowNormal`, affinité aux threads logiques 12–15, deux jobs Cargo/tests maximum. Les tâches restent planifiées avec une limite de durée GitHub Actions.
+- Par sécurité, les jobs de la CI auto-hébergée sont autorisés pour les pushes `main` et les PR internes créées par `Mesrine67` depuis ce dépôt ; les PR Dependabot ou forks ne déclenchent pas de compilation sur le PC. Intégrer leurs changements dans une branche contrôlée après revue pour les valider.
+- Le build Windows de la release passe sur ce runner depuis un tag de version validé. Les jobs de vérification du manifeste continuent sur Ubuntu GitHub Actions.
+- Ne pas pousser de tag si le runner est hors ligne ou si les tests de la branche et de `main` ne sont pas verts. La publication reste contrôlée par la vérification des signatures et la validation du draft.
+
+Le runner étant lancé sous la session Windows, il peut être relancé après un redémarrage à l'aide du script ci-dessus. Son inscription dans GitHub est indépendante de son état `online/offline`.
+
+- Les paramètres GitHub Actions utilisent une liste d'actions autorisées par SHA immuable. Après une mise à jour de pnpm/action-setup, ajouter uniquement le nouveau SHA valide dans Settings > Actions > General, sans autoriser toutes les actions. pnpm/action-setup v6.1.1 : 73e46992e05b19abd31f2f3c20e0e7370d762115. Une entrée manquante provoque startup_failure avant la création des jobs.
+
+- Sur Windows, les actions Rust fondées sur Bash doivent trouver le Bash de Git for Windows avant le shim WSL de System32 ; les workflows ajoutent `C:\Program Files\Git\bin` à `GITHUB_PATH` avant `dtolnay/rust-toolchain`. Ne pas modifier les binaires WSL globaux du PC.
