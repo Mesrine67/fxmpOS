@@ -27,16 +27,15 @@ four other files:
   operation when truncating, keeping the null-terminator invariant in
   one implementation.
 
-The four files above now intentionally differ from the openOMSI reference;
+A fifth file, `src/collections/strv.rs`, fixes five upstream test assertions that used `get_unchecked(4)` on a 4-element slice. The test now reads the documented NULL sentinel at the underlying allocation boundary via the raw pointer. This removes an out-of-bounds precondition violation under Rust 1.99.
+
+These files now intentionally differ from the openOMSI reference;
 security assessment should use this exact source, not the original
 one-file-difference baseline.
 
 ## Testing and remaining risk
 
-Under Ubuntu WSL with Rust 1.99, the modified crate passed 225 unit tests
-using `cargo test --lib -- --skip collections::strv::test::test_into_strv`.
-The skipped test fails under the same toolchain on unmodified
-GLib 0.18.5 as well. Full Linux application compilation and independent
+Under Ubuntu WSL with Rust 1.99, the modified crate passed all 226 unit tests (`cargo test --lib -j 2`), without any exclusions. Full Linux application compilation and independent
 review of the FFI memory-safety contracts are still required.
 
 The GTK3/Wry dependency graph still resolves a crate named GLib 0.18.5.
