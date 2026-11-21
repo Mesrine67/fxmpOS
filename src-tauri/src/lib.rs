@@ -34,14 +34,11 @@ pub fn run() {
         .plugin(
             tauri_plugin_global_shortcut::Builder::new()
                 .with_handler(|app, _shortcut, event| {
-                    if event.state == tauri_plugin_global_shortcut::ShortcutState::Pressed {
-                        let app = app.clone();
-                        tauri::async_runtime::spawn(async move {
-                            if let Err(error) = dock::toggle_dock(app).await {
-                                log::error!("failed to toggle dock from global shortcut: {error}");
-                            }
-                        });
-                    }
+                    let app = app.clone();
+                    let state = event.state;
+                    tauri::async_runtime::spawn(async move {
+                        dock::handle_shortcut(app, state);
+                    });
                 })
                 .build(),
         );
@@ -58,6 +55,8 @@ pub fn run() {
                 ])
                 .build(),
         )
+        .plugin(tauri_plugin_dock::init())
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_store::Builder::new().build())
