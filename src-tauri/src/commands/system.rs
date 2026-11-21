@@ -241,7 +241,7 @@ pub async fn get_network_endpoints(
         #[cfg(target_os = "windows")]
         let mut endpoints = read_windows_network_endpoints()?;
         #[cfg(not(target_os = "windows"))]
-        let mut endpoints = Vec::new();
+        let mut endpoints: Vec<NetworkEndpoint> = Vec::new();
 
         let system = system
             .lock()
