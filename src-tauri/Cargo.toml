@@ -62,3 +62,7 @@ lto = true
 opt-level = 3
 panic = "abort"
 strip = true
+
+[patch.crates-io]
+# Backport of RUSTSEC-2024-0429 for GTK3 GLib 0.18; see patches/README.md.
+glib = { path = '../patches/glib' }
